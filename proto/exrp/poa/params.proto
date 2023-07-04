@@ -1,0 +1,11 @@
+syntax = "proto3";
+package exrp.poa;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/Peersyst/exrp/x/poa/types";
+
+// Params defines the parameters for the module.
+message Params {
+  option (gogoproto.goproto_stringer) = false;
+}

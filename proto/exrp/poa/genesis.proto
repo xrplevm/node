@@ -1,0 +1,12 @@
+syntax = "proto3";
+package exrp.poa;
+
+import "gogoproto/gogo.proto";
+import "exrp/poa/params.proto";
+
+option go_package = "github.com/Peersyst/exrp/x/poa/types";
+
+// GenesisState defines the poa module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+}

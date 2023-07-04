@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package exrp.poa;
+
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+
+option go_package = "github.com/Peersyst/exrp/x/poa/types";
+
+// Msg defines the Msg service.
+service Msg {
+  rpc AddValidator           (MsgAddValidator          ) returns (MsgAddValidatorResponse          );
+  rpc RemoveValidator        (MsgRemoveValidator       ) returns (MsgRemoveValidatorResponse       );
+}
+
+message MsgAddValidator {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority         = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string validator_address = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgAddValidatorResponse {}
+
+message MsgRemoveValidator {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority         = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string validator_address = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgRemoveValidatorResponse {}
+
+
+
