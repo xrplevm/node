@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/Peersyst/exrp/x/poa"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 	"github.com/evmos/ethermint/x/evm/vm/geth"
 	"io"
@@ -93,8 +94,6 @@ import (
 
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
-	// exrp types
-	appparams "github.com/Peersyst/exrp/app/params"
 	"github.com/Peersyst/exrp/docs"
 	poakeeper "github.com/Peersyst/exrp/x/poa/keeper"
 	poatypes "github.com/Peersyst/exrp/x/poa/types"
@@ -113,6 +112,7 @@ import (
 
 const (
 	AccountAddressPrefix = "ethm"
+	Bip44CoinType        = 144
 	Name                 = "exrp"
 )
 
@@ -267,11 +267,11 @@ func New(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
-	encodingConfig appparams.EncodingConfig,
+	encodingConfig simappparams.EncodingConfig,
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
-	appCodec := encodingConfig.Marshaler
+	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
@@ -357,7 +357,7 @@ func New(
 		app.BlockedModuleAccountAddrs(),
 	)
 
-	stakingKeeper := stakingkeeper.NewKeeper(
+	app.StakingKeeper = stakingkeeper.NewKeeper(
 		appCodec,
 		keys[stakingtypes.StoreKey],
 		app.AccountKeeper,
@@ -411,17 +411,9 @@ func New(
 		appCodec,
 		app.GetSubspace(poatypes.ModuleName),
 		app.BankKeeper,
-		stakingKeeper,
+		app.StakingKeeper,
 		app.SlashingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
-
-	app.StakingKeeper = *stakingKeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			app.DistrKeeper.Hooks(),
-			app.SlashingKeeper.Hooks(),
-			app.PoaKeeper.Hooks(),
-		),
 	)
 
 	// Ethermint keepers
@@ -438,7 +430,7 @@ func New(
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey],
 		authtypes.NewModuleAddress(govtypes.ModuleName),
-		app.AccountKeeper, app.BankKeeper, &stakingKeeper, app.FeeMarketKeeper,
+		app.AccountKeeper, app.BankKeeper, &app.StakingKeeper, app.FeeMarketKeeper,
 		nil, geth.NewEVM, tracer, evmSs,
 	)
 
@@ -520,6 +512,7 @@ func New(
 			// insert staking hooks receivers here
 			app.DistrKeeper.Hooks(),
 			app.SlashingKeeper.Hooks(),
+			app.PoaKeeper.Hooks(),
 		),
 	)
 

@@ -2,11 +2,11 @@ package network
 
 import (
 	"github.com/Peersyst/exrp/app"
-	appparams "github.com/Peersyst/exrp/app/params"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	pruningtypes "github.com/cosmos/cosmos-sdk/pruning/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/stretchr/testify/require"
 	tmdb "github.com/tendermint/tm-db"
 	"testing"
@@ -14,7 +14,7 @@ import (
 )
 
 // NewAppConstructor returns a new simapp AppConstructor
-func NewAppConstructor(encodingCfg appparams.EncodingConfig) AppConstructor {
+func NewAppConstructor(encodingCfg simappparams.EncodingConfig) AppConstructor {
 	return func(val Validator) servertypes.Application {
 		return app.New(
 			val.Ctx.Logger, tmdb.NewMemDB(), nil, true, make(map[int64]bool), val.Ctx.Config.RootDir, 0,

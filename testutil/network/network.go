@@ -102,11 +102,11 @@ var (
 // testing requirements.
 func DefaultConfig(numValidators int, numBondedValidators int) Config {
 	encCfg := app.MakeEncodingConfig()
-	cdc := encCfg.Marshaler
+	cdc := encCfg.Codec
 	genesisState := app.ModuleBasics.DefaultGenesis(cdc)
 
 	return Config{
-		Codec:               encCfg.Marshaler,
+		Codec:               encCfg.Codec,
 		TxConfig:            encCfg.TxConfig,
 		LegacyAmino:         encCfg.Amino,
 		InterfaceRegistry:   encCfg.InterfaceRegistry,
