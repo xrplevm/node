@@ -3,7 +3,7 @@ package cmd
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"exrp/app"
+	"github.com/Peersyst/exrp/app"
 )
 
 func initSDKConfig() {

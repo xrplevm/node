@@ -35,8 +35,8 @@ import (
 	dbm "github.com/tendermint/tm-db"
 	// this line is used by starport scaffolding # root/moduleImport
 
-	"exrp/app"
-	appparams "exrp/app/params"
+	"github.com/Peersyst/exrp/app"
+	appparams "github.com/Peersyst/exrp/app/params"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

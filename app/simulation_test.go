@@ -1,40 +1,55 @@
 package app_test
 
 import (
-	"os"
-	"testing"
-	"time"
-
+	"github.com/Peersyst/exrp/app"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	"github.com/evmos/ethermint/app/ante"
 	"github.com/stretchr/testify/require"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmtypes "github.com/tendermint/tendermint/types"
-
-	"exrp/app"
+	"github.com/tendermint/tendermint/libs/log"
+	dbm "github.com/tendermint/tm-db"
+	"os"
+	"testing"
 )
 
 func init() {
 	simapp.GetSimulatorFlags()
 }
 
-var defaultConsensusParams = &abci.ConsensusParams{
-	Block: &abci.BlockParams{
-		MaxBytes: 200000,
-		MaxGas:   2000000,
-	},
-	Evidence: &tmproto.EvidenceParams{
-		MaxAgeNumBlocks: 302400,
-		MaxAgeDuration:  504 * time.Hour, // 3 weeks is the max duration
-		MaxBytes:        10000,
-	},
-	Validator: &tmproto.ValidatorParams{
-		PubKeyTypes: []string{
-			tmtypes.ABCIPubKeyTypeEd25519,
-		},
-	},
+const SimAppChainID = "simulation_777-1"
+
+// fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
+// an IAVLStore for faster simulation speed.
+func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
+	bapp.SetFauxMerkleMode()
+}
+
+// NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
+func NewSimApp(logger log.Logger, db dbm.DB) (*app.App, error) {
+	encodingConfig := app.MakeEncodingConfig()
+	newApp := app.New(logger, db, nil, false, map[int64]bool{}, app.DefaultNodeHome, simapp.FlagPeriodValue, encodingConfig, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	// disable feemarket on native tx
+	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
+		AccountKeeper:   newApp.AccountKeeper,
+		BankKeeper:      newApp.BankKeeper,
+		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+		FeegrantKeeper:  newApp.FeeGrantKeeper,
+		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+		IBCKeeper:       newApp.IBCKeeper,
+		EvmKeeper:       newApp.EvmKeeper,
+		FeeMarketKeeper: newApp.FeeMarketKeeper,
+		MaxTxGasWanted:  0,
+	})
+	if err != nil {
+		return nil, err
+	}
+	newApp.SetAnteHandler(anteHandler)
+	if err := newApp.LoadLatestVersion(); err != nil {
+		return nil, err
+	}
+	return newApp, nil
 }
 
 // BenchmarkSimulation run the chain simulation
@@ -49,41 +64,31 @@ func BenchmarkSimulation(b *testing.B) {
 	config, db, dir, logger, _, err := simapp.SetupSimulation("goleveldb-app-sim", "Simulation")
 	require.NoError(b, err, "simulation setup failed")
 
+	config.ChainID = SimAppChainID
+
 	b.Cleanup(func() {
 		db.Close()
 		err = os.RemoveAll(dir)
 		require.NoError(b, err)
 	})
 
-	encoding := app.MakeEncodingConfig()
-
-	app := app.New(
-		logger,
-		db,
-		nil,
-		true,
-		map[int64]bool{},
-		app.DefaultNodeHome,
-		0,
-		encoding,
-		simapp.EmptyAppOptions{},
-	)
+	simApp, _ := NewSimApp(logger, db)
 
 	// Run randomized simulations
 	_, simParams, simErr := simulation.SimulateFromSeed(
 		b,
 		os.Stdout,
-		app.BaseApp,
-		simapp.AppStateFn(app.AppCodec(), app.SimulationManager()),
+		simApp.BaseApp,
+		AppStateFn(simApp.AppCodec(), simApp.SimulationManager()),
 		simulationtypes.RandomAccounts,
-		simapp.SimulationOperations(app, app.AppCodec(), config),
-		app.ModuleAccountAddrs(),
+		simapp.SimulationOperations(simApp, simApp.AppCodec(), config),
+		simApp.ModuleAccountAddrs(),
 		config,
-		app.AppCodec(),
+		simApp.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = simapp.CheckExportSimulation(app, config, simParams)
+	err = simapp.CheckExportSimulation(simApp, config, simParams)
 	require.NoError(b, err)
 	require.NoError(b, simErr)
 

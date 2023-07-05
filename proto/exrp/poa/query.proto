@@ -4,7 +4,7 @@ package exrp.poa;
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "blockchain/poa/params.proto";
+import "exrp/poa/params.proto";
 
 option go_package = "github.com/Peersyst/exrp/x/poa/types";
 

@@ -6,8 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
-	"exrp/app"
-	"exrp/cmd/exrpd/cmd"
+	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/cmd/exrpd/cmd"
 )
 
 func main() {
