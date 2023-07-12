@@ -112,7 +112,7 @@ import (
 
 const (
 	AccountAddressPrefix = "ethm"
-	Bip44CoinType        = 144
+	Bip44CoinType        = 60
 	Name                 = "exrp"
 )
 
@@ -357,9 +357,8 @@ func New(
 		app.BlockedModuleAccountAddrs(),
 	)
 
-	app.StakingKeeper = stakingkeeper.NewKeeper(
-		appCodec,
-		keys[stakingtypes.StoreKey],
+	stakingKeeper := stakingkeeper.NewKeeper(
+		appCodec, keys[stakingtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
 		app.GetSubspace(stakingtypes.ModuleName),
@@ -371,14 +370,14 @@ func New(
 		app.GetSubspace(distrtypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
-		&app.StakingKeeper,
+		&stakingKeeper,
 		authtypes.FeeCollectorName,
 	)
 
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
 		appCodec,
 		keys[slashingtypes.StoreKey],
-		&app.StakingKeeper,
+		&stakingKeeper,
 		app.GetSubspace(slashingtypes.ModuleName),
 	)
 
@@ -411,9 +410,17 @@ func New(
 		appCodec,
 		app.GetSubspace(poatypes.ModuleName),
 		app.BankKeeper,
-		app.StakingKeeper,
+		stakingKeeper,
 		app.SlashingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	app.StakingKeeper = *stakingKeeper.SetHooks(
+		stakingtypes.NewMultiStakingHooks(
+			app.DistrKeeper.Hooks(),
+			app.SlashingKeeper.Hooks(),
+			app.PoaKeeper.Hooks(),
+		),
 	)
 
 	// Ethermint keepers
@@ -430,7 +437,7 @@ func New(
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey],
 		authtypes.NewModuleAddress(govtypes.ModuleName),
-		app.AccountKeeper, app.BankKeeper, &app.StakingKeeper, app.FeeMarketKeeper,
+		app.AccountKeeper, app.BankKeeper, &stakingKeeper, app.FeeMarketKeeper,
 		nil, geth.NewEVM, tracer, evmSs,
 	)
 
@@ -484,7 +491,7 @@ func New(
 		app.GetSubspace(govtypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
-		&app.StakingKeeper,
+		&stakingKeeper,
 		govRouter,
 		app.MsgServiceRouter(),
 		govConfig,
@@ -506,15 +513,6 @@ func New(
 	/**** Module Hooks ****/
 
 	// register hooks after all modules have been initialized
-
-	app.StakingKeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			// insert staking hooks receivers here
-			app.DistrKeeper.Hooks(),
-			app.SlashingKeeper.Hooks(),
-			app.PoaKeeper.Hooks(),
-		),
-	)
 
 	app.GovKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(
@@ -678,13 +676,10 @@ func New(
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetEndBlocker(app.EndBlocker)
 
 	app.setAnteHandler(encodingConfig.TxConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
 	app.setPostHandler()
-
-	app.SetInitChainer(app.InitChainer)
-	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetEndBlocker(app.EndBlocker)
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
