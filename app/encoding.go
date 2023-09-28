@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/cosmos/cosmos-sdk/simapp/params"
+	"cosmossdk.io/simapp/params"
 	evmenc "github.com/evmos/ethermint/encoding"
 )
 

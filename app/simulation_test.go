@@ -2,20 +2,21 @@ package app_test
 
 import (
 	"github.com/Peersyst/exrp/app"
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/ethermint/app/ante"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
 	"os"
 	"testing"
 )
 
 func init() {
-	simapp.GetSimulatorFlags()
+	simcli.GetSimulatorFlags()
 }
 
 const SimAppChainID = "simulation_777-1"
@@ -26,10 +27,18 @@ func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
 	bapp.SetFauxMerkleMode()
 }
 
+// EmptyAppOptions is a stub implementing AppOptions
+type EmptyAppOptions struct{}
+
+// Get implements AppOptions
+func (ao EmptyAppOptions) Get(o string) interface{} {
+	return nil
+}
+
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
 func NewSimApp(logger log.Logger, db dbm.DB) (*app.App, error) {
 	encodingConfig := app.MakeEncodingConfig()
-	newApp := app.New(logger, db, nil, false, map[int64]bool{}, app.DefaultNodeHome, simapp.FlagPeriodValue, encodingConfig, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	newApp := app.New(logger, db, nil, false, map[int64]bool{}, app.DefaultNodeHome, simcli.FlagPeriodValue, encodingConfig, EmptyAppOptions{}, fauxMerkleModeOpt)
 	// disable feemarket on native tx
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
 		AccountKeeper:   newApp.AccountKeeper,
@@ -58,13 +67,11 @@ func NewSimApp(logger log.Logger, db dbm.DB) (*app.App, error) {
 // Running as go benchmark test:
 // `go test -benchmem -run=^$ -bench ^BenchmarkSimulation ./app -NumBlocks=200 -BlockSize 50 -Commit=true -Verbose=true -Enabled=true`
 func BenchmarkSimulation(b *testing.B) {
-	simapp.FlagEnabledValue = true
-	simapp.FlagCommitValue = true
-
-	config, db, dir, logger, _, err := simapp.SetupSimulation("goleveldb-app-sim", "Simulation")
-	require.NoError(b, err, "simulation setup failed")
-
+	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
+
+	db, dir, logger, _, err := simtestutil.SetupSimulation(config, "goleveldb-app-sim", "Simulation", simcli.FlagVerboseValue, simcli.FlagEnabledValue)
+	require.NoError(b, err, "simulation setup failed")
 
 	b.Cleanup(func() {
 		db.Close()
@@ -81,18 +88,18 @@ func BenchmarkSimulation(b *testing.B) {
 		simApp.BaseApp,
 		AppStateFn(simApp.AppCodec(), simApp.SimulationManager()),
 		simulationtypes.RandomAccounts,
-		simapp.SimulationOperations(simApp, simApp.AppCodec(), config),
+		simtestutil.SimulationOperations(simApp, simApp.AppCodec(), config),
 		simApp.ModuleAccountAddrs(),
 		config,
 		simApp.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = simapp.CheckExportSimulation(simApp, config, simParams)
+	err = simtestutil.CheckExportSimulation(simApp, config, simParams)
 	require.NoError(b, err)
 	require.NoError(b, simErr)
 
 	if config.Commit {
-		simapp.PrintStats(db)
+		simtestutil.PrintStats(db)
 	}
 }

@@ -1,14 +1,14 @@
 package network
 
 import (
+	simappparams "cosmossdk.io/simapp/params"
 	"github.com/Peersyst/exrp/app"
+	tmdb "github.com/cometbft/cometbft-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	pruningtypes "github.com/cosmos/cosmos-sdk/pruning/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/stretchr/testify/require"
-	tmdb "github.com/tendermint/tm-db"
 	"testing"
 	"time"
 )
@@ -19,7 +19,7 @@ func NewAppConstructor(encodingCfg simappparams.EncodingConfig) AppConstructor {
 		return app.New(
 			val.Ctx.Logger, tmdb.NewMemDB(), nil, true, make(map[int64]bool), val.Ctx.Config.RootDir, 0,
 			encodingCfg,
-			simapp.EmptyAppOptions{},
+			simtestutil.EmptyAppOptions{},
 			baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 			baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
 		)
