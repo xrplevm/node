@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Peersyst/exrp/app"
+	"github.com/cosmos/cosmos-sdk/testutil/network"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,15 +18,15 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	tmcfg "github.com/cometbft/cometbft/config"
+	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
+	"github.com/cometbft/cometbft/libs/log"
+	tmrand "github.com/cometbft/cometbft/libs/rand"
+	"github.com/cometbft/cometbft/node"
+	tmclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
-	tmcfg "github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	"github.com/tendermint/tendermint/libs/log"
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	"github.com/tendermint/tendermint/node"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 	"google.golang.org/grpc"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -34,12 +35,11 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	pruningtypes "github.com/cosmos/cosmos-sdk/pruning/types"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -63,34 +63,35 @@ type AppConstructor = func(val Validator) servertypes.Application
 // Config defines the necessary configuration used to bootstrap and start an
 // in-process local testing network.
 type Config struct {
-	KeyringOptions      []keyring.Option // keyring configuration options
-	Codec               codec.Codec
-	LegacyAmino         *codec.LegacyAmino // TODO: Remove!
-	InterfaceRegistry   codectypes.InterfaceRegistry
-	TxConfig            client.TxConfig
-	AccountRetriever    client.AccountRetriever
-	AppConstructor      AppConstructor      // the ABCI application constructor
-	GenesisState        simapp.GenesisState // custom gensis state to provide
-	TimeoutCommit       time.Duration       // the consensus commitment timeout
-	AccountTokens       sdkmath.Int         // the amount of unique validator tokens (e.g. 1000node0)
-	StakingTokens       sdkmath.Int         // the amount of tokens each validator has available to stake
-	BondedTokens        sdkmath.Int         // the amount of tokens each validator stakes
-	NumValidators       int                 // the total number of validators to create
-	NumBondedValidators int                 // the total number of validators with bonded tokens to create
-	ChainID             string              // the network chain-id
-	TokenDenom          string              // the fees token denomination
-	BondDenom           string              // the staking bond denomination
-	UnBoundingTime      time.Duration       // the time to unbound and accept governance proposals
-	MinGasPrices        string              // the minimum gas prices each validator will accept
-	PruningStrategy     string              // the pruning strategy each validator will have
-	SigningAlgo         string              // signing algorithm for keys
-	RPCAddress          string              // RPC listen address (including port)
-	JSONRPCAddress      string              // JSON-RPC listen address (including port)
-	APIAddress          string              // REST API listen address (including port)
-	GRPCAddress         string              // GRPC server listen address (including port)
-	EnableTMLogging     bool                // enable Tendermint logging to STDOUT
-	CleanupDir          bool                // remove base temporary directory during cleanup
-	PrintMnemonic       bool                // print the mnemonic of first validator as log output for testing
+	KeyringOptions    []keyring.Option // keyring configuration options
+	Codec             codec.Codec
+	LegacyAmino       *codec.LegacyAmino // TODO: Remove!
+	InterfaceRegistry codectypes.InterfaceRegistry
+	TxConfig          client.TxConfig
+	AccountRetriever  client.AccountRetriever
+	AppConstructor    AppConstructor // the ABCI application constructor
+	// TODO: Check if the genesis state must come from this simapp
+	GenesisState        app.GenesisState // custom gensis state to provide
+	TimeoutCommit       time.Duration    // the consensus commitment timeout
+	AccountTokens       sdkmath.Int      // the amount of unique validator tokens (e.g. 1000node0)
+	StakingTokens       sdkmath.Int      // the amount of tokens each validator has available to stake
+	BondedTokens        sdkmath.Int      // the amount of tokens each validator stakes
+	NumValidators       int              // the total number of validators to create
+	NumBondedValidators int              // the total number of validators with bonded tokens to create
+	ChainID             string           // the network chain-id
+	TokenDenom          string           // the fees token denomination
+	BondDenom           string           // the staking bond denomination
+	UnBoundingTime      time.Duration    // the time to unbound and accept governance proposals
+	MinGasPrices        string           // the minimum gas prices each validator will accept
+	PruningStrategy     string           // the pruning strategy each validator will have
+	SigningAlgo         string           // signing algorithm for keys
+	RPCAddress          string           // RPC listen address (including port)
+	JSONRPCAddress      string           // JSON-RPC listen address (including port)
+	APIAddress          string           // REST API listen address (including port)
+	GRPCAddress         string           // GRPC server listen address (including port)
+	EnableTMLogging     bool             // enable Tendermint logging to STDOUT
+	CleanupDir          bool             // remove base temporary directory during cleanup
+	PrintMnemonic       bool             // print the mnemonic of first validator as log output for testing
 }
 
 var (
@@ -101,7 +102,10 @@ var (
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
 func DefaultConfig(numValidators int, numBondedValidators int) Config {
-	encCfg := app.MakeEncodingConfig()
+	var (
+		encCfg  = app.MakeEncodingConfig()
+		chainID = fmt.Sprintf("ethermint_%d-1", tmrand.Int63n(9999999999999)+1)
+	)
 	cdc := encCfg.Codec
 	genesisState := app.ModuleBasics.DefaultGenesis(cdc)
 
@@ -111,10 +115,10 @@ func DefaultConfig(numValidators int, numBondedValidators int) Config {
 		LegacyAmino:         encCfg.Amino,
 		InterfaceRegistry:   encCfg.InterfaceRegistry,
 		AccountRetriever:    authtypes.AccountRetriever{},
-		AppConstructor:      NewAppConstructor(encCfg),
+		AppConstructor:      NewAppConstructor(encCfg, chainID),
 		GenesisState:        genesisState,
 		TimeoutCommit:       2 * time.Second,
-		ChainID:             fmt.Sprintf("ethermint_%d-1", tmrand.Int63n(9999999999999)+1),
+		ChainID:             chainID,
 		NumValidators:       numValidators,
 		NumBondedValidators: numBondedValidators,
 		BondDenom:           BondDenom,
@@ -143,6 +147,7 @@ type (
 	}
 
 	Validator struct {
+		network.ValidatorI
 		AppConfig     *config.Config
 		ClientCtx     client.Context
 		Ctx           *server.Context

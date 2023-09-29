@@ -2,20 +2,24 @@ package app_test
 
 import (
 	"github.com/Peersyst/exrp/app"
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/server"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/ethermint/app/ante"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
 	"os"
 	"testing"
+	"time"
 )
 
 func init() {
-	simapp.GetSimulatorFlags()
+	simcli.GetSimulatorFlags()
 }
 
 const SimAppChainID = "simulation_777-1"
@@ -27,29 +31,43 @@ func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
 }
 
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
-func NewSimApp(logger log.Logger, db dbm.DB) (*app.App, error) {
+func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
 	encodingConfig := app.MakeEncodingConfig()
-	newApp := app.New(logger, db, nil, false, map[int64]bool{}, app.DefaultNodeHome, simapp.FlagPeriodValue, encodingConfig, simapp.EmptyAppOptions{}, fauxMerkleModeOpt)
+	appOptions := make(simtestutil.AppOptionsMap, 0)
+	appOptions[flags.FlagHome] = app.DefaultNodeHome
+	appOptions[server.FlagInvCheckPeriod] = simcli.FlagPeriodValue
+
+	bApp := app.New(
+		logger,
+		db,
+		nil,
+		false,
+		map[int64]bool{},
+		app.DefaultNodeHome,
+		simcli.FlagPeriodValue, encodingConfig,
+		appOptions,
+		baseapp.SetChainID(config.ChainID),
+	)
 	// disable feemarket on native tx
 	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		AccountKeeper:   newApp.AccountKeeper,
-		BankKeeper:      newApp.BankKeeper,
+		AccountKeeper:   bApp.AccountKeeper,
+		BankKeeper:      bApp.BankKeeper,
 		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		FeegrantKeeper:  newApp.FeeGrantKeeper,
+		FeegrantKeeper:  bApp.FeeGrantKeeper,
 		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
-		IBCKeeper:       newApp.IBCKeeper,
-		EvmKeeper:       newApp.EvmKeeper,
-		FeeMarketKeeper: newApp.FeeMarketKeeper,
+		IBCKeeper:       bApp.IBCKeeper,
+		EvmKeeper:       bApp.EvmKeeper,
+		FeeMarketKeeper: bApp.FeeMarketKeeper,
 		MaxTxGasWanted:  0,
 	})
 	if err != nil {
 		return nil, err
 	}
-	newApp.SetAnteHandler(anteHandler)
-	if err := newApp.LoadLatestVersion(); err != nil {
+	bApp.SetAnteHandler(anteHandler)
+	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
-	return newApp, nil
+	return bApp, nil
 }
 
 // BenchmarkSimulation run the chain simulation
@@ -58,41 +76,55 @@ func NewSimApp(logger log.Logger, db dbm.DB) (*app.App, error) {
 // Running as go benchmark test:
 // `go test -benchmem -run=^$ -bench ^BenchmarkSimulation ./app -NumBlocks=200 -BlockSize 50 -Commit=true -Verbose=true -Enabled=true`
 func BenchmarkSimulation(b *testing.B) {
-	simapp.FlagEnabledValue = true
-	simapp.FlagCommitValue = true
+	simcli.FlagSeedValue = time.Now().Unix()
+	simcli.FlagVerboseValue = true
+	simcli.FlagCommitValue = true
+	simcli.FlagEnabledValue = true
 
-	config, db, dir, logger, _, err := simapp.SetupSimulation("goleveldb-app-sim", "Simulation")
+	config := simcli.NewConfigFromFlags()
+	config.ChainID = SimAppChainID
+	db, dir, logger, _, err := simtestutil.SetupSimulation(
+		config,
+		"leveldb-bApp-sim",
+		"Simulation",
+		simcli.FlagVerboseValue,
+		simcli.FlagEnabledValue,
+	)
+
 	require.NoError(b, err, "simulation setup failed")
 
 	config.ChainID = SimAppChainID
 
 	b.Cleanup(func() {
-		db.Close()
-		err = os.RemoveAll(dir)
-		require.NoError(b, err)
+		require.NoError(b, db.Close())
+		require.NoError(b, os.RemoveAll(dir))
 	})
 
-	simApp, _ := NewSimApp(logger, db)
+	bApp, _ := NewSimApp(logger, db, config)
 
 	// Run randomized simulations
 	_, simParams, simErr := simulation.SimulateFromSeed(
 		b,
 		os.Stdout,
-		simApp.BaseApp,
-		AppStateFn(simApp.AppCodec(), simApp.SimulationManager()),
+		bApp.BaseApp,
+		simtestutil.AppStateFn(
+			bApp.AppCodec(),
+			bApp.SimulationManager(),
+			app.NewDefaultGenesisState(bApp.AppCodec()),
+		),
 		simulationtypes.RandomAccounts,
-		simapp.SimulationOperations(simApp, simApp.AppCodec(), config),
-		simApp.ModuleAccountAddrs(),
+		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
+		bApp.ModuleAccountAddrs(),
 		config,
-		simApp.AppCodec(),
+		bApp.AppCodec(),
 	)
 
 	// export state and simParams before the simulation error is checked
-	err = simapp.CheckExportSimulation(simApp, config, simParams)
+	err = simtestutil.CheckExportSimulation(bApp, config, simParams)
 	require.NoError(b, err)
 	require.NoError(b, simErr)
 
 	if config.Commit {
-		simapp.PrintStats(db)
+		simtestutil.PrintStats(db)
 	}
 }
