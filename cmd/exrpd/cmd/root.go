@@ -3,15 +3,6 @@ package cmd
 import (
 	simappparams "cosmossdk.io/simapp/params"
 	"errors"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/ethermint/crypto/hd"
-	"github.com/evmos/ethermint/ethereum/eip712"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-
 	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
@@ -34,16 +25,22 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	"github.com/evmos/evmos/v14/crypto/hd"
+	"github.com/evmos/evmos/v14/ethereum/eip712"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"io"
+	"os"
+	"path/filepath"
 	// this line is used by starport scaffolding # root/moduleImport
 
 	"github.com/Peersyst/exrp/app"
-	ethermintclient "github.com/evmos/ethermint/client"
-	ethermintserver "github.com/evmos/ethermint/server"
-	ethermintservercfg "github.com/evmos/ethermint/server/config"
-	ethermintserverflags "github.com/evmos/ethermint/server/flags"
+	ethermintclient "github.com/evmos/evmos/v14/client"
+	ethermintserver "github.com/evmos/evmos/v14/server"
+	ethermintservercfg "github.com/evmos/evmos/v14/server/config"
+	ethermintserverflags "github.com/evmos/evmos/v14/server/flags"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -59,7 +56,7 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 		WithBroadcastMode(flags.BroadcastSync).
 		WithHomeDir(app.DefaultNodeHome).
 		WithKeyringOptions(hd.EthSecp256k1Option()).
-		WithViper("")
+		WithViper("exrp")
 
 	eip712.SetEncodingConfig(encodingConfig)
 
@@ -95,7 +92,7 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 	registerDenoms()
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
-		flags.FlagChainID:        strings.ReplaceAll(app.Name, "-", ""),
+		// flags.FlagChainID:        strings.ReplaceAll(app.Name, "-", ""),
 		flags.FlagKeyringBackend: "test",
 	})
 
@@ -116,12 +113,11 @@ func initRootCmd(
 	// Set config
 	initSDKConfig()
 
-	gentxModule := app.ModuleBasics[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 	rootCmd.AddCommand(
 		ethermintclient.ValidateChainID(
 			genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
 		),
-		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, gentxModule.GenTxValidator),
+		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, genutiltypes.DefaultMessageValidator),
 		genutilcli.MigrateGenesisCmd(),
 		genutilcli.GenTxCmd(
 			app.ModuleBasics,

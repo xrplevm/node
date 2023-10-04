@@ -3,6 +3,7 @@ package app
 import (
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
+	"cosmossdk.io/simapp"
 	simappparams "cosmossdk.io/simapp/params"
 	"encoding/json"
 	"github.com/Peersyst/exrp/x/poa"
@@ -12,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"github.com/evmos/ethermint/x/evm/vm/geth"
 	"io"
 	"os"
 	"path/filepath"
@@ -95,6 +95,8 @@ import (
 	ibcporttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
+	ethante "github.com/evmos/evmos/v14/app/ante/evm"
+	evmostypes "github.com/evmos/evmos/v14/types"
 	"github.com/spf13/cast"
 
 	// this line is used by starport scaffolding # stargate/app/moduleImport
@@ -103,16 +105,16 @@ import (
 	poakeeper "github.com/Peersyst/exrp/x/poa/keeper"
 	poatypes "github.com/Peersyst/exrp/x/poa/types"
 
-	"github.com/evmos/ethermint/app/ante"
-	srvflags "github.com/evmos/ethermint/server/flags"
+	"github.com/evmos/evmos/v14/app/ante"
+	srvflags "github.com/evmos/evmos/v14/server/flags"
 	// Ethermint
-	etherminttypes "github.com/evmos/ethermint/types"
-	"github.com/evmos/ethermint/x/evm"
-	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
-	"github.com/evmos/ethermint/x/feemarket"
-	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
-	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
+	etherminttypes "github.com/evmos/evmos/v14/types"
+	"github.com/evmos/evmos/v14/x/evm"
+	evmkeeper "github.com/evmos/evmos/v14/x/evm/keeper"
+	evmtypes "github.com/evmos/evmos/v14/x/evm/types"
+	"github.com/evmos/evmos/v14/x/feemarket"
+	feemarketkeeper "github.com/evmos/evmos/v14/x/feemarket/keeper"
+	feemarkettypes "github.com/evmos/evmos/v14/x/feemarket/types"
 )
 
 const (
@@ -452,7 +454,7 @@ func New(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey],
 		authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.FeeMarketKeeper,
-		nil, geth.NewEVM, tracer, evmSs,
+		tracer, evmSs,
 	)
 
 	// Create IBC Keeper
@@ -697,12 +699,12 @@ func New(
 	app.MountMemoryStores(memKeys)
 
 	// initialize BaseApp
-	// app.SetInitChainer(app.InitChainer)
-	// app.SetBeginBlocker(app.BeginBlocker)
-	// app.SetEndBlocker(app.EndBlocker)
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.setAnteHandler(encodingConfig.TxConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
 	app.setPostHandler()
+	app.SetEndBlocker(app.EndBlocker)
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
@@ -719,24 +721,28 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
+	options := ante.HandlerOptions{
+		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
 		BankKeeper:             app.BankKeeper,
-		SignModeHandler:        txConfig.SignModeHandler(),
-		FeegrantKeeper:         app.FeeGrantKeeper,
-		SigGasConsumer:         ante.DefaultSigVerificationGasConsumer,
-		IBCKeeper:              app.IBCKeeper,
+		ExtensionOptionChecker: evmostypes.HasDynamicFeeExtensionOption,
 		EvmKeeper:              app.EvmKeeper,
+		StakingKeeper:          app.StakingKeeper,
+		FeegrantKeeper:         app.FeeGrantKeeper,
+		DistributionKeeper:     app.DistrKeeper,
+		IBCKeeper:              app.IBCKeeper,
 		FeeMarketKeeper:        app.FeeMarketKeeper,
+		SignModeHandler:        txConfig.SignModeHandler(),
+		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
-		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
-		TxFeeChecker:           ante.NewDynamicFeeChecker(app.EvmKeeper),
-	})
-	if err != nil {
+		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
+	}
+
+	if err := options.Validate(); err != nil {
 		panic(err)
 	}
 
-	app.SetAnteHandler(anteHandler)
+	app.SetAnteHandler(ante.NewAnteHandler(options))
 }
 
 func (app *App) setPostHandler() {
@@ -765,7 +771,7 @@ func (app *App) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 
 // InitChainer application update at chain initialization
 func (app *App) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
-	var genesisState GenesisState
+	var genesisState simapp.GenesisState
 	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}

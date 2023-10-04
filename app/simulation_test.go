@@ -11,7 +11,9 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/ethermint/app/ante"
+	"github.com/evmos/evmos/v14/app/ante"
+	ethante "github.com/evmos/evmos/v14/app/ante/evm"
+	evmostypes "github.com/evmos/evmos/v14/types"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -49,21 +51,28 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		baseapp.SetChainID(config.ChainID),
 	)
 	// disable feemarket on native tx
-	anteHandler, err := ante.NewAnteHandler(ante.HandlerOptions{
-		AccountKeeper:   bApp.AccountKeeper,
-		BankKeeper:      bApp.BankKeeper,
-		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		FeegrantKeeper:  bApp.FeeGrantKeeper,
-		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
-		IBCKeeper:       bApp.IBCKeeper,
-		EvmKeeper:       bApp.EvmKeeper,
-		FeeMarketKeeper: bApp.FeeMarketKeeper,
-		MaxTxGasWanted:  0,
-	})
-	if err != nil {
-		return nil, err
+	options := ante.HandlerOptions{
+		Cdc:                    encodingConfig.Codec,
+		AccountKeeper:          bApp.AccountKeeper,
+		BankKeeper:             bApp.BankKeeper,
+		ExtensionOptionChecker: evmostypes.HasDynamicFeeExtensionOption,
+		EvmKeeper:              bApp.EvmKeeper,
+		StakingKeeper:          bApp.StakingKeeper,
+		FeegrantKeeper:         bApp.FeeGrantKeeper,
+		DistributionKeeper:     bApp.DistrKeeper,
+		IBCKeeper:              bApp.IBCKeeper,
+		FeeMarketKeeper:        bApp.FeeMarketKeeper,
+		SignModeHandler:        encodingConfig.TxConfig.SignModeHandler(),
+		SigGasConsumer:         ante.SigVerificationGasConsumer,
+		MaxTxGasWanted:         0,
+		TxFeeChecker:           ethante.NewDynamicFeeChecker(bApp.EvmKeeper),
 	}
-	bApp.SetAnteHandler(anteHandler)
+
+	if err := options.Validate(); err != nil {
+		panic(err)
+	}
+
+	bApp.SetAnteHandler(ante.NewAnteHandler(options))
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
