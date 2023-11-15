@@ -2,6 +2,8 @@ package poa
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Peersyst/exrp/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -13,7 +15,6 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingcli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
-	"time"
 )
 
 func transactionFlags(s *TestSuite, val network.Validator) []string {
@@ -31,7 +32,7 @@ func addValidatorMsg(ctx client.Context, newValidatorAddress string) string {
 {
 	"messages": [
 		{
-			"@type": "/packages.blockchain.poa.MsgAddValidator",
+			"@type": "/exrp.poa.MsgAddValidator",
 		    "authority": "%s",
 		    "validator_address": "%s"
 		}
@@ -49,7 +50,7 @@ func removeValidatorMsg(ctx client.Context, newValidatorAddress string) string {
 {
 	"messages": [
 		{
-			"@type": "/packages.blockchain.poa.MsgRemoveValidator",
+			"@type": "/exrp.poa.MsgRemoveValidator",
 		    "authority": "%s",
 		    "validator_address": "%s"
 		}

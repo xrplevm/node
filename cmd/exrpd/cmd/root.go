@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"errors"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/evmos/ethermint/crypto/hd"
-	"github.com/evmos/ethermint/ethereum/eip712"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/evmos/ethermint/crypto/hd"
+	"github.com/evmos/ethermint/ethereum/eip712"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -34,6 +35,7 @@ import (
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
+
 	// this line is used by starport scaffolding # root/moduleImport
 
 	"github.com/Peersyst/exrp/app"
@@ -154,7 +156,7 @@ func initRootCmd(
 		ethermintclient.KeyCommands(app.DefaultNodeHome),
 	)
 
-	rootCmd, err := ethermintserverflags.AddTxFlags(rootCmd)
+	_, err := ethermintserverflags.AddTxFlags(rootCmd)
 	if err != nil {
 		panic(err)
 	}
@@ -223,6 +225,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 	set := func(s *pflag.FlagSet, key, val string) {
 		if f := s.Lookup(key); f != nil {
 			f.DefValue = val
+			// nolint:errcheck
 			f.Value.Set(val)
 		}
 	}

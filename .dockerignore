@@ -1,0 +1,6 @@
+.github
+.gitignore
+.idea
+Dockerfile
+release
+build
