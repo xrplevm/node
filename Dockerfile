@@ -9,9 +9,9 @@ RUN ignite chain build --release
 RUN tar -xf /go/src/github.com/Peersyst/exrp/release/exrp_linux_amd64.tar.gz -C /go/src/github.com/Peersyst/exrp/release
 
 
-FROM build AS integration
+FROM base AS integration
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-RUN golangci-lint run --timeout=10m
+RUN golangci-lint run
 # Unit tests
 RUN go test $(go list ./... | grep -v github.com/Peersyst/exrp/tests/e2e/poa)
 # End to end tests
