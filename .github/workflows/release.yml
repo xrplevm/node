@@ -25,10 +25,10 @@ jobs:
         
       - name: Prepare Release Variables 
         id: vars
-        uses: ignite/cli/actions/release/vars@main
+        uses: ignite/cli/actions/release/vars@v0.26.1
 
       - name: Issue Release Assets 
-        uses: ignite/cli/actions/cli@main
+        uses: ignite/cli/actions/cli@v0.26.1
         if: ${{ steps.vars.outputs.should_release == 'true' }}
         with:
           args: chain build --release --release.prefix ${{ steps.vars.outputs.tarball_prefix }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
