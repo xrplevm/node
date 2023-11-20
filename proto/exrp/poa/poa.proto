@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package exrp.poa;
+package packages.blockchain.poa;
 
 import "cosmos_proto/cosmos.proto";
 
