@@ -32,7 +32,7 @@ func addValidatorMsg(ctx client.Context, newValidatorAddress string) string {
 {
 	"messages": [
 		{
-			"@type": "/exrp.poa.MsgAddValidator",
+			"@type": "/packages.blockchain.poa.MsgAddValidator",
 		    "authority": "%s",
 		    "validator_address": "%s"
 		}
@@ -50,7 +50,7 @@ func removeValidatorMsg(ctx client.Context, newValidatorAddress string) string {
 {
 	"messages": [
 		{
-			"@type": "/exrp.poa.MsgRemoveValidator",
+			"@type": "/packages.blockchain.poa.MsgRemoveValidator",
 		    "authority": "%s",
 		    "validator_address": "%s"
 		}

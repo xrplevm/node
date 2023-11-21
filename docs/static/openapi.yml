@@ -31785,42 +31785,6 @@ paths:
                   additionalProperties: {}
       tags:
         - Query
-  /exrp/poa/params:
-    get:
-      summary: Parameters queries the parameters of the module.
-      operationId: ExrpPoaParams
-      responses:
-        '200':
-          description: A successful response.
-          schema:
-            type: object
-            properties:
-              params:
-                description: params holds all the parameters of this module.
-                type: object
-            description: >-
-              QueryParamsResponse is response type for the Query/Params RPC
-              method.
-        default:
-          description: An unexpected error response.
-          schema:
-            type: object
-            properties:
-              code:
-                type: integer
-                format: int32
-              message:
-                type: string
-              details:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    '@type':
-                      type: string
-                  additionalProperties: {}
-      tags:
-        - Query
   /ibc/apps/interchain_accounts/host/v1/params:
     get:
       summary: Params queries all parameters of the ICA host submodule.
@@ -42680,6 +42644,42 @@ paths:
                           "@type": "type.googleapis.com/google.protobuf.Duration",
                           "value": "1.212s"
                         }
+      tags:
+        - Query
+  /exrp/poa/params:
+    get:
+      summary: Parameters queries the parameters of the module.
+      operationId: PackagesBlockchainPoaParams
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              params:
+                description: params holds all the parameters of this module.
+                type: object
+            description: >-
+              QueryParamsResponse is response type for the Query/Params RPC
+              method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    '@type':
+                      type: string
+                  additionalProperties: {}
       tags:
         - Query
 definitions:
@@ -64559,20 +64559,6 @@ definitions:
     description: >-
       QueryParamsResponse defines the response type for querying x/evm
       parameters.
-  exrp.poa.MsgAddValidatorResponse:
-    type: object
-  exrp.poa.MsgRemoveValidatorResponse:
-    type: object
-  exrp.poa.Params:
-    type: object
-    description: Params defines the parameters for the module.
-  exrp.poa.QueryParamsResponse:
-    type: object
-    properties:
-      params:
-        description: params holds all the parameters of this module.
-        type: object
-    description: QueryParamsResponse is response type for the Query/Params RPC method.
   ibc.applications.interchain_accounts.host.v1.Params:
     type: object
     properties:
@@ -69099,3 +69085,17 @@ definitions:
     description: |-
       Version defines the versioning scheme used to negotiate the IBC verison in
       the connection handshake.
+  packages.blockchain.poa.MsgAddValidatorResponse:
+    type: object
+  packages.blockchain.poa.MsgRemoveValidatorResponse:
+    type: object
+  packages.blockchain.poa.Params:
+    type: object
+    description: Params defines the parameters for the module.
+  packages.blockchain.poa.QueryParamsResponse:
+    type: object
+    properties:
+      params:
+        description: params holds all the parameters of this module.
+        type: object
+    description: QueryParamsResponse is response type for the Query/Params RPC method.
