@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	log2 "log"
 	"os"
@@ -915,4 +916,25 @@ func (app *App) setupUpgradeHandlers() {
 			return app.mm.RunMigrations(ctx, app.configurator, vm)
 		},
 	)
+
+	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
+	log2.Default().Printf("_________________setupUpgradeHandlers upgradeInfo %v", upgradeInfo)
+	if err != nil {
+		panic(fmt.Errorf("failed to read upgrade info from disk: %w", err))
+	}
+
+	if app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+		return
+	}
+
+	var storeUpgrades *storetypes.StoreUpgrades
+
+	switch upgradeInfo.Name {
+	case "shanghai":
+	}
+
+	if storeUpgrades != nil {
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
+	}
 }
