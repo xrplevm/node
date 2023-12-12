@@ -708,6 +708,10 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		MaxTxGasWanted:         maxGasWanted,
 		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
 		TxFeeChecker:           ante.NewDynamicFeeChecker(app.EvmKeeper),
+		DisabledAuthzMsgs: 		[]string{
+			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
+			sdk.MsgTypeURL(&vestingtypes.MsgCreateVestingAccount{}),
+		},
 	})
 	if err != nil {
 		panic(err)
