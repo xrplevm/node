@@ -917,6 +917,8 @@ func (app *App) setupUpgradeHandlers() {
 		},
 	)
 
+	path, _ := app.UpgradeKeeper.GetUpgradeInfoPath()
+	log2.Default().Printf("_________________setupUpgradeHandlers path %v", path)
 	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
 	log2.Default().Printf("_________________setupUpgradeHandlers upgradeInfo %v", upgradeInfo)
 	if err != nil {
