@@ -2,6 +2,7 @@ package app
 
 import (
 	"io"
+	log2 "log"
 	"os"
 	"path/filepath"
 
@@ -905,10 +906,12 @@ func (app *App) SimulationManager() *module.SimulationManager {
 }
 
 func (app *App) setupUpgradeHandlers() {
+	log2.Default().Printf("_________________setupUpgradeHandlers")
 	// v1 to v2 upgrade handler
 	app.UpgradeKeeper.SetUpgradeHandler(
-		"v1tov2",
+		"shanghai",
 		func(ctx sdk.Context, plan upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+			log2.Default().Printf("_________________ inside setupUpgradeHandlers functions")
 			return app.mm.RunMigrations(ctx, app.configurator, vm)
 		},
 	)
