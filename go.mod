@@ -212,7 +212,9 @@ require (
 
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
-	github.com/evmos/ethermint => /home/jpeersyst/Projects/EvmXRP/ethermint
+	github.com/evmos/ethermint => github.com/Peersyst/ethermint v0.6.5-0.20231212163551-49a3720179e9
+	// TODO: when tagged replace for previous line
+	// github.com/evmos/ethermint => github.com/Peersyst/ethermint v1.11.6
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0
 	// github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
