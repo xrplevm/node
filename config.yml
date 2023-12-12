@@ -15,7 +15,7 @@ accounts:
       - 10000000000000000000000token
       - 100000000stake
   - name: custom
-    address: ethm1drmj0s7d0t445p9vhpjtwu844gvnva4a0elnzh
+    address: ethm1z8t852rm4tug6c5rxg22q68j33tle2dpccynam
     coins:
       - 10000000000000000000000token
       - 100000000stake
@@ -65,9 +65,3 @@ validators:
         address: 0.0.0.0:8545
         ws-address: 0.0.0.0:8546
     home: $HOME/.exrpd
-  - name: bob
-    bonded: 100000000stake
-    app:
-      api:
-        enable: false
-    home: $HOME/.exrpd-bob
