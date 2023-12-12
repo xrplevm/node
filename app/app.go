@@ -1,9 +1,7 @@
 package app
 
 import (
-	"fmt"
 	"io"
-	log2 "log"
 	"os"
 	"path/filepath"
 
@@ -907,36 +905,11 @@ func (app *App) SimulationManager() *module.SimulationManager {
 }
 
 func (app *App) setupUpgradeHandlers() {
-	log2.Default().Printf("_________________setupUpgradeHandlers")
 	// v1 to v2 upgrade handler
 	app.UpgradeKeeper.SetUpgradeHandler(
 		"shanghai",
 		func(ctx sdk.Context, plan upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
-			log2.Default().Printf("_________________ inside setupUpgradeHandlers functions")
 			return app.mm.RunMigrations(ctx, app.configurator, vm)
 		},
 	)
-
-	path, _ := app.UpgradeKeeper.GetUpgradeInfoPath()
-	log2.Default().Printf("_________________setupUpgradeHandlers path %v", path)
-	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
-	log2.Default().Printf("_________________setupUpgradeHandlers upgradeInfo %v", upgradeInfo)
-	if err != nil {
-		panic(fmt.Errorf("failed to read upgrade info from disk: %w", err))
-	}
-
-	if app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		return
-	}
-
-	var storeUpgrades *storetypes.StoreUpgrades
-
-	switch upgradeInfo.Name {
-	case "shanghai":
-	}
-
-	if storeUpgrades != nil {
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
-	}
 }
