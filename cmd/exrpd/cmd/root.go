@@ -26,8 +26,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v14/crypto/hd"
-	"github.com/evmos/evmos/v14/ethereum/eip712"
+	"github.com/evmos/evmos/v15/crypto/hd"
+	"github.com/evmos/evmos/v15/ethereum/eip712"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -37,10 +37,10 @@ import (
 	// this line is used by starport scaffolding # root/moduleImport
 
 	"github.com/Peersyst/exrp/app"
-	ethermintclient "github.com/evmos/evmos/v14/client"
-	ethermintserver "github.com/evmos/evmos/v14/server"
-	ethermintservercfg "github.com/evmos/evmos/v14/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v14/server/flags"
+	ethermintclient "github.com/evmos/evmos/v15/client"
+	ethermintserver "github.com/evmos/evmos/v15/server"
+	ethermintservercfg "github.com/evmos/evmos/v15/server/config"
+	ethermintserverflags "github.com/evmos/evmos/v15/server/flags"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

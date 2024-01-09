@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/Peersyst/exrp/app"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ethermint "github.com/evmos/evmos/v14/types"
+	ethermint "github.com/evmos/evmos/v15/types"
 )
 
 func initSDKConfig() {

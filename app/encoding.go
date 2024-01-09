@@ -2,7 +2,7 @@ package app
 
 import (
 	"cosmossdk.io/simapp/params"
-	evmenc "github.com/evmos/evmos/v14/encoding"
+	evmenc "github.com/evmos/evmos/v15/encoding"
 )
 
 // MakeEncodingConfig creates an EncodingConfig for testing

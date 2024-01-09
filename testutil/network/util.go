@@ -30,8 +30,8 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/evmos/v14/server"
-	evmtypes "github.com/evmos/evmos/v14/x/evm/types"
+	"github.com/evmos/evmos/v15/server"
+	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
 )
 
 type FmtLogger struct {

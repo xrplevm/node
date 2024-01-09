@@ -1,11 +1,18 @@
 package app
 
 import (
+	"encoding/json"
+	"io"
+	"os"
+	"path/filepath"
+
+	"github.com/ethereum/go-ethereum/core/vm"
+	"golang.org/x/exp/maps"
+
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/simapp"
 	simappparams "cosmossdk.io/simapp/params"
-	"encoding/json"
 	"github.com/Peersyst/exrp/x/poa"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
@@ -13,9 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"io"
-	"os"
-	"path/filepath"
 
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -95,8 +99,7 @@ import (
 	ibcporttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
-	ethante "github.com/evmos/evmos/v14/app/ante/evm"
-	evmostypes "github.com/evmos/evmos/v14/types"
+	evmostypes "github.com/evmos/evmos/v15/types"
 	"github.com/spf13/cast"
 
 	// this line is used by starport scaffolding # stargate/app/moduleImport
@@ -105,16 +108,18 @@ import (
 	poakeeper "github.com/Peersyst/exrp/x/poa/keeper"
 	poatypes "github.com/Peersyst/exrp/x/poa/types"
 
-	"github.com/evmos/evmos/v14/app/ante"
-	srvflags "github.com/evmos/evmos/v14/server/flags"
+	"github.com/Peersyst/exrp/app/ante"
+	ethante "github.com/Peersyst/exrp/app/ante/evm"
+	srvflags "github.com/evmos/evmos/v15/server/flags"
+
 	// Ethermint
-	etherminttypes "github.com/evmos/evmos/v14/types"
-	"github.com/evmos/evmos/v14/x/evm"
-	evmkeeper "github.com/evmos/evmos/v14/x/evm/keeper"
-	evmtypes "github.com/evmos/evmos/v14/x/evm/types"
-	"github.com/evmos/evmos/v14/x/feemarket"
-	feemarketkeeper "github.com/evmos/evmos/v14/x/feemarket/keeper"
-	feemarkettypes "github.com/evmos/evmos/v14/x/feemarket/types"
+	etherminttypes "github.com/evmos/evmos/v15/types"
+	"github.com/evmos/evmos/v15/x/evm"
+	evmkeeper "github.com/evmos/evmos/v15/x/evm/keeper"
+	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
+	"github.com/evmos/evmos/v15/x/feemarket"
+	feemarketkeeper "github.com/evmos/evmos/v15/x/feemarket/keeper"
+	feemarkettypes "github.com/evmos/evmos/v15/x/feemarket/types"
 )
 
 const (
@@ -457,6 +462,10 @@ func New(
 		tracer, evmSs,
 	)
 
+	app.EvmKeeper.WithPrecompiles(
+		maps.Clone(vm.PrecompiledContractsBerlin),
+	)
+
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
 		appCodec, keys[ibcexported.StoreKey],
@@ -705,6 +714,7 @@ func New(
 	app.setAnteHandler(encodingConfig.TxConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
 	app.setPostHandler()
 	app.SetEndBlocker(app.EndBlocker)
+	app.setupUpgradeHandlers()
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {

@@ -4,4 +4,6 @@ release/
 .idea/
 .vscode/
 .DS_Store
+
+build/
 .exrpd/
