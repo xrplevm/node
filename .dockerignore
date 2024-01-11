@@ -1,6 +1,6 @@
 .github
 .gitignore
 .idea
-Dockerfile
+*Dockerfile
 release
 build
