@@ -1,11 +1,11 @@
-package poa
+package poa_test
 
 import (
 	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
+func (s *IntegrationTestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
 	fmt.Println("==== Test_AddDelegationIsNotAllowedToOtherValidators")
 	validator := s.network.Validators[0]
 	validatorAddress := validator.Address.String()
@@ -27,7 +27,7 @@ func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
 	fmt.Println("==== [V] Test_AddDelegationIsNotAllowedToOtherValidators")
 }
 
-func (s *TestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
+func (s *IntegrationTestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
 	fmt.Println("==== Test_AddDelegationIsAllowedToSelfValidator")
 	validator := s.network.Validators[s.cfg.NumBondedValidators]
 	validatorAddress := validator.Address.String()

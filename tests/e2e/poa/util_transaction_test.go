@@ -1,4 +1,4 @@
-package poa
+package poa_test
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	stakingcli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
 )
 
-func transactionFlags(s *TestSuite, val network.Validator) []string {
+func transactionFlags(s *IntegrationTestSuite, val network.Validator) []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
@@ -62,7 +62,7 @@ func removeValidatorMsg(ctx client.Context, newValidatorAddress string) string {
 }`, authority, newValidatorAddress, GetMinDeposit(ctx))
 }
 
-func submitProposal(s *TestSuite, val network.Validator, content string) string {
+func submitProposal(s *IntegrationTestSuite, val network.Validator, content string) string {
 	propFile := testutil.WriteToNewTempFile(s.T(), content)
 	defer propFile.Close()
 
@@ -81,7 +81,7 @@ func submitProposal(s *TestSuite, val network.Validator, content string) string 
 	return s.ConsumeProposalCount()
 }
 
-func voteProposal(s *TestSuite, val network.Validator, id string) {
+func voteProposal(s *IntegrationTestSuite, val network.Validator, id string) {
 	cmd := govcli.NewCmdVote()
 	clientCtx := val.ClientCtx
 
@@ -102,7 +102,7 @@ var (
 )
 
 func ChangeValidator(
-	s *TestSuite,
+	s *IntegrationTestSuite,
 	action int,
 	address string,
 	validators []*network.Validator,
@@ -143,7 +143,7 @@ func ChangeValidator(
 	}
 }
 
-func BondTokens(s *TestSuite, validator *network.Validator, tokens sdk.Int) {
+func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int) {
 	clientCtx := validator.ClientCtx
 	cmd := stakingcli.NewCreateValidatorCmd()
 
@@ -172,7 +172,7 @@ func BondTokens(s *TestSuite, validator *network.Validator, tokens sdk.Int) {
 	}
 }
 
-func UnBondTokens(s *TestSuite, validator *network.Validator, tokens sdk.Int, wait bool) {
+func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int, wait bool) {
 	clientCtx := validator.ClientCtx
 	cmd := stakingcli.NewUnbondCmd()
 
@@ -198,7 +198,7 @@ func UnBondTokens(s *TestSuite, validator *network.Validator, tokens sdk.Int, wa
 	}
 }
 
-func Delegate(s *TestSuite, delegator *network.Validator, validator *network.Validator, tokens sdk.Int) {
+func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *network.Validator, tokens sdk.Int) {
 	clientCtx := delegator.ClientCtx
 	cmd := stakingcli.NewDelegateCmd()
 

@@ -3,20 +3,19 @@ package network
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/cometbft/cometbft/libs/log"
 	"path/filepath"
-	"strings"
 	"time"
 
+	tmos "github.com/cometbft/cometbft/libs/os"
+	"github.com/cometbft/cometbft/node"
+	"github.com/cometbft/cometbft/p2p"
+	pvm "github.com/cometbft/cometbft/privval"
+	"github.com/cometbft/cometbft/proxy"
+	"github.com/cometbft/cometbft/rpc/client/local"
+	"github.com/cometbft/cometbft/types"
+	tmtime "github.com/cometbft/cometbft/types/time"
 	"github.com/ethereum/go-ethereum/ethclient"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/p2p"
-	pvm "github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/proxy"
-	"github.com/tendermint/tendermint/rpc/client/local"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
 
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
@@ -27,29 +26,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/ethermint/server"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	"github.com/evmos/evmos/v15/server"
+	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
 )
 
 type FmtLogger struct {
 	log.Logger
-}
-
-func (l *FmtLogger) Debug(msg string, keyvals ...interface{}) {
-	// fmt.Printf("[DEBUG] %+v %+v\n", msg, keyvals)
-}
-func (l *FmtLogger) Info(msg string, keyvals ...interface{}) {
-	fmt.Printf("[INFO] %+v %+v\n", msg, keyvals)
-}
-func (l *FmtLogger) Error(msg string, keyvals ...interface{}) {
-	fmt.Printf("[ERROR] %+v %+v\n", msg, keyvals)
-}
-func (l *FmtLogger) With(keyvals ...interface{}) log.Logger {
-	// fmt.Printf("[WITH] %+v\n", keyvals)
-	return &FmtLogger{}
 }
 
 func startInProcess(cfg Config, val *Validator) error {
@@ -187,7 +172,7 @@ func collectGenFiles(cfg Config, vals []*Validator, outputDir string) error {
 		}
 
 		appState, err := genutil.GenAppStateFromConfig(cfg.Codec, cfg.TxConfig,
-			tmCfg, initCfg, *genDoc, banktypes.GenesisBalancesIterator{})
+			tmCfg, initCfg, *genDoc, banktypes.GenesisBalancesIterator{}, genutiltypes.DefaultMessageValidator)
 		if err != nil {
 			return err
 		}
@@ -231,8 +216,8 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 	var govGenState govv1.GenesisState
 	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[govtypes.ModuleName], &govGenState)
 
-	govGenState.DepositParams.MinDeposit[0].Denom = cfg.TokenDenom
-	govGenState.VotingParams.VotingPeriod = cfg.UnBoundingTime
+	govGenState.Params.MinDeposit[0].Denom = cfg.TokenDenom
+	govGenState.Params.VotingPeriod = &cfg.UnBoundingTime
 	cfg.GenesisState[govtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&govGenState)
 
 	var crisisGenState crisistypes.GenesisState
@@ -277,43 +262,4 @@ func WriteFile(name string, dir string, contents []byte) error {
 	}
 
 	return tmos.WriteFile(file, contents, 0o644)
-}
-
-func printMnemonic(l Logger, secret string) {
-	lines := []string{
-		"THIS MNEMONIC IS FOR TESTING PURPOSES ONLY",
-		"DO NOT USE IN PRODUCTION",
-		"",
-		strings.Join(strings.Fields(secret)[0:8], " "),
-		strings.Join(strings.Fields(secret)[8:16], " "),
-		strings.Join(strings.Fields(secret)[16:24], " "),
-	}
-
-	lineLengths := make([]int, len(lines))
-	for i, line := range lines {
-		lineLengths[i] = len(line)
-	}
-
-	maxLineLength := 0
-	for _, lineLen := range lineLengths {
-		if lineLen > maxLineLength {
-			maxLineLength = lineLen
-		}
-	}
-
-	l.Log("\n")
-	l.Log(strings.Repeat("+", maxLineLength+8))
-	for _, line := range lines {
-		l.Logf("++  %s  ++\n", centerText(line, maxLineLength))
-	}
-	l.Log(strings.Repeat("+", maxLineLength+8))
-	l.Log("\n")
-}
-
-func centerText(text string, width int) string {
-	textLen := len(text)
-	leftBuffer := strings.Repeat(" ", (width-textLen)/2)
-	rightBuffer := strings.Repeat(" ", (width-textLen)/2+(width-textLen)%2)
-
-	return fmt.Sprintf("%s%s%s", leftBuffer, text, rightBuffer)
 }

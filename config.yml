@@ -9,27 +9,28 @@ accounts:
   - name: alice
     coins:
       - 20000000000000000000000token
-      - 200000000stake
-  - name: bob
-    coins:
-      - 10000000000000000000000token
-      - 100000000stake
+      # - 1000000000000000000stake
+      - 1000000000000000000apoa
+#   - name: bob
+#     coins:
+#       - 10000000000000000000000token
+#       - 100000000000stake
   - name: custom
     address: ethm1drmj0s7d0t445p9vhpjtwu844gvnva4a0elnzh
     coins:
       - 10000000000000000000000token
-      - 100000000stake
-faucet:
-  name: bob
-  coins:
-    - 50token
-    - 100000stake
-  host: 0.0.0.0:4500
-client:
-  vuex:
-    path: vue/src/store
-  openapi:
-    path: docs/static/openapi.yml
+      - 10000000000000000000000apoa
+# faucet:
+#   name: bob
+#   coins:
+#     - 50token
+#     - 100000stake
+#   host: 0.0.0.0:4500
+# client:
+#   vuex:
+#     path: vue/src/store
+#   openapi:
+#     path: docs/static/openapi.yml
 genesis:
   consensus_params:
     block:
@@ -42,6 +43,7 @@ genesis:
       params:
         evm_denom: token
         allow_unprotected_txs: true
+        active_precompiles: []
     gov:
       deposit_params:
         min_deposit:
@@ -51,23 +53,22 @@ genesis:
         voting_period: 60s
     staking:
       params:
-        bond_denom: stake
+        bond_denom: apoa
         unbonding_time: 60s
-  chain_id: exrpd_9000-1
+  chain_id: exrpd_9001-1
 validators:
   - name: alice
-    bonded: 100000000stake
+    bonded: 1000000apoa
     app:
       api:
         enable: true
       json-rpc:
+        enable: true
         allow-unprotected-txs: true
         address: 0.0.0.0:8545
         ws-address: 0.0.0.0:8546
+    config:
+      log_level: debug
+      consensus:
+        timeout_commit: 10s
     home: $HOME/.exrpd
-  - name: bob
-    bonded: 100000000stake
-    app:
-      api:
-        enable: false
-    home: $HOME/.exrpd-bob

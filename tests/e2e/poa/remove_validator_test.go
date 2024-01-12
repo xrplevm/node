@@ -1,4 +1,4 @@
-package poa
+package poa_test
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (s *TestSuite) Test_RemoveUnexistentValidator() {
+func (s *IntegrationTestSuite) Test_RemoveUnexistentValidator() {
 	fmt.Println("==== Test_RemoveUnexistentValidator")
 
 	address := "cosmos153d8hsnwtrcmywfw3vlh7q05zf7nm7y6w9jqn0"
@@ -30,7 +30,7 @@ func (s *TestSuite) Test_RemoveUnexistentValidator() {
 	fmt.Println("==== [V] Test_RemoveUnexistentValidator")
 }
 
-func (s *TestSuite) Test_RemoveValidatorWithoutBondedAndBankTokens() {
+func (s *IntegrationTestSuite) Test_RemoveValidatorWithoutBondedAndBankTokens() {
 	fmt.Println("==== Test_RemoveValidatorWithoutBondedAndBankTokens")
 
 	address := "cosmos10rjdn4zhkelfasypu42tpehywfq3eku9r9kwk6"
@@ -51,7 +51,7 @@ func (s *TestSuite) Test_RemoveValidatorWithoutBondedAndBankTokens() {
 	fmt.Println("==== [V] Test_RemoveValidatorWithoutBondedAndBankTokens")
 }
 
-func (s *TestSuite) Test_RemoveFullyBondedValidator() {
+func (s *IntegrationTestSuite) Test_RemoveFullyBondedValidator() {
 	fmt.Println("==== Test_RemoveFullyBondedValidator")
 
 	validator := s.network.Validators[0]
@@ -80,7 +80,7 @@ func (s *TestSuite) Test_RemoveFullyBondedValidator() {
 	fmt.Println("==== [V] Test_RemoveFullyBondedValidator")
 }
 
-func (s *TestSuite) Test_RemoveUnbondedValidator() {
+func (s *IntegrationTestSuite) Test_RemoveUnbondedValidator() {
 	fmt.Println("==== Test_RemoveUnbondedValidator")
 
 	validator := s.network.Validators[s.cfg.NumBondedValidators+0]
@@ -111,7 +111,7 @@ func (s *TestSuite) Test_RemoveUnbondedValidator() {
 	fmt.Println("==== [V] Test_RemoveUnbondedValidator")
 }
 
-func (s *TestSuite) Test_RemoveUnbondingValidator() {
+func (s *IntegrationTestSuite) Test_RemoveUnbondingValidator() {
 	fmt.Println("==== Test_RemoveUnbondingValidator")
 
 	validator := s.network.Validators[1]

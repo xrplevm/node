@@ -1,8 +1,13 @@
-FROM ignitehq/cli:v0.26.1 AS base
+FROM golang:1.20 AS base
 USER root
+RUN apt update && \
+    apt-get install -y \
+        build-essential \
+        ca-certificates \
+        curl
+RUN curl https://get.ignite.com/cli@v0.27.2! | bash
 WORKDIR /go/src/github.com/Peersyst/exrp
 COPY . .
-
 
 FROM base AS build
 RUN ignite chain build --release

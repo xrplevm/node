@@ -7,7 +7,6 @@ import (
 	poasimulation "github.com/Peersyst/exrp/x/poa/simulation"
 	"github.com/Peersyst/exrp/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
@@ -18,9 +17,9 @@ import (
 var (
 	_ = sample.AccAddress
 	_ = poasimulation.FindAccount
-	_ = simappparams.StakePerAccount
 	_ = simulation.MsgEntryKind
 	_ = baseapp.Paramspace
+	_ = rand.Rand{}
 )
 
 const (
@@ -50,10 +49,11 @@ func (am AppModule) ProposalContents(simState module.SimulationState) []simtypes
 	return proposalContents
 }
 
-// RandomizedParams creates randomized  param changes for the simulator
-func (am AppModule) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
-
-	return []simtypes.ParamChange{}
+// ProposalMsgs returns msgs used for governance proposals for simulations.
+func (am AppModule) ProposalMsgs(simState module.SimulationState) []simtypes.WeightedProposalMsg {
+	return []simtypes.WeightedProposalMsg{
+		// this line is used by starport scaffolding # simapp/module/OpMsg
+	}
 }
 
 // RegisterStoreDecoder registers a decoder

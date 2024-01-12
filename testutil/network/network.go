@@ -1,3 +1,6 @@
+// Copyright Tharsis Labs Ltd.(Evmos)
+// SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
+
 package network
 
 import (
@@ -6,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Peersyst/exrp/app"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,44 +18,49 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/math"
+	dbm "github.com/cometbft/cometbft-db"
+	tmcfg "github.com/cometbft/cometbft/config"
+	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
+	"github.com/cometbft/cometbft/libs/log"
+	tmrand "github.com/cometbft/cometbft/libs/rand"
+	"github.com/cometbft/cometbft/node"
+	tmclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
-	tmcfg "github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	"github.com/tendermint/tendermint/libs/log"
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	"github.com/tendermint/tendermint/node"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
 	"google.golang.org/grpc"
 
+	"cosmossdk.io/simapp"
+	"cosmossdk.io/simapp/params"
+	"github.com/Peersyst/exrp/app"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	pruningtypes "github.com/cosmos/cosmos-sdk/pruning/types"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
+	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
+	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/evmos/evmos/v15/crypto/hd"
 
-	"github.com/evmos/ethermint/crypto/hd"
-	"github.com/evmos/ethermint/server/config"
-	ethermint "github.com/evmos/ethermint/types"
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	"github.com/evmos/evmos/v15/server/config"
+	evmostypes "github.com/evmos/evmos/v15/types"
+	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
 )
 
-// network lock to only allow one test network at a time
+// package-wide network lock to only allow one test network at a time
 var lock = new(sync.Mutex)
 
 // AppConstructor defines a function which accepts a network configuration and
@@ -72,14 +79,14 @@ type Config struct {
 	AppConstructor      AppConstructor      // the ABCI application constructor
 	GenesisState        simapp.GenesisState // custom gensis state to provide
 	TimeoutCommit       time.Duration       // the consensus commitment timeout
-	AccountTokens       sdkmath.Int         // the amount of unique validator tokens (e.g. 1000node0)
-	StakingTokens       sdkmath.Int         // the amount of tokens each validator has available to stake
-	BondedTokens        sdkmath.Int         // the amount of tokens each validator stakes
-	NumValidators       int                 // the total number of validators to create
+	AccountTokens       math.Int            // the amount of unique validator tokens (e.g. 1000node0)
+	StakingTokens       math.Int            // the amount of tokens each validator has available to stake
+	BondedTokens        math.Int            // the amount of tokens each validator stakes
+	NumValidators       int                 // the total number of validators to create and bond
 	NumBondedValidators int                 // the total number of validators with bonded tokens to create
 	ChainID             string              // the network chain-id
-	TokenDenom          string              // the fees token denomination
 	BondDenom           string              // the staking bond denomination
+	TokenDenom          string              // the fees token denomination
 	UnBoundingTime      time.Duration       // the time to unbound and accept governance proposals
 	MinGasPrices        string              // the minimum gas prices each validator will accept
 	PruningStrategy     string              // the pruning strategy each validator will have
@@ -93,47 +100,63 @@ type Config struct {
 	PrintMnemonic       bool                // print the mnemonic of first validator as log output for testing
 }
 
-var (
-	TokenDenom = "token"
-	BondDenom  = "stake"
-)
-
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
 func DefaultConfig(numValidators int, numBondedValidators int) Config {
 	encCfg := app.MakeEncodingConfig()
-	cdc := encCfg.Codec
-	genesisState := app.ModuleBasics.DefaultGenesis(cdc)
-
+	chainID := fmt.Sprintf("exrp_%d-1", tmrand.Int63n(9999999999999)+1)
 	return Config{
 		Codec:               encCfg.Codec,
 		TxConfig:            encCfg.TxConfig,
 		LegacyAmino:         encCfg.Amino,
 		InterfaceRegistry:   encCfg.InterfaceRegistry,
 		AccountRetriever:    authtypes.AccountRetriever{},
-		AppConstructor:      NewAppConstructor(encCfg),
-		GenesisState:        genesisState,
-		TimeoutCommit:       2 * time.Second,
-		ChainID:             fmt.Sprintf("ethermint_%d-1", tmrand.Int63n(9999999999999)+1),
+		AppConstructor:      NewAppConstructor(encCfg, chainID),
+		GenesisState:        app.ModuleBasics.DefaultGenesis(encCfg.Codec),
+		TimeoutCommit:       3 * time.Second,
+		ChainID:             chainID,
 		NumValidators:       numValidators,
 		NumBondedValidators: numBondedValidators,
-		BondDenom:           BondDenom,
-		TokenDenom:          TokenDenom,
-		UnBoundingTime:      time.Second * 10,
-		MinGasPrices:        fmt.Sprintf("0.000006%s", TokenDenom),
-		AccountTokens:       sdkmath.NewInt(2000000000000000000),
+		BondDenom:           "apoa",
+		MinGasPrices:        fmt.Sprintf("0.000006%s", "apoa"),
+		AccountTokens:       sdk.TokensFromConsensusPower(1000000000000000000, sdk.DefaultPowerReduction),
 		StakingTokens:       sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
 		BondedTokens:        sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
+		TokenDenom:          "axrp",
+		UnBoundingTime:      10 * time.Second,
 		PruningStrategy:     pruningtypes.PruningOptionNothing,
 		CleanupDir:          true,
 		SigningAlgo:         string(hd.EthSecp256k1Type),
 		KeyringOptions:      []keyring.Option{hd.EthSecp256k1Option()},
 		PrintMnemonic:       false,
-		EnableTMLogging:     true,
+	}
+}
+
+// NewAppConstructor returns a new Evmos AppConstructor
+func NewAppConstructor(encodingCfg params.EncodingConfig, chainID string) AppConstructor {
+	return func(val Validator) servertypes.Application {
+		return app.New(
+			val.Ctx.Logger, dbm.NewMemDB(), nil, true, make(map[int64]bool), val.Ctx.Config.RootDir, 0,
+			encodingCfg,
+			simutils.NewAppOptionsWithFlagHome(val.Ctx.Config.RootDir),
+			baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
+			baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
+			baseapp.SetChainID(chainID),
+		)
 	}
 }
 
 type (
+	// Network defines a local in-process testing network using SimApp. It can be
+	// configured to start any number of validators, each with its own RPC and API
+	// clients. Typically, this test network would be used in client and integration
+	// testing where user input is expected.
+	//
+	// Note, due to Tendermint constraints in regards to RPC functionality, there
+	// may only be one test network running at a time. Thus, any caller must be
+	// sure to Cleanup after testing is finished in order to allow other tests
+	// to create networks. In addition, only the first validator will have a valid
+	// RPC and API server/client.
 	Network struct {
 		Logger     Logger
 		BaseDir    string
@@ -142,6 +165,9 @@ type (
 		Config Config
 	}
 
+	// Validator defines an in-process Tendermint validator node. Through this object,
+	// a client can make RPC and API calls and interact with any client command
+	// or handler.
 	Validator struct {
 		AppConfig     *config.Config
 		ClientCtx     client.Context
@@ -167,6 +193,8 @@ type (
 	}
 )
 
+// Logger is a network logger interface that exposes testnet-level Log() methods for an in-process testing network
+// This is not to be confused with logging that may happen at an individual node or validator level
 type Logger interface {
 	Log(args ...interface{})
 	Logf(format string, args ...interface{})
@@ -182,12 +210,10 @@ type CLILogger struct {
 }
 
 func (s CLILogger) Log(args ...interface{}) {
-	fmt.Println(args...)
 	s.cmd.Println(args...)
 }
 
 func (s CLILogger) Logf(format string, args ...interface{}) {
-	fmt.Println(format, args)
 	s.cmd.Printf(format, args...)
 }
 
@@ -201,7 +227,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	l.Log("acquiring test network lock")
 	lock.Lock()
 
-	if !ethermint.IsValidChainID(cfg.ChainID) {
+	if !evmostypes.IsValidChainID(cfg.ChainID) {
 		return nil, fmt.Errorf("invalid chain-id: %s", cfg.ChainID)
 	}
 
@@ -301,7 +327,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			if err != nil {
 				return nil, err
 			}
-			appCfg.JSONRPC.Address = fmt.Sprintf("127.0.0.1:%s", jsonRPCPort)
+			appCfg.JSONRPC.Address = fmt.Sprintf("0.0.0.0:%s", jsonRPCPort)
 		}
 		appCfg.JSONRPC.Enable = false
 		appCfg.JSONRPC.API = config.GetAPINamespaces()
@@ -389,13 +415,13 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		}
 
 		balances := sdk.NewCoins(
-			sdk.NewCoin(TokenDenom, cfg.AccountTokens),
+			sdk.NewCoin(cfg.TokenDenom, cfg.AccountTokens),
 			sdk.NewCoin(cfg.BondDenom, cfg.StakingTokens),
 		)
 
 		genFiles = append(genFiles, tmCfg.GenesisFile())
 		genBalances = append(genBalances, banktypes.Balance{Address: addr.String(), Coins: balances.Sort()})
-		genAccounts = append(genAccounts, &ethermint.EthAccount{
+		genAccounts = append(genAccounts, &evmostypes.EthAccount{
 			BaseAccount: authtypes.NewBaseAccount(addr, nil, 0, 0),
 			CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
 		})
@@ -425,7 +451,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			}
 
 			memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
-			fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, sdkmath.NewInt(0)))
+			fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, sdk.NewInt(0)))
 			txBuilder := cfg.TxConfig.NewTxBuilder()
 			err = txBuilder.SetMsgs(createValMsg)
 			if err != nil {
@@ -456,7 +482,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			}
 		}
 
-		customAppTemplate, _ := config.AppConfig(TokenDenom)
+		customAppTemplate, _ := config.AppConfig(cfg.TokenDenom)
 		srvconfig.SetConfigTemplate(customAppTemplate)
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg)
 
@@ -637,4 +663,46 @@ func (n *Network) Cleanup() {
 	}
 
 	n.Logger.Log("finished cleaning up test network")
+}
+
+// printMnemonic prints a provided mnemonic seed phrase on a network logger
+// for debugging and manual testing
+func printMnemonic(l Logger, secret string) {
+	lines := []string{
+		"THIS MNEMONIC IS FOR TESTING PURPOSES ONLY",
+		"DO NOT USE IN PRODUCTION",
+		"",
+		strings.Join(strings.Fields(secret)[0:8], " "),
+		strings.Join(strings.Fields(secret)[8:16], " "),
+		strings.Join(strings.Fields(secret)[16:24], " "),
+	}
+
+	lineLengths := make([]int, len(lines))
+	for i, line := range lines {
+		lineLengths[i] = len(line)
+	}
+
+	maxLineLength := 0
+	for _, lineLen := range lineLengths {
+		if lineLen > maxLineLength {
+			maxLineLength = lineLen
+		}
+	}
+
+	l.Log("\n")
+	l.Log(strings.Repeat("+", maxLineLength+8))
+	for _, line := range lines {
+		l.Logf("++  %s  ++\n", centerText(line, maxLineLength))
+	}
+	l.Log(strings.Repeat("+", maxLineLength+8))
+	l.Log("\n")
+}
+
+// centerText centers text across a fixed width, filling either side with whitespace buffers
+func centerText(text string, width int) string {
+	textLen := len(text)
+	leftBuffer := strings.Repeat(" ", (width-textLen)/2)
+	rightBuffer := strings.Repeat(" ", (width-textLen)/2+(width-textLen)%2)
+
+	return fmt.Sprintf("%s%s%s", leftBuffer, text, rightBuffer)
 }

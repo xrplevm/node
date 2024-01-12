@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cosmossdk.io/simapp"
 	"encoding/json"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -16,6 +17,6 @@ import (
 type GenesisState map[string]json.RawMessage
 
 // NewDefaultGenesisState generates the default state for the application.
-func NewDefaultGenesisState(cdc codec.JSONCodec) GenesisState {
+func NewDefaultGenesisState(cdc codec.JSONCodec) simapp.GenesisState {
 	return ModuleBasics.DefaultGenesis(cdc)
 }

@@ -1,4 +1,4 @@
-package poa
+package poa_test
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ func GetMinDeposit(ctx client.Context) sdk.Coin {
 		fmt.Printf("Error unmarshaling json %v - %v", err, res.String())
 	}
 
-	return params.DepositParams.MinDeposit[0]
+	return params.MinDeposit[0]
 }
 
 type GetBalanceResponse struct {
