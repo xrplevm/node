@@ -8,7 +8,7 @@ import (
 func (s *IntegrationTestSuite) Test_AddNewValidator() {
 	fmt.Println("==== Test_AddNewValidator")
 
-	address := "cosmos1vyve2urxz0kz6n7xs3tx8uvjymgv5wlemqgy7h"
+	address := "evmos1ycvhcxthjju0466d4ga0j7du7wt8kmaep28zqv"
 	validators := s.network.Validators
 
 	// PRE:
@@ -29,7 +29,7 @@ func (s *IntegrationTestSuite) Test_AddNewValidator() {
 func (s *IntegrationTestSuite) Test_AddValidatorWithUnboundedTokens() {
 	fmt.Println("==== Test_AddValidatorWithUnboundedTokens")
 
-	address := "cosmos1s4h303hw7gd7z2m2f0n7y0lknknfyqnxvztdxv"
+	address := "evmos1vnaenttkyalgvjus34xxt8h8k0fpuuurdlukaq"
 	validators := s.network.Validators
 
 	// PRE:

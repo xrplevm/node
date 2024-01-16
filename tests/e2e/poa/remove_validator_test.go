@@ -10,7 +10,7 @@ import (
 func (s *IntegrationTestSuite) Test_RemoveUnexistentValidator() {
 	fmt.Println("==== Test_RemoveUnexistentValidator")
 
-	address := "cosmos153d8hsnwtrcmywfw3vlh7q05zf7nm7y6w9jqn0"
+	address := "evmos16qkupjv69m6r8zl2frckc9vkmlz9ll7law8uea"
 	validators := s.network.Validators[0:s.cfg.NumBondedValidators]
 
 	// PRE:
@@ -33,7 +33,7 @@ func (s *IntegrationTestSuite) Test_RemoveUnexistentValidator() {
 func (s *IntegrationTestSuite) Test_RemoveValidatorWithoutBondedAndBankTokens() {
 	fmt.Println("==== Test_RemoveValidatorWithoutBondedAndBankTokens")
 
-	address := "cosmos10rjdn4zhkelfasypu42tpehywfq3eku9r9kwk6"
+	address := "evmos1jp26kvnhf940p544awlfd75jkx23z6pjyyvvkz"
 	validators := s.network.Validators[0:s.cfg.NumBondedValidators]
 
 	// PRE:

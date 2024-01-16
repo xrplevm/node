@@ -3,6 +3,7 @@ package keeper
 import (
 	"errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 func (h Hooks) BeforeDelegationCreated(_ sdk.Context, accAddr sdk.AccAddress, valAddr sdk.ValAddress) error {
@@ -18,7 +19,7 @@ type Hooks struct {
 	k Keeper
 }
 
-// var _ stakingtypes.StakingHooks = Hooks{}
+var _ stakingtypes.StakingHooks = Hooks{}
 
 // Return the wrapper struct
 func (k Keeper) Hooks() Hooks {
@@ -54,6 +55,10 @@ func (h Hooks) BeforeDelegationRemoved(_ sdk.Context, _ sdk.AccAddress, _ sdk.Va
 }
 
 func (h Hooks) AfterDelegationModified(_ sdk.Context, _ sdk.AccAddress, _ sdk.ValAddress) error {
+	return nil
+}
+
+func (h Hooks) AfterUnbondingInitiated(_ sdk.Context, _ uint64) error {
 	return nil
 }
 

@@ -450,6 +450,7 @@ func New(
 		stakingtypes.NewMultiStakingHooks(
 			app.DistrKeeper.Hooks(),
 			app.SlashingKeeper.Hooks(),
+			app.PoaKeeper.Hooks(),
 		),
 	)
 

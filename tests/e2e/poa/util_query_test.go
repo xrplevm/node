@@ -20,12 +20,12 @@ func GetMinDeposit(ctx client.Context) sdk.Coin {
 	}
 	res, _ := clitestutil.ExecTestCLICmd(ctx, govcli.GetCmdQueryParams(), args)
 
-	var params govtypesv1.Params
+	var params govtypesv1.QueryParamsResponse
 	if err := json.Unmarshal(res.Bytes(), &params); err != nil {
 		fmt.Printf("Error unmarshaling json %v - %v", err, res.String())
 	}
 
-	return params.MinDeposit[0]
+	return params.Params.MinDeposit[0]
 }
 
 type GetBalanceResponse struct {

@@ -620,6 +620,7 @@ func (n *Network) WaitForNextBlock() error {
 // in a defer.
 func (n *Network) Cleanup() {
 	defer func() {
+		time.Sleep(10 * time.Second)
 		lock.Unlock()
 		n.Logger.Log("released test network lock")
 	}()

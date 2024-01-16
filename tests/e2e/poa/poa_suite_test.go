@@ -7,7 +7,6 @@ import (
 
 	"github.com/Peersyst/exrp/testutil/network"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/evmos/evmos/v15/server/config"
 )
 
 type IntegrationTestSuite struct {
@@ -19,15 +18,16 @@ type IntegrationTestSuite struct {
 	network *network.Network
 }
 
-func (s *IntegrationTestSuite) SetupSuite() {
-	s.T().Log("setting up integration test suite")
+func (s *IntegrationTestSuite) SetupTest() {
+	s.T().Log("setting up network test suite")
 
 	var err error
-	cfg := network.DefaultConfig(2, 4)
-	cfg.JSONRPCAddress = config.DefaultJSONRPCAddress
-	cfg.NumValidators = 1
+	cfg := network.DefaultConfig(3, 2)
 
 	s.network, err = network.New(s.T(), s.T().TempDir(), cfg)
+	s.cfg = cfg
+	s.proposalCount = 0
+
 	s.Require().NoError(err)
 	s.Require().NotNil(s.network)
 
@@ -41,8 +41,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	}
 }
 
-func (s *IntegrationTestSuite) TearDownSuite() {
-	s.T().Log("tearing down integration test suite")
+func (s *IntegrationTestSuite) TearDownTest() {
+	s.T().Log("tearing down network test suite")
 	s.network.Cleanup()
 }
 
