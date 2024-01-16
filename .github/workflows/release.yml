@@ -1,53 +1,44 @@
-# This workflow is useful if you want to automate the process of:
-#
-# a) Creating a new prelease when you push a new tag with a "v" prefix (version).
-#
-#    This type of prerelease is meant to be used for production: alpha, beta, rc, etc. types of releases.
-#    After the prerelease is created, you need to make your changes on the release page at the relevant
-#    Github page and publish your release.
-#
-# b) Creating/updating the "latest" prerelease when you push to your default branch.
-#
-#    This type of prelease is useful to make your bleeding-edge binaries available to advanced users.
-#
-# The workflow will not run if there is no tag pushed with a "v" prefix and no change pushed to your 
-# default branch.
-on: push
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      commit_branch:
+        description: The branch or the commit sha to push tag to
+        required: true
+      tag:
+        description: The tag of the release
+        required: true
+      is_latest_release:
+        description: Is this the latest release
+        type: boolean
+        required: true
 
 jobs:
-  might_release:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-        
-      - name: Prepare Release Variables 
-        id: vars
-        uses: ignite/cli/actions/release/vars@v0.26.1
-
+          ref: ${{ github.event.inputs.commit_branch }}
+      - run:
+          TAG=${{ github.event.inputs.tag }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Issue Release Assets 
         uses: ignite/cli/actions/cli@v0.26.1
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
         with:
-          args: chain build --release --release.prefix ${{ steps.vars.outputs.tarball_prefix }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
-
-      - name: Delete the "latest" Release
-        uses: dev-drprasad/delete-tag-and-release@v0.2.1
-        if: ${{ steps.vars.outputs.is_release_type_latest == 'true' }}
-        with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          delete_release: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          args: chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
+      - name: Check prerelease
+        id: check-prerelease
+        run: |
+          if [[ ${{ github.event.inputs.tag }} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+          fi
       - name: Publish the Release
         uses: softprops/action-gh-release@v1
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
         with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
+          tag_name: ${{ github.event.inputs.tag }}
           files: release/*
-          prerelease: true 
+          prerelease: steps.check-prerelease.outputs.match == 'true'
+          target_commitish: ${{ github.event.inputs.commit_branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

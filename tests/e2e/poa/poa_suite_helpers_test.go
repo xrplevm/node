@@ -1,11 +1,10 @@
-package poa
+package poa_test
 
 import (
 	"github.com/Peersyst/exrp/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/stretchr/testify/suite"
 	"strconv"
 )
 
@@ -16,25 +15,16 @@ var (
 	DefaultBondedTokens = sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 )
 
-type TestSuite struct {
-	suite.Suite
-
-	proposalCount int
-
-	cfg     network.Config
-	network *network.Network
-}
-
-func (s *TestSuite) ConsumeProposalCount() string {
+func (s *IntegrationTestSuite) ConsumeProposalCount() string {
 	s.proposalCount = s.proposalCount + 1
 	return strconv.Itoa(s.proposalCount)
 }
 
-func (s *TestSuite) GetCtx() client.Context {
+func (s *IntegrationTestSuite) GetCtx() client.Context {
 	return s.network.Validators[0].ClientCtx
 }
 
-func (s *TestSuite) RequireValidator(address string, status *stakingtypes.BondStatus, tokens *sdk.Int) {
+func (s *IntegrationTestSuite) RequireValidator(address string, status *stakingtypes.BondStatus, tokens *sdk.Int) {
 	accAddr, _ := sdk.AccAddressFromBech32(address)
 	validatorInfo := GetValidator(s.GetCtx(), sdk.ValAddress(accAddr).String())
 	if validatorInfo == nil {
@@ -46,7 +36,7 @@ func (s *TestSuite) RequireValidator(address string, status *stakingtypes.BondSt
 	}
 }
 
-func (s *TestSuite) RequireDelegation(valAddress string, delAddress string, shares sdk.Dec) {
+func (s *IntegrationTestSuite) RequireDelegation(valAddress string, delAddress string, shares sdk.Dec) {
 	accAddr, _ := sdk.AccAddressFromBech32(valAddress)
 	valAddr := sdk.ValAddress(accAddr).String()
 	delegation := GetDelegation(s.GetCtx(), valAddr, delAddress)
@@ -57,13 +47,13 @@ func (s *TestSuite) RequireDelegation(valAddress string, delAddress string, shar
 	}
 }
 
-func (s *TestSuite) RequireBondBalance(address string, balance sdk.Int) {
+func (s *IntegrationTestSuite) RequireBondBalance(address string, balance sdk.Int) {
 	originalBalance := GetBalance(s.GetCtx(), address, s.cfg.BondDenom)
 	expected := sdk.NewCoin(s.cfg.BondDenom, balance)
 	s.Require().True(originalBalance.Equal(expected))
 }
 
-func (s *TestSuite) RequireValidatorSet() struct {
+func (s *IntegrationTestSuite) RequireValidatorSet() struct {
 	Contains    func(validator *network.Validator)
 	NotContains func(validator *network.Validator)
 } {

@@ -2,7 +2,7 @@ syntax = "proto3";
 package packages.blockchain.poa;
 
 import "gogoproto/gogo.proto";
-import "exrp/poa/params.proto";
+import "packages/blockchain/poa/params.proto";
 
 option go_package = "github.com/Peersyst/exrp/x/poa/types";
 
