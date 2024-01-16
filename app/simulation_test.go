@@ -26,12 +26,6 @@ func init() {
 
 const SimAppChainID = "simulation_777-1"
 
-// fauxMerkleModeOpt returns a BaseApp option to use a dbStoreAdapter instead of
-// an IAVLStore for faster simulation speed.
-func fauxMerkleModeOpt(bapp *baseapp.BaseApp) {
-	bapp.SetFauxMerkleMode()
-}
-
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
 func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
 	encodingConfig := app.MakeEncodingConfig()

@@ -92,7 +92,6 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 	registerDenoms()
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
-		// flags.FlagChainID:        strings.ReplaceAll(app.Name, "-", ""),
 		flags.FlagKeyringBackend: "test",
 	})
 
