@@ -27,13 +27,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PUSH_TOKEN }}
+      - run: |
+          TAG=${{ github.event.inputs.tag }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       # Build and push docker image
       - name: Build docker image
         uses: docker/build-push-action@v4
         with:
           target: release
           push: true
-          build-args: VERSION=${{ github.event.inputs.tag }}
+          build-args: VERSION=${{ env.VERSION }}
           tags: |
             peersyst/exrp:${{ github.event.inputs.tag }}
             ${{ fromJSON('["", "peersyst/exrp:latest"]')[github.event.inputs.is_latest_release == 'true'] }}

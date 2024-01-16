@@ -28,8 +28,7 @@ RUN touch /test.lock
 
 FROM golang:1.20 AS release
 WORKDIR /
-# TODO: Restore this
-# COPY --from=integration /test.lock /test.lock
+COPY --from=integration /test.lock /test.lock
 COPY --from=build /go/src/github.com/Peersyst/exrp/release /binaries
 COPY --from=build /usr/bin/exrpd /usr/bin/exrpd
 ENTRYPOINT ["/bin/sh", "-ec"]
