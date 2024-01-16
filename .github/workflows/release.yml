@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit_branch }}
-      - run:
+      - run: |
           TAG=${{ github.event.inputs.tag }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Issue Release Assets 
