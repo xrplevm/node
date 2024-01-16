@@ -12,7 +12,7 @@ COPY . .
 
 FROM base AS build
 ARG VERSION=0.0.0
-RUN ignite chain build --release --release.prefix exrp_$VERSION -t linux:amd64 -t linux:arm64 -t darwin:amd64 -t darwin:arm64 -v
+RUN ignite chain build --release --release.prefix exrp_$VERSION -t linux:amd64 -v
 RUN tar -xf /go/src/github.com/Peersyst/exrp/release/exrp_${VERSION}_linux_amd64.tar.gz -C /usr/bin
 
 
