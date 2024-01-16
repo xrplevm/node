@@ -26,7 +26,7 @@ jobs:
       - name: Issue Release Assets 
         uses: ignite/cli/actions/cli@v0.27.2
         with:
-          args: chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64 -y
+          args: chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64 -y --skip-proto
       - name: Check prerelease
         id: check-prerelease
         run: |
