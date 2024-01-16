@@ -51,7 +51,7 @@ func (app *App) setupUpgradeHandlers() {
 				consensusparamtypes.StoreKey,
 				crisistypes.ModuleName,
 			},
-			Deleted: []string{crisistypes.ModuleName},
+			Deleted: []string{},
 		}
 	}
 
