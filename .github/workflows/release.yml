@@ -24,7 +24,7 @@ jobs:
           TAG=${{ github.event.inputs.tag }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Issue Release Assets 
-        uses: ignite/cli/actions/cli@v0.26.1
+        uses: ignite/cli/actions/cli@v0.27.2
         with:
           args: chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
       - name: Check prerelease
