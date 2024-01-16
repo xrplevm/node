@@ -32,7 +32,8 @@ jobs:
           ignite version
       - name: Build release assets
         run: |
-          ignite chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64 -v
+          ls -la
+          ignite chain build --release --release.prefix exrp_${{ env.VERSION }} -t linux:amd64 -v
       - name: Check prerelease
         id: check-prerelease
         run: |
