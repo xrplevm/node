@@ -7,5 +7,5 @@ const (
 	AttributeValidator     = "address"
 	AttributeHeight        = "height"
 	AttributeStakingTokens = "staking_tokens"
-	AttributeBankTokens    = "staking_tokens"
+	AttributeBankTokens    = "bank_tokens"
 )
