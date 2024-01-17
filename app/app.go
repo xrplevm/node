@@ -200,7 +200,7 @@ func init() {
 		panic(err)
 	}
 
-	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name)
+	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name+"d")
 }
 
 // App extends an ABCI application, but with most of its parameters exported.

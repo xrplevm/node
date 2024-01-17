@@ -1,15 +1,7 @@
-FROM --platform=linux ignitehq/cli:v0.26.1 AS exrp
-USER root
-WORKDIR /exrp
-COPY . .
-RUN ignite chain build --release
-RUN tar -xf release/exrp_* -C /usr/local/bin
-
-
 FROM --platform=linux golang:1.20
 
 ENV COSMOS_VERSION=v0.46.12
-ENV DAEMON_HOME=/root/.exrp
+ENV DAEMON_HOME=/root/.exrpd
 ENV DAEMON_NAME=exrpd
 ENV DAEMON_ALLOW_DOWNLOAD_BINARIES=true
 ENV DAEMON_RESTART_AFTER_UPGRADE=true
@@ -21,7 +13,7 @@ WORKDIR /root/cosmos-sdk/cosmovisor
 RUN make cosmovisor
 
 RUN mv /root/cosmos-sdk/cosmovisor/cosmovisor /usr/local/bin/cosmovisor
-COPY --from=exrp /usr/local/bin/exrpd $DAEMON_HOME/cosmovisor/genesis/bin/exrpd
+COPY --from=peersyst/xrp-evm-blockchain:latest /usr/bin/exrpd $DAEMON_HOME/cosmovisor/genesis/bin/exrpd
 
 RUN ls -la $DAEMON_HOME/cosmovisor/genesis/bin/
 RUN cp $DAEMON_HOME/cosmovisor/genesis/bin/exrpd /usr/local/bin/exrpd
