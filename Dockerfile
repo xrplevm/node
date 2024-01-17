@@ -1,12 +1,19 @@
-FROM ignitehq/cli:v0.26.1 AS base
+FROM golang:1.20 AS base
 USER root
+RUN apt update && \
+    apt-get install -y \
+        build-essential \
+        ca-certificates \
+        curl
+RUN curl https://get.ignite.com/cli@v0.27.2! | bash
 WORKDIR /go/src/github.com/Peersyst/exrp
 COPY . .
 
 
 FROM base AS build
-RUN ignite chain build --release
-RUN tar -xf /go/src/github.com/Peersyst/exrp/release/exrp_linux_amd64.tar.gz -C /go/src/github.com/Peersyst/exrp/release
+ARG VERSION=0.0.0
+RUN ignite chain build --release --release.prefix exrp_$VERSION -t linux:amd64 -v
+RUN tar -xf /go/src/github.com/Peersyst/exrp/release/exrp_${VERSION}_linux_amd64.tar.gz -C /usr/bin
 
 
 FROM base AS integration
@@ -22,6 +29,7 @@ RUN touch /test.lock
 FROM golang:1.20 AS release
 WORKDIR /
 COPY --from=integration /test.lock /test.lock
-COPY --from=build /go/src/github.com/Peersyst/exrp/release/exrpd /usr/bin/exrpd
+COPY --from=build /go/src/github.com/Peersyst/exrp/release /binaries
+COPY --from=build /usr/bin/exrpd /usr/bin/exrpd
 ENTRYPOINT ["/bin/sh", "-ec"]
 CMD ["exrpd"]

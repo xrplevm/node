@@ -1,14 +1,14 @@
-package poa
+package poa_test
 
 import (
 	"fmt"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
-func (s *TestSuite) Test_AddNewValidator() {
+func (s *IntegrationTestSuite) Test_AddNewValidator() {
 	fmt.Println("==== Test_AddNewValidator")
 
-	address := "cosmos1vyve2urxz0kz6n7xs3tx8uvjymgv5wlemqgy7h"
+	address := "evmos1ycvhcxthjju0466d4ga0j7du7wt8kmaep28zqv"
 	validators := s.network.Validators
 
 	// PRE:
@@ -26,10 +26,10 @@ func (s *TestSuite) Test_AddNewValidator() {
 	fmt.Println("==== [V] Test_AddNewValidator")
 }
 
-func (s *TestSuite) Test_AddValidatorWithUnboundedTokens() {
+func (s *IntegrationTestSuite) Test_AddValidatorWithUnboundedTokens() {
 	fmt.Println("==== Test_AddValidatorWithUnboundedTokens")
 
-	address := "cosmos1s4h303hw7gd7z2m2f0n7y0lknknfyqnxvztdxv"
+	address := "evmos1vnaenttkyalgvjus34xxt8h8k0fpuuurdlukaq"
 	validators := s.network.Validators
 
 	// PRE:
@@ -49,7 +49,7 @@ func (s *TestSuite) Test_AddValidatorWithUnboundedTokens() {
 	fmt.Println("==== [V] Test_AddValidatorWithUnboundedTokens")
 }
 
-func (s *TestSuite) Test_AddValidatorWithBondedTokens() {
+func (s *IntegrationTestSuite) Test_AddValidatorWithBondedTokens() {
 	fmt.Println("==== Test_AddValidatorWithBondedTokens")
 
 	address := s.network.Validators[0].Address.String()
@@ -72,7 +72,7 @@ func (s *TestSuite) Test_AddValidatorWithBondedTokens() {
 	fmt.Println("==== [V] Test_AddValidatorWithBondedTokens")
 }
 
-func (s *TestSuite) Test_AddUnbondingValidator() {
+func (s *IntegrationTestSuite) Test_AddUnbondingValidator() {
 	fmt.Println("==== Test_AddUnbondingValidator")
 
 	validator := s.network.Validators[1]
