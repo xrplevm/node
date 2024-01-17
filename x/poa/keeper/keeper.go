@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -149,6 +150,24 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	// and slash them. We also need to remove all the tokens from the validator and burn them
 	// from the staking module account
 	if found {
+		// Remove delegator shares
+		delegations := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
+		for _, delegation := range delegations {
+			if !delegation.Shares.IsZero() {
+				delVal, found := k.sk.GetValidator(ctx, delegation.GetValidatorAddr())
+				if !found {
+					continue
+				}
+				if !delVal.Tokens.IsZero() {
+					coins := sdk.NewCoins(sdk.NewCoin(k.sk.BondDenom(ctx), delVal.Tokens))
+					err = k.bk.BurnCoins(ctx, stakingtypes.BondedPoolName, coins)
+					if err != nil {
+						panic(err)
+					}
+				}
+			}
+		}
+
 		ubds := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
 		for _, ubd := range ubds {
 			k.sk.SlashUnbondingDelegation(ctx, ubd, 0, sdk.OneDec())
