@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -35,6 +36,11 @@ func NewKeeper(
 	// set KeyTable if it has not already been set
 	if !ps.HasKeyTable() {
 		ps = ps.WithKeyTable(types.ParamKeyTable())
+	}
+
+	_, err := sdk.AccAddressFromBech32(authority)
+	if err != nil {
+		panic(err)
 	}
 
 	return &Keeper{
