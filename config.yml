@@ -7,30 +7,9 @@ build:
       - proto_vendor
 accounts:
   - name: alice
+    mnemonic: drink barely mobile group entry easy spot second chunk cause mad equip portion virus attract vessel orange omit elbow engage zone dilemma uncle leaf
     coins:
-      - 20000000000000000000000token
-      # - 1000000000000000000stake
-      - 1000000000000000000apoa
-#   - name: bob
-#     coins:
-#       - 10000000000000000000000token
-#       - 100000000000stake
-  - name: custom
-    address: ethm1drmj0s7d0t445p9vhpjtwu844gvnva4a0elnzh
-    coins:
-      - 10000000000000000000000token
-      - 10000000000000000000000apoa
-# faucet:
-#   name: bob
-#   coins:
-#     - 50token
-#     - 100000stake
-#   host: 0.0.0.0:4500
-# client:
-#   vuex:
-#     path: vue/src/store
-#   openapi:
-#     path: docs/static/openapi.yml
+      - 1000000apoa
 genesis:
   consensus_params:
     block:
@@ -43,7 +22,6 @@ genesis:
       params:
         evm_denom: token
         allow_unprotected_txs: true
-        active_precompiles: []
     gov:
       deposit_params:
         min_deposit:
@@ -71,4 +49,3 @@ validators:
       log_level: debug
       consensus:
         timeout_commit: 10s
-    home: $HOME/.exrpd

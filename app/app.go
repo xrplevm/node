@@ -215,7 +215,7 @@ func init() {
 		panic(err)
 	}
 
-	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name)
+	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name+"d")
 
 	// Replace evmos defaults
 	sdk.DefaultPowerReduction = sdk.NewIntFromUint64(1000000)
