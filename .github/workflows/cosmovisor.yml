@@ -2,6 +2,7 @@ name: "Cosmovisor"
 
 on:
   workflow_dispatch:
+    inputs:
       tag:
         description: The docker tag for the publish
         required: true
