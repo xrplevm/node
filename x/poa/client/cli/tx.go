@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Peersyst/exrp/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -40,7 +41,7 @@ func NewSubmitAddValidatorProposalTxCmd() *cobra.Command {
 			fmt.Sprintf(`Submit an AddValidator proposal
 
 Example:
-$ %s tx gov submit-proposal add-validator <address> --from=<key_or_address>
+$ %s tx poa add-validator <address> --from=<key_or_address>
 `,
 				version.AppName,
 			),
@@ -92,7 +93,7 @@ func NewSubmitRemoveValidatorProposalTxCmd() *cobra.Command {
 			fmt.Sprintf(`Submit an RemoveValidator proposal
 
 Example:
-$ %s tx gov submit-proposal remove-validator <address> --from=<key_or_address>
+$ %s tx poa remove-validator <address> --from=<key_or_address>
 `,
 				version.AppName,
 			),
