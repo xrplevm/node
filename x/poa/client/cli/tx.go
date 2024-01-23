@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Peersyst/exrp/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -51,7 +52,7 @@ $ %s tx gov submit-proposal add-validator <address> --from=<key_or_address>
 				return err
 			}
 			address := args[0]
-			content := types.NewAddValidatorProposal("title", "description", address)
+			content := types.NewAddValidatorProposal("add validator", "proposal to add a new validator in the chain", address)
 			fmt.Println(address)
 			fmt.Printf("%+v\n", content)
 			from := clientCtx.GetFromAddress()
@@ -103,7 +104,7 @@ $ %s tx gov submit-proposal remove-validator <address> --from=<key_or_address>
 				return err
 			}
 			address := args[0]
-			content := types.NewRemoveValidatorProposal("title", "description", address)
+			content := types.NewRemoveValidatorProposal("remove validator", "proposal to remove an existent validator", address)
 
 			from := clientCtx.GetFromAddress()
 
