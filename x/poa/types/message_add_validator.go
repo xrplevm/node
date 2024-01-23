@@ -24,7 +24,10 @@ func (msg *MsgAddValidator) Type() string {
 }
 
 func (msg *MsgAddValidator) GetSigners() []sdk.AccAddress {
-	addr, _ := sdk.AccAddressFromBech32(msg.Authority)
+	addr, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil {
+		panic(err)
+	}
 	return []sdk.AccAddress{addr}
 }
 
