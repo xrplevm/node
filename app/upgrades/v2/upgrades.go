@@ -104,12 +104,10 @@ func CreateUpgradeHandler(
 			logger.Error("error while enabling EIPs", "error", err)
 		}
 
-		// we are deprecating the crisis module since it is not being used
-		// TODO: subsitute this for distribution module
+		// we are deprecating the distribution module since it is not being used
 		// NOTE: this was already removed on testnet
-		// logger.Debug("deleting crisis module from version map...")
-		// delete(vm, "crisis")
-
+		logger.Debug("deleting distribution module from version map...")
+		delete(vm, distrtypes.ModuleName)
 		// Leave modules are as-is to avoid running InitGenesis.
 		logger.Debug("running module migrations ...")
 		return mm.RunMigrations(ctx, configurator, vm)
