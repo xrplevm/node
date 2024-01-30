@@ -1,19 +1,19 @@
 package poa_test
 
 import (
-	"fmt"
+	"github.com/Peersyst/exrp/tests/e2e"
 	"strings"
 )
 
-func (s *IntegrationTestSuite) Test_AnteHandlerForbiddenTransactions() {
-	fmt.Println("==== Test_AnteHandlerForbiddenTransactions")
-	validator := s.network.Validators[0]
-	dst := s.network.Validators[1]
+func (s *TestSuite) Test_AnteHandlerForbiddenTransactions() {
+	s.T().Logf("==== Test_AnteHandlerForbiddenTransactions")
+	validator := s.Network.Validators[0]
+	dst := s.Network.Validators[1]
 
-	res := UnBondTokens(s, validator, DefaultBondedTokens, false)
+	res := e2e.UnBondTokens(&s.IntegrationTestSuite, validator, e2e.DefaultBondedTokens, false)
 	s.Require().True(strings.Contains(res, "tx type not allowed"))
-	res = Redelegate(s, validator, dst, DefaultBondedTokens)
+	res = e2e.Redelegate(&s.IntegrationTestSuite, validator, dst, e2e.DefaultBondedTokens)
 	s.Require().True(strings.Contains(res, "tx type not allowed"))
 
-	fmt.Println("==== [V] Test_AnteHandlerForbiddenTransactions")
+	s.T().Logf("==== [V] Test_AnteHandlerForbiddenTransactions")
 }

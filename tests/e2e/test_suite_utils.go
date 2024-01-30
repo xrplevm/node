@@ -1,4 +1,4 @@
-package poa_test
+package e2e
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
@@ -9,20 +9,20 @@ import (
 )
 
 var (
-	bondedStatus        = stakingtypes.Bonded
-	unbondedStatus      = stakingtypes.Unbonded
-	unbondingStatus     = stakingtypes.Unbonding
-	zero                = sdk.ZeroInt()
+	BondedStatus        = stakingtypes.Bonded
+	UnbondedStatus      = stakingtypes.Unbonded
+	UnbondingStatus     = stakingtypes.Unbonding
+	Zero                = sdk.ZeroInt()
 	DefaultBondedTokens = sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 )
 
 func (s *IntegrationTestSuite) ConsumeProposalCount() string {
-	s.proposalCount = s.proposalCount + 1
-	return strconv.Itoa(s.proposalCount)
+	s.ProposalCount = s.ProposalCount + 1
+	return strconv.Itoa(s.ProposalCount)
 }
 
 func (s *IntegrationTestSuite) GetCtx() client.Context {
-	return s.network.Validators[0].ClientCtx
+	return s.Network.Validators[0].ClientCtx
 }
 
 func (s *IntegrationTestSuite) RequireValidator(address string, status *stakingtypes.BondStatus, tokens *sdk.Int) {
@@ -49,8 +49,8 @@ func (s *IntegrationTestSuite) RequireDelegation(valAddress string, delAddress s
 }
 
 func (s *IntegrationTestSuite) RequireBondBalance(address string, balance sdk.Int) {
-	originalBalance := GetBalance(s.GetCtx(), address, s.cfg.BondDenom)
-	expected := sdk.NewCoin(s.cfg.BondDenom, balance)
+	originalBalance := GetBalance(s.GetCtx(), address, s.Cfg.BondDenom)
+	expected := sdk.NewCoin(s.Cfg.BondDenom, balance)
 	s.Require().True(originalBalance.Equal(expected))
 }
 

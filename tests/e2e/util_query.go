@@ -1,4 +1,4 @@
-package poa_test
+package e2e
 
 import (
 	"encoding/json"

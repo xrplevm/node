@@ -103,10 +103,9 @@ type Config struct {
 
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
-func DefaultConfig(numValidators int, numBondedValidators int) Config {
+func DefaultConfig(numValidators int, numBondedValidators int, blockTime time.Duration) Config {
 	encCfg := app.MakeEncodingConfig()
 	chainID := fmt.Sprintf("exrp_%d-1", tmrand.Int63n(9999999999999)+1)
-	blockTime := 3 * time.Second
 	return Config{
 		Codec:               encCfg.Codec,
 		TxConfig:            encCfg.TxConfig,
@@ -125,7 +124,7 @@ func DefaultConfig(numValidators int, numBondedValidators int) Config {
 		StakingTokens:       sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
 		BondedTokens:        sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
 		TokenDenom:          "axrp",
-		UnBoundingTime:      (3 * blockTime) + 1,
+		UnBoundingTime:      (3 * blockTime) + time.Second,
 		PruningStrategy:     pruningtypes.PruningOptionNothing,
 		CleanupDir:          true,
 		SigningAlgo:         string(hd.EthSecp256k1Type),

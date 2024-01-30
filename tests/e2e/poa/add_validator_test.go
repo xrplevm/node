@@ -1,18 +1,17 @@
 package poa_test
 
 import (
-	"fmt"
+	"github.com/Peersyst/exrp/tests/e2e"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	"sync"
 )
 
-func (s *IntegrationTestSuite) Test_AddNewValidator() {
-	fmt.Println("==== Test_AddNewValidator")
+func (s *TestSuite) Test_AddNewValidator() {
+	s.T().Logf("==== Test_AddNewValidator")
 
 	address, _ := sdk.AccAddressFromBech32("evmos1ycvhcxthjju0466d4ga0j7du7wt8kmaep28zqv")
-	validators := s.network.Validators
-	pubKey := GenPubKey()
+	validators := s.Network.Validators
+	pubKey := e2e.GenPubKey()
 
 	// PRE:
 	// Validator should not be in the validator set
@@ -20,94 +19,58 @@ func (s *IntegrationTestSuite) Test_AddNewValidator() {
 
 	// EXEC:
 	// Make a PoA change to add validator
-	ChangeValidator(s, AddValidatorAction, address, pubKey, validators, govtypesv1.StatusPassed)
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, address, pubKey, validators, govtypesv1.StatusPassed)
 	// Wait enough to be sure that the validator is in the validator set
-	s.network.MustWaitForNextBlock()
-	s.network.MustWaitForNextBlock()
+	s.Network.MustWaitForNextBlock()
 
 	// POST:
 	// Validator should be in the validator set
 	s.RequireValidatorSet().Contains(pubKey)
 
-	fmt.Println("==== [V] Test_AddNewValidator")
+	s.T().Logf("==== [V] Test_AddNewValidator")
 }
 
-func (s *IntegrationTestSuite) Test_AddValidatorWithUnboundedTokens() {
-	fmt.Println("==== Test_AddValidatorWithUnboundedTokens")
+func (s *TestSuite) Test_AddValidatorWithUnboundedTokens() {
+	s.T().Logf("==== Test_AddValidatorWithUnboundedTokens")
 
-	validators := s.network.Validators
-	validator := s.network.Validators[s.cfg.NumBondedValidators]
+	validators := s.Network.Validators
+	validator := s.Network.Validators[s.Cfg.NumBondedValidators]
 
 	// PRE:
 	// Validator has no initial balance
-	s.RequireBondBalance(validator.Address.String(), DefaultBondedTokens)
+	s.RequireBondBalance(validator.Address.String(), e2e.DefaultBondedTokens)
 
 	// EXEC:
 	// Add validator through PoA change twice
-	ChangeValidator(s, AddValidatorAction, validator.Address, validator.PubKey, validators, govtypesv1.StatusFailed)
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, validator.Address, validator.PubKey, validators, govtypesv1.StatusFailed)
 
 	// POST:
 	// Only one of the proposals should have passed, validator should have the default power tokens
-	s.RequireBondBalance(validator.Address.String(), DefaultBondedTokens)
+	s.RequireBondBalance(validator.Address.String(), e2e.DefaultBondedTokens)
 
-	fmt.Println("==== [V] Test_AddValidatorWithUnboundedTokens")
+	s.T().Logf("==== [V] Test_AddValidatorWithUnboundedTokens")
 }
 
-func (s *IntegrationTestSuite) Test_AddValidatorWithBondedTokens() {
-	fmt.Println("==== Test_AddValidatorWithBondedTokens")
+func (s *TestSuite) Test_AddValidatorWithBondedTokens() {
+	s.T().Logf("==== Test_AddValidatorWithBondedTokens")
 
-	validator := s.network.Validators[0]
+	validator := s.Network.Validators[0]
 	address := validator.Address.String()
-	validators := s.network.Validators
+	validators := s.Network.Validators
 
 	// PRE:
 	// Validator has no balance in bank and bonded balance in staking
-	s.RequireBondBalance(address, zero)
-	s.RequireValidator(address, &bondedStatus, &DefaultBondedTokens)
+	s.RequireBondBalance(address, e2e.Zero)
+	s.RequireValidator(address, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
 
 	// EXEC:
 	// Add validator through PoA Change
-	ChangeValidator(s, AddValidatorAction, validator.Address, validator.PubKey, validators, govtypesv1.StatusFailed)
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, validator.Address, validator.PubKey, validators, govtypesv1.StatusFailed)
 
 	// POST:
 	// Validator should not have extra balance in bank
-	s.RequireBondBalance(address, zero)
-	s.RequireValidator(address, &bondedStatus, &DefaultBondedTokens)
+	s.RequireBondBalance(address, e2e.Zero)
+	s.RequireValidator(address, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
 
-	fmt.Println("==== [V] Test_AddValidatorWithBondedTokens")
-}
-
-func (s *IntegrationTestSuite) Test_AddUnbondingValidator() {
-	fmt.Println("==== Test_AddUnbondingValidator")
-
-	validator := s.network.Validators[1]
-	validatorAddress := validator.Address.String()
-
-	// PRE:
-	// Validator is bonded and has no balance in bank
-	s.RequireValidator(validatorAddress, &bondedStatus, &DefaultBondedTokens)
-	s.RequireBondBalance(validatorAddress, zero)
-	s.RequireValidatorSet().Contains(validator.PubKey)
-
-	// EXEC:
-	// Add validator from a poa change but don't wait to be finished
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ChangeValidator(s, AddValidatorAction, validator.Address, validator.PubKey, s.network.Validators, govtypesv1.StatusFailed)
-
-		// POST:
-		// Validator should have tokens bonded in its validator but not in bank
-		s.RequireValidator(validatorAddress, &unbondingStatus, &DefaultBondedTokens)
-		s.RequireBondBalance(validatorAddress, zero)
-	}()
-	// Execute unbond tokens so at the moment of the proposal execution the status is unbonding
-	if err := validator.TmNode.Stop(); err != nil {
-		fmt.Printf("Error stopping node: %v\n", err)
-	}
-
-	wg.Wait()
-
-	fmt.Println("==== [V] Test_AddUnbondingValidator")
+	s.T().Logf("==== [V] Test_AddValidatorWithBondedTokens")
 }

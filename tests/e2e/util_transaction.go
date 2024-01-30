@@ -1,4 +1,4 @@
-package poa_test
+package e2e
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func transactionFlags(s *IntegrationTestSuite, val network.Validator) []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, sdk.NewCoins(sdk.NewCoin(s.cfg.TokenDenom, sdk.NewInt(1000000000))).String()),
+		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, sdk.NewCoins(sdk.NewCoin(s.Cfg.TokenDenom, sdk.NewInt(1000000000))).String()),
 		fmt.Sprintf("--%s=%s", flags.FlagGas, "1000000"),
 	}
 }
@@ -128,18 +128,18 @@ func ChangeValidator(
 
 	proposalId := submitProposal(s, *initiator, msg)
 
-	s.network.MustWaitForNextBlock()
+	s.Network.MustWaitForNextBlock()
 
 	for _, validator := range validators {
 		voteProposal(s, *validator, proposalId)
 	}
-	s.network.MustWaitForNextBlock()
+	s.Network.MustWaitForNextBlock()
 
 	timeLimit := time.Now().Add(time.Minute * 2)
 	for time.Now().Before(timeLimit) &&
 		waitStatus != govtypesv1.StatusNil &&
 		GetProposal(initiator.ClientCtx, proposalId).Status != waitStatus {
-		s.network.MustWaitForNextBlock()
+		s.Network.MustWaitForNextBlock()
 	}
 }
 
@@ -150,7 +150,7 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 	json, _ := clientCtx.Codec.MarshalInterfaceJSON(validator.PubKey)
 
 	args := []string{
-		fmt.Sprintf("--%s=%s", stakingcli.FlagAmount, sdk.NewCoin(s.cfg.BondDenom, tokens).String()),
+		fmt.Sprintf("--%s=%s", stakingcli.FlagAmount, sdk.NewCoin(s.Cfg.BondDenom, tokens).String()),
 		fmt.Sprintf("--%s=%s", stakingcli.FlagPubKey, json),
 		fmt.Sprintf("--%s=%s", stakingcli.FlagMoniker, "moniker"),
 		fmt.Sprintf("--%s=%s", stakingcli.FlagCommissionRate, "0.1"),
@@ -161,10 +161,10 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 
 	ExecTransaction(s, validator, cmd, args)
 
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
 }
@@ -174,19 +174,19 @@ func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens 
 
 	args := []string{
 		sdk.ValAddress(validator.Address).String(),
-		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
+		sdk.NewCoin(s.Cfg.BondDenom, tokens).String(),
 	}
 
 	out := ExecTransaction(s, validator, cmd, args)
 
 	if wait {
-		time.Sleep(s.cfg.UnBoundingTime)
+		time.Sleep(s.Cfg.UnBoundingTime)
 	}
 
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
 
@@ -198,15 +198,15 @@ func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *
 
 	args := []string{
 		sdk.ValAddress(validator.Address).String(),
-		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
+		sdk.NewCoin(s.Cfg.BondDenom, tokens).String(),
 	}
 
 	out := ExecTransaction(s, validator, cmd, args)
 
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
-	if err := s.network.WaitForNextBlock(); err != nil {
+	if err := s.Network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
 
@@ -218,7 +218,7 @@ func Redelegate(s *IntegrationTestSuite, src *network.Validator, dst *network.Va
 	args := []string{
 		sdk.ValAddress(src.Address).String(),
 		sdk.ValAddress(dst.Address).String(),
-		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
+		sdk.NewCoin(s.Cfg.BondDenom, tokens).String(),
 	}
 	return ExecTransaction(s, src, cmd, args)
 }
