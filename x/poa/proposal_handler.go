@@ -24,7 +24,9 @@ func NewValidatorProposalHandler(k keeper.Keeper) govtypes.Handler {
 }
 
 func handleAddValidatorProposal(ctx sdk.Context, k keeper.Keeper, p *types.AddValidatorProposal) error {
-	return k.ExecuteAddValidator(ctx, p.ValidatorAddress)
+	return nil
+	// TODO: What this?
+	// return k.ExecuteAddValidator(ctx, p)
 }
 
 func handleRemoveValidatorProposal(ctx sdk.Context, k keeper.Keeper, p *types.RemoveValidatorProposal) error {

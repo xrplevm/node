@@ -22,7 +22,7 @@ func (s *IntegrationTestSuite) SetupTest() {
 	s.T().Log("setting up network test suite")
 
 	var err error
-	cfg := network.DefaultConfig(3, 2)
+	cfg := network.DefaultConfig(5, 4)
 
 	s.network, err = network.New(s.T(), s.T().TempDir(), cfg)
 	s.cfg = cfg

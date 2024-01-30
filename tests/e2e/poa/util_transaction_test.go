@@ -2,6 +2,10 @@ package poa_test
 
 import (
 	"fmt"
+	"github.com/Peersyst/exrp/x/poa/types"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/spf13/cobra"
 	"time"
 
 	"github.com/Peersyst/exrp/testutil/network"
@@ -26,22 +30,26 @@ func transactionFlags(s *IntegrationTestSuite, val network.Validator) []string {
 	}
 }
 
-func addValidatorMsg(ctx client.Context, newValidatorAddress string) string {
+func addValidatorMsg(ctx client.Context, newValidatorAddress string, pubKey cryptotypes.PubKey) string {
 	authority := authtypes.NewModuleAddress(govtypes.ModuleName)
+	msg, err := types.NewMsgAddValidator(authority.String(), newValidatorAddress, pubKey, stakingtypes.Description{Moniker: "Test node"})
+	if err != nil {
+		panic(err)
+	}
+	rawMsg, err := ctx.Codec.MarshalInterfaceJSON(msg)
+	if err != nil {
+		panic(err)
+	}
 	return fmt.Sprintf(`
 {
 	"messages": [
-		{
-			"@type": "/packages.blockchain.poa.MsgAddValidator",
-		    "authority": "%s",
-		    "validator_address": "%s"
-		}
+		%s
 	],
 	"title": "My awesome title",
 	"summary": "My awesome description",
 	"metadata": "ipfs://CID",
 	"deposit": "%s"
-}`, authority, newValidatorAddress, GetMinDeposit(ctx))
+}`, rawMsg, GetMinDeposit(ctx))
 }
 
 func removeValidatorMsg(ctx client.Context, newValidatorAddress string) string {
@@ -104,42 +112,34 @@ var (
 func ChangeValidator(
 	s *IntegrationTestSuite,
 	action int,
-	address string,
+	address sdk.AccAddress,
+	pubKey cryptotypes.PubKey,
+	// pubKey string,
 	validators []*network.Validator,
 	waitStatus govtypesv1.ProposalStatus,
 ) {
 	initiator := validators[0]
 	var msg string
 	if action == AddValidatorAction {
-		msg = addValidatorMsg(initiator.ClientCtx, address)
+		msg = addValidatorMsg(initiator.ClientCtx, address.String(), pubKey)
 	} else {
-		msg = removeValidatorMsg(initiator.ClientCtx, address)
+		msg = removeValidatorMsg(initiator.ClientCtx, address.String())
 	}
 
 	proposalId := submitProposal(s, *initiator, msg)
 
-	if err := s.network.WaitForNextBlock(); err != nil {
-		panic(err)
-	}
-
-	if err := s.network.WaitForNextBlock(); err != nil {
-		panic(err)
-	}
+	s.network.MustWaitForNextBlock()
 
 	for _, validator := range validators {
 		voteProposal(s, *validator, proposalId)
 	}
-	if err := s.network.WaitForNextBlock(); err != nil {
-		panic(err)
-	}
+	s.network.MustWaitForNextBlock()
 
 	timeLimit := time.Now().Add(time.Minute * 2)
 	for time.Now().Before(timeLimit) &&
 		waitStatus != govtypesv1.StatusNil &&
 		GetProposal(initiator.ClientCtx, proposalId).Status != waitStatus {
-		if err := s.network.WaitForNextBlock(); err != nil {
-			panic(err)
-		}
+		s.network.MustWaitForNextBlock()
 	}
 }
 
@@ -159,10 +159,7 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 		fmt.Sprintf("--%s=%s", stakingcli.FlagMinSelfDelegation, "1"),
 	}
 
-	out, err := clitestutil.ExecTestCLICmd(clientCtx, cmd, append(args, transactionFlags(s, *validator)...))
-	s.Require().NoError(err)
-
-	fmt.Printf("Submitted bond transaction: %+v\n", out.String())
+	ExecTransaction(s, validator, cmd, args)
 
 	if err := s.network.WaitForNextBlock(); err != nil {
 		panic(err)
@@ -172,8 +169,7 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 	}
 }
 
-func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int, wait bool) {
-	clientCtx := validator.ClientCtx
+func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int, wait bool) string {
 	cmd := stakingcli.NewUnbondCmd()
 
 	args := []string{
@@ -181,10 +177,7 @@ func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens 
 		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
 	}
 
-	out, err := clitestutil.ExecTestCLICmd(clientCtx, cmd, append(args, transactionFlags(s, *validator)...))
-	s.Require().NoError(err)
-
-	fmt.Printf("Submitted unbound transaction: %+v\n", out.String())
+	out := ExecTransaction(s, validator, cmd, args)
 
 	if wait {
 		time.Sleep(s.cfg.UnBoundingTime)
@@ -196,10 +189,11 @@ func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens 
 	if err := s.network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
+
+	return out
 }
 
-func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *network.Validator, tokens sdk.Int) {
-	clientCtx := delegator.ClientCtx
+func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *network.Validator, tokens sdk.Int) string {
 	cmd := stakingcli.NewDelegateCmd()
 
 	args := []string{
@@ -207,9 +201,7 @@ func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *
 		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
 	}
 
-	out, err := clitestutil.ExecTestCLICmd(clientCtx, cmd, append(args, transactionFlags(s, *delegator)...))
-	fmt.Printf("Submitted delegation transaction: %+v\n", out.String())
-	s.Require().NoError(err)
+	out := ExecTransaction(s, validator, cmd, args)
 
 	if err := s.network.WaitForNextBlock(); err != nil {
 		panic(err)
@@ -217,4 +209,26 @@ func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *
 	if err := s.network.WaitForNextBlock(); err != nil {
 		panic(err)
 	}
+
+	return out
+}
+
+func Redelegate(s *IntegrationTestSuite, src *network.Validator, dst *network.Validator, tokens sdk.Int) string {
+	cmd := stakingcli.NewRedelegateCmd()
+	args := []string{
+		sdk.ValAddress(src.Address).String(),
+		sdk.ValAddress(dst.Address).String(),
+		sdk.NewCoin(s.cfg.BondDenom, tokens).String(),
+	}
+	return ExecTransaction(s, src, cmd, args)
+}
+
+func ExecTransaction(s *IntegrationTestSuite, validator *network.Validator, cmd *cobra.Command, args []string) string {
+	clientCtx := validator.ClientCtx
+	out, err := clitestutil.ExecTestCLICmd(clientCtx, cmd, append(args, transactionFlags(s, *validator)...))
+	s.Require().NoError(err)
+
+	fmt.Printf("Submitted transaction: %+v\n", out.String())
+
+	return out.String()
 }

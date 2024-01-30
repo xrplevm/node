@@ -3,6 +3,7 @@ package app
 import (
 	"cosmossdk.io/math"
 	"encoding/json"
+	poaante "github.com/Peersyst/exrp/x/poa/ante"
 	ethante "github.com/evmos/evmos/v15/app/ante/evm"
 	"io"
 	"os"
@@ -440,6 +441,7 @@ func New(
 	app.PoaKeeper = *poakeeper.NewKeeper(
 		appCodec,
 		app.GetSubspace(poatypes.ModuleName),
+		app.MsgServiceRouter(),
 		app.BankKeeper,
 		*app.StakingKeeper,
 		app.SlashingKeeper,
@@ -754,6 +756,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
+		ExtraDecorator:         poaante.NewPoaDecorator(),
 	}
 
 	if err := options.Validate(); err != nil {

@@ -1,8 +1,8 @@
 package poa_test
 
 import (
-	"github.com/Peersyst/exrp/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"strconv"
@@ -11,6 +11,7 @@ import (
 var (
 	bondedStatus        = stakingtypes.Bonded
 	unbondedStatus      = stakingtypes.Unbonded
+	unbondingStatus     = stakingtypes.Unbonding
 	zero                = sdk.ZeroInt()
 	DefaultBondedTokens = sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 )
@@ -54,8 +55,8 @@ func (s *IntegrationTestSuite) RequireBondBalance(address string, balance sdk.In
 }
 
 func (s *IntegrationTestSuite) RequireValidatorSet() struct {
-	Contains    func(validator *network.Validator)
-	NotContains func(validator *network.Validator)
+	Contains    func(validator cryptotypes.PubKey)
+	NotContains func(validator cryptotypes.PubKey)
 } {
 	validatorSet := GetValidatorSet(s.GetCtx())
 	validatorAddresses := make([]string, 0)
@@ -63,14 +64,14 @@ func (s *IntegrationTestSuite) RequireValidatorSet() struct {
 		validatorAddresses = append(validatorAddresses, val.Address)
 	}
 	return struct {
-		Contains    func(validator *network.Validator)
-		NotContains func(validator *network.Validator)
+		Contains    func(pubKey cryptotypes.PubKey)
+		NotContains func(pubKey cryptotypes.PubKey)
 	}{
-		Contains: func(validator *network.Validator) {
-			s.Require().Contains(validatorAddresses, sdk.ConsAddress(validator.PubKey.Address()).String())
+		Contains: func(pubKey cryptotypes.PubKey) {
+			s.Require().Contains(validatorAddresses, sdk.ConsAddress(pubKey.Address()).String())
 		},
-		NotContains: func(validator *network.Validator) {
-			s.Require().NotContains(validatorAddresses, sdk.ConsAddress(validator.PubKey.Address()).String())
+		NotContains: func(pubKey cryptotypes.PubKey) {
+			s.Require().NotContains(validatorAddresses, sdk.ConsAddress(pubKey.Address()).String())
 		},
 	}
 }
