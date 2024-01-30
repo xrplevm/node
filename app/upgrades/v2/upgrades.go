@@ -107,8 +107,7 @@ func CreateUpgradeHandler(
 		// we are deprecating the distribution module since it is not being used
 		// NOTE: this was already removed on testnet
 		logger.Debug("deleting distribution module from version map...")
-		delete(vm, distrtypes.ModuleName) // TODO check correct version map key
-
+		delete(vm, distrtypes.ModuleName)
 		// Leave modules are as-is to avoid running InitGenesis.
 		logger.Debug("running module migrations ...")
 		return mm.RunMigrations(ctx, configurator, vm)
