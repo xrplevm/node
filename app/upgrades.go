@@ -7,6 +7,7 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 )
 
@@ -51,7 +52,9 @@ func (app *App) setupUpgradeHandlers() {
 				consensusparamtypes.StoreKey,
 				crisistypes.ModuleName,
 			},
-			Deleted: []string{},
+			Deleted: []string{
+				distrtypes.ModuleName,
+			},
 		}
 	}
 
