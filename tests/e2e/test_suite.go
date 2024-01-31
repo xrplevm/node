@@ -16,11 +16,11 @@ type IntegrationTestSuite struct {
 	Network       *network.Network
 }
 
-func (s *IntegrationTestSuite) SetupNetwork(numValidators int, numBondedValidators int, blockTime time.Duration) {
+func (s *IntegrationTestSuite) SetupNetwork(numValidators int, numBondedValidators int, blockTime time.Duration, unbondingBlocks int64) {
 	s.T().Log("setting up network test suite")
 
 	var err error
-	cfg := network.DefaultConfig(numValidators, numBondedValidators, blockTime)
+	cfg := network.DefaultConfig(numValidators, numBondedValidators, blockTime, unbondingBlocks)
 
 	s.Network, err = network.New(s.T(), s.T().TempDir(), cfg)
 	s.Cfg = cfg
