@@ -18,8 +18,3 @@ func (s *TestSuite) SetupTest() {
 func Test_TestSuite(t *testing.T) {
 	suite.Run(t, new(TestSuite))
 }
-
-func (s *TestSuite) TearDownTest() {
-	s.IntegrationTestSuite.TearDownTest()
-	time.Sleep(10 * time.Second)
-}
