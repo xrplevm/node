@@ -64,7 +64,8 @@ func (s *TestSuite) Test_RemoveUnbondingValidator() {
 
 	go func() {
 		defer wg.Done()
-		s.Network.WaitForHeightWithTimeout(10, 2*time.Minute)
+		_, err := s.Network.WaitForHeightWithTimeout(10, 2*time.Minute)
+		s.Require().NoError(err)
 		// EXEC:
 		// Remove validator from a pool but don't wait to be finished
 		e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.RemoveValidatorAction, validator.Address, validator.PubKey, s.Network.Validators, govtypesv1.StatusPassed)
@@ -76,8 +77,9 @@ func (s *TestSuite) Test_RemoveUnbondingValidator() {
 		s.RequireValidatorSet().NotContains(validator.PubKey)
 	}()
 	// Execute unbond tokens so at the moment of the proposal execution the status is unbonding
-	s.Network.WaitForHeightWithTimeout(10, 2*time.Minute)
-	err := validator.TmNode.Stop()
+	_, err := s.Network.WaitForHeightWithTimeout(10, 2*time.Minute)
+	s.Require().NoError(err)
+	err = validator.TmNode.Stop()
 	s.Require().NoError(err)
 
 	wg.Wait()
