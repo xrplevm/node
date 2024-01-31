@@ -126,7 +126,7 @@ func DefaultConfig(numValidators int, numBondedValidators int, blockTime time.Du
 		TokenDenom:          "axrp",
 		UnBoundingTime:      (time.Duration(unbondingBlocks) * blockTime) + time.Second,
 		PruningStrategy:     pruningtypes.PruningOptionNothing,
-		CleanupDir:          false,
+		CleanupDir:          true,
 		SigningAlgo:         string(hd.EthSecp256k1Type),
 		KeyringOptions:      []keyring.Option{hd.EthSecp256k1Option()},
 		PrintMnemonic:       false,
