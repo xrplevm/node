@@ -86,3 +86,50 @@ func (s *TestSuite) Test_RemoveUnbondingValidator() {
 
 	s.T().Logf("==== [V] Test_RemoveUnbondingValidator")
 }
+
+func (s *TestSuite) Test_ValidatorIsRemovedCorrectly() {
+	s.T().Logf("==== Test_AddUnbondingValidator")
+	validators := s.Network.Validators
+	validator := validators[s.Cfg.NumBondedValidators-1]
+	// PRE:
+	// Validator is bonded and has no balance in bank
+	s.RequireValidator(validator.Address.String(), &e2e.BondedStatus, &e2e.DefaultBondedTokens)
+	s.RequireBondBalance(validator.Address.String(), e2e.Zero)
+	s.RequireValidatorSet().Contains(validator.PubKey)
+
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.RemoveValidatorAction, validator.Address, validator.PubKey, s.Network.Validators, govtypesv1.StatusPassed)
+
+	// POST:
+	// Validator is unbonding and after unbonding without tokens and after unbonding time is removed
+	s.RequireValidator(validator.Address.String(), &e2e.UnbondingStatus, &e2e.Zero)
+	s.RequireBondBalance(validator.Address.String(), e2e.Zero)
+
+	time.Sleep(s.Cfg.UnBoundingTime)
+	s.Network.MustWaitForNextBlock()
+
+	s.RequireValidator(validator.Address.String(), nil, nil)
+	s.RequireBondBalance(validator.Address.String(), e2e.Zero)
+	s.RequireValidatorSet().NotContains(validator.PubKey)
+}
+
+func (s *TestSuite) Test_AddRemovedValidator() {
+	s.T().Logf("==== Test_AddUnbondingValidator")
+	validators := s.Network.Validators
+	validator := validators[s.Cfg.NumBondedValidators-1]
+	// PRE:
+	// Validator is bonded and has no balance in bank
+	s.RequireValidator(validator.Address.String(), &e2e.BondedStatus, &e2e.DefaultBondedTokens)
+	s.RequireBondBalance(validator.Address.String(), e2e.Zero)
+	s.RequireValidatorSet().Contains(validator.PubKey)
+
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.RemoveValidatorAction, validator.Address, validator.PubKey, s.Network.Validators, govtypesv1.StatusPassed)
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, validator.Address, validator.PubKey, s.Network.Validators, govtypesv1.StatusPassed)
+
+	s.Network.MustWaitForNextBlock()
+
+	// POST:
+	// Validator is unbonding and after unbonding without tokens and after unbonding time is removed
+	s.RequireValidator(validator.Address.String(), &e2e.BondedStatus, &e2e.DefaultBondedTokens)
+	s.RequireBondBalance(validator.Address.String(), e2e.Zero)
+	s.RequireValidatorSet().Contains(validator.PubKey)
+}

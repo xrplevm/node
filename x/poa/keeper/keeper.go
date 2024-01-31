@@ -195,11 +195,15 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		delegations := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
 		for _, delegation := range delegations {
 			if !delegation.Shares.IsZero() {
-				k.sk.RemoveValidatorTokensAndShares(ctx, validator, delegation.Shares)
+				if err := k.sk.RemoveDelegation(ctx, delegation); err != nil {
+					return err
+				}
 			}
 		}
 
+		validator, _ = k.sk.RemoveValidatorTokensAndShares(ctx, validator, validator.DelegatorShares)
 		changedVal := k.sk.RemoveValidatorTokens(ctx, validator, validator.Tokens)
+
 		switch changedVal.GetStatus() {
 		case stakingtypes.Bonded:
 			coins := sdk.NewCoins(sdk.NewCoin(k.sk.BondDenom(ctx), validator.Tokens))
@@ -216,8 +220,6 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		default:
 			return types.ErrInvalidValidatorStatus
 		}
-
-		k.sk.RemoveValidator(ctx, valAddress)
 	}
 
 	// If address also has tokens in the bank, we need to remove them and burn them
