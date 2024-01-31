@@ -669,6 +669,7 @@ func (n *Network) Cleanup() {
 	}
 
 	if n.Config.CleanupDir {
+		time.Sleep(15)
 		_ = os.RemoveAll(n.BaseDir)
 	}
 
