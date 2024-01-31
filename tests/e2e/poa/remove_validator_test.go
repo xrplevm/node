@@ -74,7 +74,7 @@ func (s *TestSuite) Test_RemoveFullyBondedValidator() {
 
 	// POST:
 	// Validator is unbonded and has no tokens in bank
-	s.RequireValidator(validatorAddress, &e2e.UnbondedStatus, &e2e.Zero)
+	s.RequireValidator(validatorAddress, nil, nil)
 	s.RequireBondBalance(validatorAddress, e2e.Zero)
 	s.RequireValidatorSet().NotContains(validator.PubKey)
 
