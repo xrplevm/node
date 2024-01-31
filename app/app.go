@@ -2,12 +2,13 @@ package app
 
 import (
 	"encoding/json"
+	poaante "github.com/Peersyst/exrp/x/poa/ante"
+	ethante "github.com/evmos/evmos/v15/app/ante/evm"
 	"io"
 	"os"
 	"path/filepath"
 
 	"cosmossdk.io/math"
-	ethante "github.com/evmos/evmos/v15/app/ante/evm"
 
 	"github.com/ethereum/go-ethereum/core/vm"
 	"golang.org/x/exp/maps"
@@ -423,6 +424,7 @@ func New(
 	app.PoaKeeper = *poakeeper.NewKeeper(
 		appCodec,
 		app.GetSubspace(poatypes.ModuleName),
+		app.MsgServiceRouter(),
 		app.BankKeeper,
 		*app.StakingKeeper,
 		app.SlashingKeeper,
@@ -508,8 +510,7 @@ func New(
 		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
 		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper)).
-		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper)).
-		AddRoute(poatypes.RouterKey, poa.NewValidatorProposalHandler(app.PoaKeeper))
+		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper))
 	govKeeper.SetLegacyRouter(govRouter)
 
 	app.GovKeeper = *govKeeper.SetHooks(
@@ -732,6 +733,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
+		ExtraDecorator:         poaante.NewPoaDecorator(),
 	}
 
 	if err := options.Validate(); err != nil {

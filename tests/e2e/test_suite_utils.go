@@ -1,27 +1,28 @@
-package poa_test
+package e2e
 
 import (
-	"github.com/Peersyst/exrp/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"strconv"
 )
 
 var (
-	bondedStatus        = stakingtypes.Bonded
-	unbondedStatus      = stakingtypes.Unbonded
-	zero                = sdk.ZeroInt()
+	BondedStatus        = stakingtypes.Bonded
+	UnbondedStatus      = stakingtypes.Unbonded
+	UnbondingStatus     = stakingtypes.Unbonding
+	Zero                = sdk.ZeroInt()
 	DefaultBondedTokens = sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 )
 
 func (s *IntegrationTestSuite) ConsumeProposalCount() string {
-	s.proposalCount = s.proposalCount + 1
-	return strconv.Itoa(s.proposalCount)
+	s.ProposalCount = s.ProposalCount + 1
+	return strconv.Itoa(s.ProposalCount)
 }
 
 func (s *IntegrationTestSuite) GetCtx() client.Context {
-	return s.network.Validators[0].ClientCtx
+	return s.Network.Validators[0].ClientCtx
 }
 
 func (s *IntegrationTestSuite) RequireValidator(address string, status *stakingtypes.BondStatus, tokens *sdk.Int) {
@@ -48,14 +49,14 @@ func (s *IntegrationTestSuite) RequireDelegation(valAddress string, delAddress s
 }
 
 func (s *IntegrationTestSuite) RequireBondBalance(address string, balance sdk.Int) {
-	originalBalance := GetBalance(s.GetCtx(), address, s.cfg.BondDenom)
-	expected := sdk.NewCoin(s.cfg.BondDenom, balance)
+	originalBalance := GetBalance(s.GetCtx(), address, s.Cfg.BondDenom)
+	expected := sdk.NewCoin(s.Cfg.BondDenom, balance)
 	s.Require().True(originalBalance.Equal(expected))
 }
 
 func (s *IntegrationTestSuite) RequireValidatorSet() struct {
-	Contains    func(validator *network.Validator)
-	NotContains func(validator *network.Validator)
+	Contains    func(validator cryptotypes.PubKey)
+	NotContains func(validator cryptotypes.PubKey)
 } {
 	validatorSet := GetValidatorSet(s.GetCtx())
 	validatorAddresses := make([]string, 0)
@@ -63,14 +64,14 @@ func (s *IntegrationTestSuite) RequireValidatorSet() struct {
 		validatorAddresses = append(validatorAddresses, val.Address)
 	}
 	return struct {
-		Contains    func(validator *network.Validator)
-		NotContains func(validator *network.Validator)
+		Contains    func(pubKey cryptotypes.PubKey)
+		NotContains func(pubKey cryptotypes.PubKey)
 	}{
-		Contains: func(validator *network.Validator) {
-			s.Require().Contains(validatorAddresses, sdk.ConsAddress(validator.PubKey.Address()).String())
+		Contains: func(pubKey cryptotypes.PubKey) {
+			s.Require().Contains(validatorAddresses, sdk.ConsAddress(pubKey.Address()).String())
 		},
-		NotContains: func(validator *network.Validator) {
-			s.Require().NotContains(validatorAddresses, sdk.ConsAddress(validator.PubKey.Address()).String())
+		NotContains: func(pubKey cryptotypes.PubKey) {
+			s.Require().NotContains(validatorAddresses, sdk.ConsAddress(pubKey.Address()).String())
 		},
 	}
 }

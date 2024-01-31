@@ -1,4 +1,4 @@
-package poa_test
+package unbonding_test
 
 import (
 	"github.com/Peersyst/exrp/tests/e2e"
@@ -12,7 +12,7 @@ type TestSuite struct {
 }
 
 func (s *TestSuite) SetupTest() {
-	s.SetupNetwork(3, 2, time.Second, 3)
+	s.SetupNetwork(5, 4, 3*time.Second, 5)
 }
 
 func Test_TestSuite(t *testing.T) {

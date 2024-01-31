@@ -82,6 +82,7 @@ type Config struct {
 	AccountTokens       math.Int            // the amount of unique validator tokens (e.g. 1000node0)
 	StakingTokens       math.Int            // the amount of tokens each validator has available to stake
 	BondedTokens        math.Int            // the amount of tokens each validator stakes
+	SignedBlocksWindow  int64               // slashing signed blocks window
 	NumValidators       int                 // the total number of validators to create and bond
 	NumBondedValidators int                 // the total number of validators with bonded tokens to create
 	ChainID             string              // the network chain-id
@@ -102,7 +103,7 @@ type Config struct {
 
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
-func DefaultConfig(numValidators int, numBondedValidators int) Config {
+func DefaultConfig(numValidators int, numBondedValidators int, blockTime time.Duration, unbondingBlocks int64) Config {
 	encCfg := app.MakeEncodingConfig()
 	chainID := fmt.Sprintf("exrp_%d-1", tmrand.Int63n(9999999999999)+1)
 	return Config{
@@ -113,7 +114,7 @@ func DefaultConfig(numValidators int, numBondedValidators int) Config {
 		AccountRetriever:    authtypes.AccountRetriever{},
 		AppConstructor:      NewAppConstructor(encCfg, chainID),
 		GenesisState:        app.ModuleBasics.DefaultGenesis(encCfg.Codec),
-		TimeoutCommit:       3 * time.Second,
+		TimeoutCommit:       blockTime,
 		ChainID:             chainID,
 		NumValidators:       numValidators,
 		NumBondedValidators: numBondedValidators,
@@ -123,12 +124,14 @@ func DefaultConfig(numValidators int, numBondedValidators int) Config {
 		StakingTokens:       sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
 		BondedTokens:        sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction),
 		TokenDenom:          "axrp",
-		UnBoundingTime:      10 * time.Second,
+		UnBoundingTime:      (time.Duration(unbondingBlocks) * blockTime) + time.Second,
 		PruningStrategy:     pruningtypes.PruningOptionNothing,
-		CleanupDir:          true,
+		CleanupDir:          false,
 		SigningAlgo:         string(hd.EthSecp256k1Type),
 		KeyringOptions:      []keyring.Option{hd.EthSecp256k1Option()},
 		PrintMnemonic:       false,
+		EnableTMLogging:     true,
+		SignedBlocksWindow:  2,
 	}
 }
 
@@ -184,7 +187,7 @@ type (
 		RPCClient     tmclient.Client
 		JSONRPCClient *ethclient.Client
 
-		tmNode      *node.Node
+		TmNode      *node.Node
 		api         *api.Server
 		grpc        *grpc.Server
 		grpcWeb     *http.Server
@@ -614,6 +617,12 @@ func (n *Network) WaitForNextBlock() error {
 	return err
 }
 
+func (n *Network) MustWaitForNextBlock() {
+	if err := n.WaitForNextBlock(); err != nil {
+		panic(err)
+	}
+}
+
 // Cleanup removes the root testing (temporary) directory and stops both the
 // Tendermint and API services. It allows other callers to create and start
 // test networks. This method must be called when a test is finished, typically
@@ -628,8 +637,8 @@ func (n *Network) Cleanup() {
 	n.Logger.Log("cleaning up test network...")
 
 	for _, v := range n.Validators {
-		if v.tmNode != nil && v.tmNode.IsRunning() {
-			_ = v.tmNode.Stop()
+		if v.TmNode != nil && v.TmNode.IsRunning() {
+			_ = v.TmNode.Stop()
 		}
 
 		if v.api != nil {
@@ -648,9 +657,9 @@ func (n *Network) Cleanup() {
 			defer cancelFn()
 
 			if err := v.jsonrpc.Shutdown(shutdownCtx); err != nil {
-				v.tmNode.Logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+				v.TmNode.Logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
 			} else {
-				v.tmNode.Logger.Info("HTTP server shut down, waiting 5 sec")
+				v.TmNode.Logger.Info("HTTP server shut down, waiting 5 sec")
 				select {
 				case <-time.Tick(5 * time.Second):
 				case <-v.jsonrpcDone:

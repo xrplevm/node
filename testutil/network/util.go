@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cometbft/cometbft/libs/log"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"path/filepath"
 	"time"
 
@@ -72,7 +74,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		return err
 	}
 
-	val.tmNode = tmNode
+	val.TmNode = tmNode
 
 	if val.RPCAddress != "" {
 		val.RPCClient = local.New(tmNode)
@@ -231,6 +233,13 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 
 	evmGenState.Params.EvmDenom = cfg.TokenDenom
 	cfg.GenesisState[evmtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&evmGenState)
+
+	var slashingGenState slashingtypes.GenesisState
+	cfg.Codec.MustUnmarshalJSON(cfg.GenesisState[slashingtypes.ModuleName], &slashingGenState)
+
+	slashingGenState.Params.SignedBlocksWindow = cfg.SignedBlocksWindow
+	slashingGenState.Params.SlashFractionDowntime = sdk.ZeroDec()
+	cfg.GenesisState[slashingtypes.ModuleName] = cfg.Codec.MustMarshalJSON(&slashingGenState)
 
 	appGenStateJSON, err := json.MarshalIndent(cfg.GenesisState, "", "  ")
 	if err != nil {

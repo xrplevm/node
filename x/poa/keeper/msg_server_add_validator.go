@@ -15,7 +15,7 @@ func (k msgServer) AddValidator(goCtx context.Context, msg *types.MsgAddValidato
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	err := k.ExecuteAddValidator(ctx, msg.ValidatorAddress)
+	err := k.ExecuteAddValidator(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
