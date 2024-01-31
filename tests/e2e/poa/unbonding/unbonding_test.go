@@ -55,14 +55,14 @@ func (s *TestSuite) Test_RemoveUnbondingValidator() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		s.Network.MustWaitForNextBlock()
 		// EXEC:
 		// Remove validator from a pool but don't wait to be finished
 		e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.RemoveValidatorAction, validator.Address, validator.PubKey, s.Network.Validators, govtypesv1.StatusPassed)
-		s.Network.MustWaitForNextBlock()
 
 		// POST:
 		// Validator should not have any tokens in staking and bonded
-		s.RequireValidator(validatorAddress, &e2e.UnbondedStatus, &e2e.Zero)
+		s.RequireValidator(validatorAddress, &e2e.UnbondingStatus, &e2e.Zero)
 		s.RequireBondBalance(validatorAddress, e2e.Zero)
 		s.RequireValidatorSet().NotContains(validator.PubKey)
 	}()
