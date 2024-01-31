@@ -10,6 +10,7 @@ accounts:
     mnemonic: drink barely mobile group entry easy spot second chunk cause mad equip portion virus attract vessel orange omit elbow engage zone dilemma uncle leaf
     coins:
       - 1000000apoa
+      - 1000000000000000000000000000token
 genesis:
   consensus_params:
     block:
@@ -23,12 +24,11 @@ genesis:
         evm_denom: token
         allow_unprotected_txs: true
     gov:
-      deposit_params:
+      params:
         min_deposit:
           - amount: "1"
             denom: token
-      voting_params:
-        voting_period: 60s
+        voting_period: 10s
     staking:
       params:
         bond_denom: apoa

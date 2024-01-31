@@ -11,8 +11,6 @@ import (
 func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgAddValidator{}, "poa/AddValidator", nil)
 	cdc.RegisterConcrete(&MsgRemoveValidator{}, "poa/RemoveValidator", nil)
-	cdc.RegisterConcrete(&AddValidatorProposal{}, "poa/AddValidatorProposal", nil)
-	cdc.RegisterConcrete(&RemoveValidatorProposal{}, "poa/RemoveValidatorProposal", nil)
 	// this line is used by starport scaffolding # 2
 }
 
@@ -25,8 +23,6 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	)
 	registry.RegisterImplementations(
 		(*govtypes.Content)(nil),
-		&AddValidatorProposal{},
-		&RemoveValidatorProposal{},
 	)
 	// this line is used by starport scaffolding # 3
 

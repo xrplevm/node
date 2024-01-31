@@ -43,9 +43,6 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 func (am AppModule) ProposalContents(simState module.SimulationState) []simtypes.WeightedProposalContent {
 	proposalContents := make([]simtypes.WeightedProposalContent, 0)
 
-	proposalContents = append(proposalContents, poasimulation.AddValidatorProposal())
-	// proposalContents = append(proposalContents, poasimulation.RemoveValidatorProposal(am.bk, am.sk))
-
 	return proposalContents
 }
 

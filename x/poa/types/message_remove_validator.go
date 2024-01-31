@@ -9,8 +9,9 @@ const TypeMsgRemoveValidator = "remove_validator"
 
 var _ sdk.Msg = &MsgRemoveValidator{}
 
-func NewMsgRemoveValidator(address string) *MsgRemoveValidator {
+func NewMsgRemoveValidator(authority string, address string) *MsgRemoveValidator {
 	return &MsgRemoveValidator{
+		Authority:        authority,
 		ValidatorAddress: address,
 	}
 }
