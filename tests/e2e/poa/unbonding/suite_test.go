@@ -12,18 +12,14 @@ type TestSuite struct {
 }
 
 func (s *TestSuite) SetupTest() {
-	s.SetupNetwork(5, 4, 3*time.Second)
+	s.SetupNetwork(5, 4, 3*time.Second, 5)
 }
 
-func TestIntegrationTestSuite(t *testing.T) {
+func Test_TestSuite(t *testing.T) {
 	suite.Run(t, new(TestSuite))
 }
 
 func (s *TestSuite) TearDownTest() {
 	s.IntegrationTestSuite.TearDownTest()
 	time.Sleep(10 * time.Second)
-}
-
-func Test_TestSuite(t *testing.T) {
-	suite.Run(t, new(TestSuite))
 }

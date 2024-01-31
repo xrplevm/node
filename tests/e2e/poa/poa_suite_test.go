@@ -12,9 +12,9 @@ type TestSuite struct {
 }
 
 func (s *TestSuite) SetupTest() {
-	s.SetupNetwork(3, 2, time.Second)
+	s.SetupNetwork(3, 2, time.Second, 3)
 }
 
-func Test_PoaTestSuite(t *testing.T) {
+func Test_TestSuite(t *testing.T) {
 	suite.Run(t, new(TestSuite))
 }
