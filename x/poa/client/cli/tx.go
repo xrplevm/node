@@ -74,7 +74,12 @@ $ %s tx poa add-validator \
 			if err != nil {
 				return err
 			}
+
 			proposal, err := cli.ReadGovPropFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			fs := cmd.Flags()
 
 			authority := sdk.AccAddress(address.Module("gov"))
@@ -104,6 +109,9 @@ $ %s tx poa add-validator \
 					Identity: identity,
 				},
 			)
+			if err != nil {
+				return err
+			}
 
 			if err := proposal.SetMsgs([]sdk.Msg{
 				msg,
@@ -153,7 +161,11 @@ $ %s tx poa remove-validator \
 			if err != nil {
 				return err
 			}
+
 			proposal, err := cli.ReadGovPropFlags(clientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
 
 			authority := sdk.AccAddress(address.Module("gov"))
 
