@@ -1,12 +1,14 @@
 package app
 
 import (
-	"cosmossdk.io/math"
 	"encoding/json"
+	poaante "github.com/Peersyst/exrp/x/poa/ante"
 	ethante "github.com/evmos/evmos/v15/app/ante/evm"
 	"io"
 	"os"
 	"path/filepath"
+
+	"cosmossdk.io/math"
 
 	"github.com/ethereum/go-ethereum/core/vm"
 	"golang.org/x/exp/maps"
@@ -59,9 +61,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
@@ -163,7 +162,6 @@ var (
 		bank.AppModuleBasic{},
 		capability.AppModuleBasic{},
 		staking.AppModuleBasic{},
-		distr.AppModuleBasic{},
 		gov.NewAppModuleBasic(getGovProposalHandlers()),
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},
@@ -187,7 +185,6 @@ var (
 	// module account permissions
 	maccPerms = map[string][]string{
 		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
@@ -199,9 +196,7 @@ var (
 	}
 
 	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{
-		distrtypes.ModuleName: true,
-	}
+	allowedReceivingModAcc = map[string]bool{}
 )
 
 var (
@@ -249,7 +244,6 @@ type App struct {
 	CapabilityKeeper      *capabilitykeeper.Keeper
 	StakingKeeper         *stakingkeeper.Keeper
 	SlashingKeeper        slashingkeeper.Keeper
-	DistrKeeper           distrkeeper.Keeper
 	GovKeeper             govkeeper.Keeper
 	CrisisKeeper          *crisiskeeper.Keeper
 	UpgradeKeeper         *upgradekeeper.Keeper
@@ -313,7 +307,7 @@ func New(
 
 	keys := sdk.NewKVStoreKeys(
 		authtypes.StoreKey, authz.ModuleName, banktypes.StoreKey, stakingtypes.StoreKey,
-		distrtypes.StoreKey, slashingtypes.StoreKey, govtypes.StoreKey,
+		slashingtypes.StoreKey, govtypes.StoreKey,
 		paramstypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey, capabilitytypes.StoreKey, crisistypes.StoreKey, consensusparamtypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
@@ -392,16 +386,6 @@ func New(
 		govAuthAddress,
 	)
 
-	app.DistrKeeper = distrkeeper.NewKeeper(
-		appCodec,
-		keys[distrtypes.StoreKey],
-		app.AccountKeeper,
-		app.BankKeeper,
-		app.StakingKeeper,
-		authtypes.FeeCollectorName,
-		govAuthAddress,
-	)
-
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
 		appCodec,
 		cdc,
@@ -440,6 +424,7 @@ func New(
 	app.PoaKeeper = *poakeeper.NewKeeper(
 		appCodec,
 		app.GetSubspace(poatypes.ModuleName),
+		app.MsgServiceRouter(),
 		app.BankKeeper,
 		*app.StakingKeeper,
 		app.SlashingKeeper,
@@ -448,7 +433,6 @@ func New(
 
 	app.StakingKeeper.SetHooks(
 		stakingtypes.NewMultiStakingHooks(
-			app.DistrKeeper.Hooks(),
 			app.SlashingKeeper.Hooks(),
 			app.PoaKeeper.Hooks(),
 		),
@@ -574,7 +558,6 @@ func New(
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName)),
-		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
 		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
 		upgrade.NewAppModule(app.UpgradeKeeper),
 		evidence.NewAppModule(app.EvidenceKeeper),
@@ -602,7 +585,6 @@ func New(
 		capabilitytypes.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
-		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
@@ -636,7 +618,6 @@ func New(
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
@@ -653,7 +634,6 @@ func New(
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		distrtypes.ModuleName,
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
@@ -754,6 +734,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
+		ExtraDecorator:         poaante.NewPoaDecorator(),
 	}
 
 	if err := options.Validate(); err != nil {
@@ -933,7 +914,6 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
 	paramsKeeper.Subspace(stakingtypes.ModuleName)
-	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govv1.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)

@@ -2,6 +2,9 @@ package keeper
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -16,18 +19,19 @@ import (
 
 type (
 	Keeper struct {
-		cdc            codec.BinaryCodec
-		paramstore     paramtypes.Subspace
-		authority      string // the address capable of executing a poa change. Usually the gov module account
-		bk             types.BankKeeper
-		sk             stakingkeeper.Keeper
-		slashingKeeper slashingkeeper.Keeper
+		cdc        codec.Codec
+		paramstore paramtypes.Subspace
+		authority  string                    // the address capable of executing a poa change. Usually the gov module account
+		router     *baseapp.MsgServiceRouter // Msg server router
+		bk         types.BankKeeper
+		sk         stakingkeeper.Keeper
 	}
 )
 
 func NewKeeper(
-	cdc codec.BinaryCodec,
+	cdc codec.Codec,
 	ps paramtypes.Subspace,
+	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk stakingkeeper.Keeper,
 	slashingKeeper slashingkeeper.Keeper,
@@ -38,13 +42,18 @@ func NewKeeper(
 		ps = ps.WithKeyTable(types.ParamKeyTable())
 	}
 
+	_, err := sdk.AccAddressFromBech32(authority)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Keeper{
-		cdc:            cdc,
-		paramstore:     ps,
-		authority:      authority,
-		bk:             bk,
-		sk:             sk,
-		slashingKeeper: slashingKeeper,
+		cdc:        cdc,
+		paramstore: ps,
+		authority:  authority,
+		router:     router,
+		bk:         bk,
+		sk:         sk,
 	}
 }
 
@@ -52,13 +61,18 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
+// Router returns the gov keeper's router
+func (keeper Keeper) Router() *baseapp.MsgServiceRouter {
+	return keeper.router
+}
+
 func (k Keeper) GetAuthority() string {
 	return k.authority
 }
 
-func (k Keeper) ExecuteAddValidator(ctx sdk.Context, validatorAddress string) error {
+func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator) error {
 	// Check if the new validator already has staking power in the bank account
-	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	accAddress, err := sdk.AccAddressFromBech32(msg.ValidatorAddress)
 	valAddress := sdk.ValAddress(accAddress)
 	if err != nil {
 		return err
@@ -106,12 +120,34 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, validatorAddress string) er
 	}
 
 	// All checks passed, mint new validator tokens and send them to the address
-	coins := sdk.NewCoins(sdk.NewCoin(denom, sdk.DefaultPowerReduction))
+	coin := sdk.NewCoin(denom, sdk.DefaultPowerReduction)
+	coins := sdk.NewCoins(coin)
 	err = k.bk.MintCoins(ctx, types.ModuleName, coins)
 	if err != nil {
 		return err
 	}
 	err = k.bk.SendCoinsFromModuleToAccount(ctx, types.ModuleName, accAddress, coins)
+	if err != nil {
+		return err
+	}
+
+	pubKey, ok := msg.Pubkey.GetCachedValue().(cryptotypes.PubKey)
+	if !ok {
+		return sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "Expecting cryptotypes.PubKey, got %T", pubKey)
+	}
+	createValidatorMsg, err := stakingtypes.NewMsgCreateValidator(
+		valAddress,
+		pubKey,
+		coin,
+		msg.Description,
+		stakingtypes.NewCommissionRates(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
+		sdk.OneInt(),
+	)
+	if err != nil {
+		return err
+	}
+	handler := k.Router().Handler(createValidatorMsg)
+	_, err = handler(ctx, createValidatorMsg)
 	if err != nil {
 		return err
 	}

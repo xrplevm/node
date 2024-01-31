@@ -24,7 +24,10 @@ func (msg *MsgRemoveValidator) Type() string {
 }
 
 func (msg *MsgRemoveValidator) GetSigners() []sdk.AccAddress {
-	addr, _ := sdk.AccAddressFromBech32(msg.Authority)
+	addr, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil {
+		panic(err)
+	}
 	return []sdk.AccAddress{addr}
 }
 

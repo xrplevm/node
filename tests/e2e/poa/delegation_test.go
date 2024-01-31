@@ -1,56 +1,56 @@
 package poa_test
 
 import (
-	"fmt"
+	"github.com/Peersyst/exrp/tests/e2e"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (s *IntegrationTestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
-	fmt.Println("==== Test_AddDelegationIsNotAllowedToOtherValidators")
-	validator := s.network.Validators[0]
+func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
+	s.T().Logf("==== Test_AddDelegationIsNotAllowedToOtherValidators")
+	validator := s.Network.Validators[0]
 	validatorAddress := validator.Address.String()
-	delegator := s.network.Validators[s.cfg.NumBondedValidators]
+	delegator := s.Network.Validators[s.Cfg.NumBondedValidators]
 	delegatorAddress := delegator.Address.String()
 
 	// Validator should be bonded and have default bonded tokens power
-	s.RequireValidator(validatorAddress, &bondedStatus, &DefaultBondedTokens)
-	s.RequireBondBalance(validatorAddress, zero)
+	s.RequireValidator(validatorAddress, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
+	s.RequireBondBalance(validatorAddress, e2e.Zero)
 	// Delegator should not have any shares and should have default bonded tokens in bank
 	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
-	s.RequireBondBalance(delegatorAddress, DefaultBondedTokens)
+	s.RequireBondBalance(delegatorAddress, e2e.DefaultBondedTokens)
 
-	Delegate(s, delegator, validator, DefaultBondedTokens)
+	e2e.Delegate(&s.IntegrationTestSuite, delegator, validator, e2e.DefaultBondedTokens)
 
 	// Delegator should not have any shares and should have default bonded tokens in bank
 	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
-	s.RequireBondBalance(delegatorAddress, DefaultBondedTokens)
-	fmt.Println("==== [V] Test_AddDelegationIsNotAllowedToOtherValidators")
+	s.RequireBondBalance(delegatorAddress, e2e.DefaultBondedTokens)
+	s.T().Logf("==== [V] Test_AddDelegationIsNotAllowedToOtherValidators")
 }
 
-func (s *IntegrationTestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
-	fmt.Println("==== Test_AddDelegationIsAllowedToSelfValidator")
-	validator := s.network.Validators[s.cfg.NumBondedValidators]
+func (s *TestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
+	s.T().Logf("==== Test_AddDelegationIsAllowedToSelfValidator")
+	validator := s.Network.Validators[s.Cfg.NumBondedValidators]
 	validatorAddress := validator.Address.String()
 
 	// PRE:
 	// Validator should not be bonded and have default bonded tokens power
 	s.RequireValidator(validatorAddress, nil, nil)
-	s.RequireBondBalance(validatorAddress, DefaultBondedTokens)
+	s.RequireBondBalance(validatorAddress, e2e.DefaultBondedTokens)
 
 	// EXEC:
-	halfTokens := sdk.NewDec(DefaultBondedTokens.Int64()).Quo(sdk.NewDec(2)).RoundInt()
+	halfTokens := sdk.NewDec(e2e.DefaultBondedTokens.Int64()).Quo(sdk.NewDec(2)).RoundInt()
 
-	BondTokens(s, validator, halfTokens)
+	e2e.BondTokens(&s.IntegrationTestSuite, validator, halfTokens)
 
 	// Check validator is active and there are pending bonded tokens in bank
-	s.RequireValidator(validatorAddress, &unbondedStatus, &halfTokens)
+	s.RequireValidator(validatorAddress, &e2e.UnbondedStatus, &halfTokens)
 	s.RequireBondBalance(validatorAddress, halfTokens)
 
-	Delegate(s, validator, validator, halfTokens)
+	e2e.Delegate(&s.IntegrationTestSuite, validator, validator, halfTokens)
 
 	// POST:
 	// Delegator should have all the tokens bonded and delegation should have happened
-	s.RequireValidator(validatorAddress, &bondedStatus, &DefaultBondedTokens)
+	s.RequireValidator(validatorAddress, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
 	s.RequireBondBalance(validatorAddress, sdk.ZeroInt())
-	fmt.Println("==== [V] Test_AddDelegationIsAllowedToSelfValidator")
+	s.T().Logf("==== [V] Test_AddDelegationIsAllowedToSelfValidator")
 }
