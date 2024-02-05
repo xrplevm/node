@@ -22,7 +22,7 @@ RUN golangci-lint run
 # Unit tests
 RUN go test $(go list ./... | grep -v github.com/Peersyst/exrp/tests/e2e/poa)
 # End to end tests
-RUN go test -p 1 -v -timeout 30m ./tests/e2e/...
+RUN TEST_CLEANUP_DIR=false go test -p 1 -v -timeout 30m ./tests/e2e/...
 RUN touch /test.lock
 
 FROM golang:1.20 AS release
