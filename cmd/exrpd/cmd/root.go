@@ -1,8 +1,12 @@
 package cmd
 
 import (
-	simappparams "cosmossdk.io/simapp/params"
 	"errors"
+	"io"
+	"os"
+	"path/filepath"
+
+	simappparams "cosmossdk.io/simapp/params"
 	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
@@ -31,9 +35,7 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"io"
-	"os"
-	"path/filepath"
+
 	// this line is used by starport scaffolding # root/moduleImport
 
 	"github.com/Peersyst/exrp/app"
@@ -126,6 +128,7 @@ func initRootCmd(
 		),
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
+		AddGenesisContractsCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		ethermintclient.NewTestnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
