@@ -24,12 +24,11 @@ import (
 
 func AddGenesisContractsCmd(defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add-genesis-contracts [witness][,[witness]] [threshold]",
+		Use:   "add-genesis-contracts [witness][,[witness]] [threshold] [bridgeLckChainAddress,minCreateAmount,signatureReward]?",
 		Short: "Adds genesis contracts to genesis.json",
-		Long: `Adds genesis contracts to genesis.json. First it adds the safe contracts and afterwards
-			the bridge contract paired with its proxy.`,
+		Long:  `Adds genesis contracts to genesis.json. Adds the safe contracts and bridge contracts as well as a native bridge if indicated.`,
 
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
 
@@ -38,6 +37,9 @@ func AddGenesisContractsCmd(defaultNodeHome string) *cobra.Command {
 
 			config.SetRoot(clientCtx.HomeDir)
 
+			// ----------------------------------------------------------------
+			// Parse args
+			// ----------------------------------------------------------------
 			witnesses, witnessesEvm, err := ParseWitnesses(args[0])
 			if err != nil {
 				return fmt.Errorf("failed to parse witnesses: %w", err)
@@ -48,15 +50,26 @@ func AddGenesisContractsCmd(defaultNodeHome string) *cobra.Command {
 				return fmt.Errorf("failed to parse threshold: %w", err)
 			}
 
+			var bridge *BridgeInitInfo = nil
+			if len(args) > 2 {
+				bridge, err = ParseBridge(args[2])
+				if err != nil {
+					return fmt.Errorf("failed to parse bridge: %w", err)
+				}
+			}
+
+			// ----------------------------------------------------------------
+			// Prepare contracts, accounts, addresses and balances
+			// ----------------------------------------------------------------
+			contracts, err := getGenesisContracts(witnessesEvm, threshold, bridge)
+			if err != nil {
+				return fmt.Errorf("failed to get genesis contracts: %w", err)
+			}
+
 			balances := []banktypes.Balance{}
 			addresses := []sdk.AccAddress{}
 			genAccounts := []authtypes.GenesisAccount{}
 			evmGenAccounts := []evmtypes.GenesisAccount{}
-
-			contracts, err := getGenesisContracts(witnessesEvm, threshold)
-			if err != nil {
-				return fmt.Errorf("failed to get genesis contracts: %w", err)
-			}
 
 			for _, contract := range contracts {
 				addr, err := sdk.AccAddressFromHexUnsafe(contract.address)
@@ -212,7 +225,7 @@ func AddGenesisContractsCmd(defaultNodeHome string) *cobra.Command {
 func ParseWitnesses(witnessesStr string) ([]sdk.AccAddress, []string, error) {
 	witnessesStr = strings.TrimSpace(witnessesStr)
 	if len(witnessesStr) == 0 {
-		return nil, nil, nil
+		return nil, nil, fmt.Errorf("no witnesses indicated")
 	}
 
 	witnessesStrs := strings.Split(witnessesStr, ",")
@@ -243,7 +256,7 @@ func ParseWitnesses(witnessesStr string) ([]sdk.AccAddress, []string, error) {
 func ParseThreshold(thresholdStr string, witnessesLength int) (int64, error) {
 	threshold, err := strconv.ParseInt(thresholdStr, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error parsing threshold: %w", err)
 	}
 
 	if threshold > int64(witnessesLength) || threshold <= 0 {
@@ -251,4 +264,38 @@ func ParseThreshold(thresholdStr string, witnessesLength int) (int64, error) {
 	}
 
 	return threshold, nil
+}
+
+func ParseBridge(bridgeStr string) (*BridgeInitInfo, error) {
+	bridgeStr = strings.TrimSpace(bridgeStr)
+	if len(bridgeStr) == 0 {
+		return nil, nil
+	}
+
+	bridgeInfoStrs := strings.Split(bridgeStr, ",")
+	if len(bridgeInfoStrs) != 3 {
+		return nil, fmt.Errorf("invalid bridge info format")
+	}
+
+	lockingAddress := strings.TrimPrefix(bridgeInfoStrs[0], "0x")
+	_, err := sdk.AccAddressFromHexUnsafe(lockingAddress)
+	if err != nil {
+		return nil, fmt.Errorf("invalid bridge locking address format: %w", err)
+	}
+
+	minCreateAmount, err := strconv.ParseInt(bridgeInfoStrs[1], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing bridge min create amount: %w", err)
+	}
+
+	signatureReward, err := strconv.ParseInt(bridgeInfoStrs[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing bridge signature reward: %w", err)
+	}
+
+	return &BridgeInitInfo{
+		lockingAddress:  lockingAddress,
+		minCreateAmount: minCreateAmount,
+		signatureReward: signatureReward,
+	}, nil
 }

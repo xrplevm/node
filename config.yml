@@ -23,6 +23,7 @@ genesis:
       params:
         evm_denom: token
         allow_unprotected_txs: true
+        active_precompiles: []
     gov:
       params:
         min_deposit:
