@@ -1,0 +1,29 @@
+name: "📃 Documentation Bug"
+description: "Report inaccuracies or omissions in the documentation."
+title: "[docs] "
+labels: ["docs"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for helping us improve the documentation! Your contribution is invaluable in enhancing the user experience.
+  - type: textarea
+    attributes:
+      label: Summary
+      description: "Please succinctly describe the inaccuracies or omissions you have identified in the documentation."
+      placeholder: "Enter a brief summary of the issue."
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Link to the Related Documentation Page
+      description: "Please provide a link to the documentation page that requires attention."
+      placeholder: "Enter the URL of the documentation page."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Describe the Issue
+      description: "Please provide a detailed description of the inaccuracies or omissions you have observed in the documentation."
+      placeholder: "Enter a detailed description of the issue."
+    validations:
+      required: true
