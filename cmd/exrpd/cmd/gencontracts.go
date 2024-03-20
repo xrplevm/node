@@ -93,7 +93,7 @@ func AddGenesisContractsCmd(defaultNodeHome string) *cobra.Command {
 					return fmt.Errorf("failed to validate new genesis account: %w", err)
 				}
 
-				if contract.name == safeContractName {
+				if contract.name == safeProxyName {
 					coins, err := sdk.ParseCoinsNormalized(safeInitCoins)
 					if err != nil {
 						return fmt.Errorf("failed to parse coins: %w", err)
