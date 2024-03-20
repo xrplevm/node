@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  node:
+    build:
+      context: ./../../
+      dockerfile: tools/contracts-tester/docker/node.Dockerfile
+      args:
+        - WITNESSES=${NODE_WITNESSES}
+        - THRESHOLD=${SAFE_THRESHOLD}
+        - BRIDGE=${BRIDGE}
+    ports:
+      - "8545:8545"
+  tester:
+    build:
+      context: ./../../
+      dockerfile: tools/contracts-tester/docker/test.Dockerfile
+    environment:
+      - BRIDGE_RUN_TESTS=true
+      - NODE_URL=http://node:8545
+      - SAFE_THRESHOLD=${SAFE_THRESHOLD}
+      - CLAIMER_ACCOUNT=${CLAIMER_ACCOUNT}
+      - TEST_WITNESSES=${TEST_WITNESSES}
+      - BRIDGE=${BRIDGE}
+      - BRIDGE_KEY=${BRIDGE_KEY}
+    command: ['sleep 5s && go test github.com/Peersyst/exrp/tools/contracts-tester -v']
+    depends_on: 
+      - node
