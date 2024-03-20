@@ -15,10 +15,10 @@ const (
 	witnessInitCoins         = "10000000000000000000000" + "token"
 	safeInitCoins            = "10000000000000000000000000000000000" + "token"
 	safeContractName         = "SafeProxyImplementation"
-	safeProxyAddress         = "b5f762798a53d543a014caf8b297cff8f2f937e8"
+	SafeProxyAddress         = "b5f762798a53d543a014caf8b297cff8f2f937e8"
 	fallbackHandlerAddress   = "f48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4"
 	safeMasterAddress        = "3E5c63644E683549055b9Be8653de26E0B4CD36E"
-	bridgeProxyModuleAddress = "a025DD2C018c159489a85d288a1b420a07C43f87"
+	BridgeProxyModuleAddress = "a025DD2C018c159489a85d288a1b420a07C43f87"
 	bridgeDoorAddress        = "f35225d1d59e77ee66012f5bf4c41675a3d2ec7b"
 )
 
@@ -31,8 +31,8 @@ type GenesisContract struct {
 
 type BridgeInitInfo struct {
 	lockingAddress  string
-	minCreateAmount int64
-	signatureReward int64
+	minCreateAmount *big.Int
+	signatureReward *big.Int
 }
 
 func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInitInfo) ([]GenesisContract, error) {
@@ -43,7 +43,7 @@ func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInit
 			Value: "0x" + padZeroes(safeMasterAddress),
 		},
 	}
-	modulesStorage, err := buildSentinel([]string{bridgeProxyModuleAddress}, padZeroes("1"))
+	modulesStorage, err := buildSentinel([]string{BridgeProxyModuleAddress}, padZeroes("1"))
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +73,11 @@ func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInit
 		},
 		evmtypes.State{
 			Key:   "0x" + padZeroes("97"),
-			Value: "0x" + padZeroes(safeProxyAddress),
+			Value: "0x" + padZeroes(SafeProxyAddress),
 		},
 		evmtypes.State{
 			Key:   "0x" + padZeroes("fd"),
-			Value: "0x" + padZeroes(safeProxyAddress),
+			Value: "0x" + padZeroes(SafeProxyAddress),
 		},
 		evmtypes.State{
 			Key:   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
@@ -122,49 +122,49 @@ func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInit
 
 		// Bridge lock value
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
 			Value: "0x" + padZeroes("1"),
 		})
 		memBI = memBI.Add(memBI, big.NewInt(1))
 
 		// Bridge minCreateAmount
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
-			Value: "0x" + padZeroes(strconv.FormatInt(bridge.minCreateAmount, 16)),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
+			Value: "0x" + padZeroes(fmt.Sprintf("%x", bridge.minCreateAmount)),
 		})
 		memBI = memBI.Add(memBI, big.NewInt(1))
 
 		// Bridge signatureReward
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
-			Value: "0x" + padZeroes(strconv.FormatInt(bridge.signatureReward, 16)),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
+			Value: "0x" + padZeroes(fmt.Sprintf("%x", bridge.signatureReward)),
 		})
 		memBI = memBI.Add(memBI, big.NewInt(1))
 
 		// Bridge lockingAddress
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
 			Value: "0x" + padZeroes(bridge.lockingAddress),
 		})
 		memBI = memBI.Add(memBI, big.NewInt(2)) // Sum 2 as lockingIssuer is 0 and not present
 
 		// Bridge lockingIssue currency (XRP in hex + size (6))
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
 			Value: "0x5852500000000000000000000000000000000000000000000000000000000006",
 		})
 		memBI = memBI.Add(memBI, big.NewInt(1))
 
 		// Bridge issuingAddress
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
-			Value: "0x" + padZeroes(safeProxyAddress),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
+			Value: "0x" + padZeroes(SafeProxyAddress),
 		})
-		memBI = memBI.Add(memBI, big.NewInt(2)) // Sum 2 as lockingIssuer is 0 and not present
+		memBI = memBI.Add(memBI, big.NewInt(2)) // Sum 2 as issuingIssuer is 0 and not present
 
 		// Bridge issuingIssue currency (XRP in hex + size (6))
 		bridgeProxyStorage = append(bridgeProxyStorage, evmtypes.State{
-			Key:   "0x" + fmt.Sprintf("%x", memBI),
+			Key:   "0x" + padZeroes(fmt.Sprintf("%x", memBI)),
 			Value: "0x5852500000000000000000000000000000000000000000000000000000000006",
 		})
 
@@ -222,7 +222,7 @@ func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInit
 		},
 	}, GenesisContract{
 		name:     safeContractName,
-		address:  safeProxyAddress,
+		address:  SafeProxyAddress,
 		bytecode: "608060405273ffffffffffffffffffffffffffffffffffffffff600054167fa619486e0000000000000000000000000000000000000000000000000000000060003514156050578060005260206000f35b3660008037600080366000845af43d6000803e60008114156070573d6000fd5b3d6000f3fea2646970667358221220d1429297349653a4918076d650332de1a1068c5f3e07c5c82360c277770b955264736f6c63430007060033",
 		memory:   safeStorage,
 	}, GenesisContract{
@@ -247,7 +247,7 @@ func getGenesisContracts(witnesses []string, threshold int64, bridge *BridgeInit
 		},
 	}, GenesisContract{
 		name:     "ProxyBridgeDoorMultiToken",
-		address:  bridgeProxyModuleAddress,
+		address:  BridgeProxyModuleAddress,
 		bytecode: "60806040523661001357610011610017565b005b6100115b610027610022610067565b61009f565b565b606061004e8383604051806060016040528060278152602001610268602791396100c3565b9392505050565b6001600160a01b03163b151590565b90565b600061009a7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b3660008037600080366000845af43d6000803e8080156100be573d6000f35b3d6000fd5b6060600080856001600160a01b0316856040516100e09190610218565b600060405180830381855af49150503d806000811461011b576040519150601f19603f3d011682016040523d82523d6000602084013e610120565b606091505b50915091506101318683838761013b565b9695505050505050565b606083156101ac5782516101a5576001600160a01b0385163b6101a55760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e747261637400000060448201526064015b60405180910390fd5b50816101b6565b6101b683836101be565b949350505050565b8151156101ce5781518083602001fd5b8060405162461bcd60e51b815260040161019c9190610234565b60005b838110156102035781810151838201526020016101eb565b83811115610212576000848401525b50505050565b6000825161022a8184602087016101e8565b9190910192915050565b60208152600082518060208401526102538160408501602087016101e8565b601f01601f1916919091016040019291505056fe416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220ff8e6f2d761d58b3bd984933269e01a7ff1f70a460b808056daa4cff1ee8ab6964736f6c63430008090033",
 		memory:   bridgeProxyStorage,
 	}), nil
@@ -316,7 +316,7 @@ func getBridgeEncoding(bridge *BridgeInitInfo) string {
 	encoding := padZeroes(bridge.lockingAddress)                              // Locking address
 	encoding += padZeroes("0")                                                // Locking issuer
 	encoding += padZeroes("c0")                                               // c0 = 192 => bytes before string start
-	encoding += padZeroes(safeProxyAddress)                                   // Issuing address
+	encoding += padZeroes(SafeProxyAddress)                                   // Issuing address
 	encoding += padZeroes("0")                                                // Issuing issuer
 	encoding += padZeroes("100")                                              // c0 = 256 => bytes before string start
 	encoding += padZeroes(strconv.FormatInt(int64(len(currencyEncoded)), 16)) // Position 192, first string, indicates size

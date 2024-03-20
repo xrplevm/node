@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -283,14 +284,14 @@ func ParseBridge(bridgeStr string) (*BridgeInitInfo, error) {
 		return nil, fmt.Errorf("invalid bridge locking address format: %w", err)
 	}
 
-	minCreateAmount, err := strconv.ParseInt(bridgeInfoStrs[1], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing bridge min create amount: %w", err)
+	minCreateAmount, success := big.NewInt(0).SetString(bridgeInfoStrs[1], 10)
+	if !success {
+		return nil, fmt.Errorf("error parsing bridge min create amount")
 	}
 
-	signatureReward, err := strconv.ParseInt(bridgeInfoStrs[2], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing bridge signature reward: %w", err)
+	signatureReward, success := big.NewInt(0).SetString(bridgeInfoStrs[2], 10)
+	if !success {
+		return nil, fmt.Errorf("error parsing bridge signature reward")
 	}
 
 	return &BridgeInitInfo{
