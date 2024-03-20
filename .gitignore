@@ -5,6 +5,7 @@ release/
 .idea/
 .vscode/
 .DS_Store
+tools/contracts-tester/.env
 
 
 .exrpd/
