@@ -137,6 +137,9 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 
 	am.keeper.InitGenesis(ctx, genState)
 
+	// To create module account
+	am.ak.GetModuleAccount(ctx, am.Name())
+
 	return []abci.ValidatorUpdate{}
 }
 
