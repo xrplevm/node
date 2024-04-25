@@ -91,29 +91,9 @@ func CreateUpgradeHandler(
 		if _, err := ibctmmigrations.PruneExpiredConsensusStates(ctx, cdc, clientKeeper); err != nil {
 			return nil, err
 		}
-		// !! ATTENTION !!
-
-		// Add EIP contained in Shanghai hard fork to the extra EIPs
-		// in the EVM parameters. This enables using the PUSH0 opcode and
-		// thus supports Solidity v0.8.20.
-		//
-		// NOTE: this was already enabled on testnet
-		logger.Info("adding EIP 3855 to EVM parameters")
-		err := EnableEIPs(ctx, ek, 3855)
-		if err != nil {
-			logger.Error("error while enabling EIPs", "error", err)
-		}
 
 		// Leave modules are as-is to avoid running InitGenesis.
 		logger.Debug("running module migrations ...")
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
-}
-
-// EnableEIPs enables the given EIPs in the EVM parameters.
-func EnableEIPs(ctx sdk.Context, ek *evmkeeper.Keeper, eips ...int64) error {
-	evmParams := ek.GetParams(ctx)
-	evmParams.ExtraEIPs = append(evmParams.ExtraEIPs, eips...)
-
-	return ek.SetParams(ctx, evmParams)
 }
