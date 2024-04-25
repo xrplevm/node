@@ -1,0 +1,23 @@
+name: GoReleaser
+on:
+  workflow_dispatch:
+    inputs:
+      commit_branch:
+        description: The branch or the commit sha to push tag to
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.commit_branch }}
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      # Build and push docker image
+      - name: Run go releaser
+        run: |
+          docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+             -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
+             goreleaser/goreleaser-cross:v1.20.2 release --clean --skip-validate
