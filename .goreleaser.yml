@@ -2,6 +2,12 @@ before:
   hooks:
     - go mod download
 
+release:
+  target_commitish: '{{ .Commit }}'
+  tag: '{{ .Env.Tag }}'
+  prerelease: auto
+  make_latest: '{{ .Env.IsLatestRelease }}'
+
 builds:
   - id: "exrpd-darwin-amd64"
     main: ./cmd/exrpd
@@ -94,5 +100,3 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ .Tag }}-next"

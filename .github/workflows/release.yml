@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit_branch }}
+          fetch-depth: 0
+          fetch-tags: true
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
       # Docker login
@@ -40,15 +42,11 @@ jobs:
           tags: |
             peersyst/exrp:${{ github.event.inputs.tag }}
             ${{ fromJSON('["", "peersyst/exrp:latest"]')[github.event.inputs.is_latest_release == 'true'] }}
-      - name: Extract release binaries from docker image
+      - name: Run go releaser
         run: |
-          docker run --rm -v $PWD/release:/release peersyst/exrp:${{ github.event.inputs.tag }} "cp /binaries/* /release"
-      - name: Publish the Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          files: release/*
-          prerelease: steps.check-prerelease.outputs.match == 'true'
-          target_commitish: ${{ github.event.inputs.commit_branch }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          docker run --rm -e CGO_ENABLED \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e Tag=${{ github.event.inputs.tag }} \
+            -e IsLatestRelease=${{ github.event.inputs.is_latest_release }} \
+            -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
+            goreleaser/goreleaser-cross:v1.20.2 release --clean
