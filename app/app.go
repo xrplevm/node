@@ -7,6 +7,7 @@ import (
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	ethante "github.com/evmos/evmos/v15/app/ante/evm"
+	"github.com/spf13/cast"
 	"io"
 	"os"
 	"path/filepath"
@@ -103,8 +104,7 @@ import (
 	ibcporttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
-	"github.com/spf13/cast"
-
+	ibctm "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
 	"github.com/Peersyst/exrp/docs"
@@ -172,6 +172,7 @@ var (
 		slashing.AppModuleBasic{},
 		feegrantmodule.AppModuleBasic{},
 		ibc.AppModuleBasic{},
+		ibctm.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
 		transfer.AppModuleBasic{},
