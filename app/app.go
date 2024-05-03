@@ -756,6 +756,10 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
 		ExtraDecorator:         poaante.NewPoaDecorator(),
+		AuthzDisabledMsgTypes: []string{
+			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+		},
 	}
 
 	if err := options.Validate(); err != nil {

@@ -3,6 +3,7 @@ package ante
 import (
 	"errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 type PoaDecorator struct{}
@@ -14,8 +15,8 @@ func NewPoaDecorator() PoaDecorator {
 func (cbd PoaDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	// loop through all the messages and check if the message type is allowed
 	for _, msg := range tx.GetMsgs() {
-		if sdk.MsgTypeURL(msg) == "/cosmos.staking.v1beta1.MsgUndelegate" ||
-			sdk.MsgTypeURL(msg) == "/cosmos.staking.v1beta1.MsgBeginRedelegate" {
+		if sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}) ||
+			sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}) {
 			return ctx, errors.New("tx type not allowed")
 		}
 	}
