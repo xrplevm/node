@@ -21,7 +21,7 @@ ENV DAEMON_RESTART_AFTER_UPGRADE=true
 COPY --from=build /root/cosmos-sdk/cosmovisor/cosmovisor /usr/local/bin/cosmovisor
 COPY --from=peersyst/xrp-evm-blockchain:latest /usr/bin/exrpd /usr/local/bin/exrpd
 
-ADD init.sh /usr/local/bin/initialize
+ADD tools/cosmovisor/init.sh /usr/local/bin/initialize
 RUN chmod +x /usr/local/bin/initialize
 
 RUN apk add gcompat
