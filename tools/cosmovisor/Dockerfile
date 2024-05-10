@@ -13,7 +13,7 @@ RUN make cosmovisor
 
 FROM alpine:3.17.3
 
-ENV DAEMON_HOME=/root/.cosmovisor
+ENV DAEMON_HOME=/root/.exrpd
 ENV DAEMON_NAME=exrpd
 ENV DAEMON_ALLOW_DOWNLOAD_BINARIES=true
 ENV DAEMON_RESTART_AFTER_UPGRADE=true
@@ -21,9 +21,10 @@ ENV DAEMON_RESTART_AFTER_UPGRADE=true
 COPY --from=build /root/cosmos-sdk/cosmovisor/cosmovisor /usr/local/bin/cosmovisor
 COPY --from=peersyst/xrp-evm-blockchain:latest /usr/bin/exrpd /usr/local/bin/exrpd
 
-RUN mkdir -p $DAEMON_HOME/data
-RUN mkdir -p $DAEMON_HOME/cosmovisor/genesis/bin
+ADD init.sh /usr/local/bin/initialize
+RUN chmod +x /usr/local/bin/initialize
 
-RUN ln -s /usr/local/bin/exrpd $DAEMON_HOME/cosmovisor/genesis/bin/exrpd
+RUN apk add gcompat
+RUN ln -sf ../../lib/libgcompat.so.0 /usr/lib/libresolv.so.2
 
 CMD ["cosmovisor"]
