@@ -20,10 +20,10 @@ FROM base AS integration
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 RUN golangci-lint run
 # Unit tests
-RUN go test $(go list ./... | grep -v github.com/Peersyst/exrp/tests/e2e/poa)
+RUN go test $(go list ./... | grep -v github.com/Peersyst/exrp/v2/tests/e2e/poa)
 # End to end tests
 # TODO: Temporary disabled e2e tests
-# RUN TEST_CLEANUP_DIR=false go test -p 1 -v -timeout 30m ./tests/e2e/...
+RUN TEST_CLEANUP_DIR=false go test -p 1 -v -timeout 30m ./tests/e2e/...
 RUN touch /test.lock
 
 FROM golang:1.20 AS release
