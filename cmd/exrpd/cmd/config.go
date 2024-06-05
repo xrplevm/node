@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/v2/app"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethermint "github.com/evmos/evmos/v15/types"
 )

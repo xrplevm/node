@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	poaante "github.com/Peersyst/exrp/x/poa/ante"
+	poaante "github.com/Peersyst/exrp/v2/x/poa/ante"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -21,7 +21,7 @@ import (
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/simapp"
 	simappparams "cosmossdk.io/simapp/params"
-	"github.com/Peersyst/exrp/x/poa"
+	"github.com/Peersyst/exrp/v2/x/poa"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
@@ -107,11 +107,11 @@ import (
 	ibctm "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
-	"github.com/Peersyst/exrp/docs"
-	poakeeper "github.com/Peersyst/exrp/x/poa/keeper"
-	poatypes "github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/docs"
+	poakeeper "github.com/Peersyst/exrp/v2/x/poa/keeper"
+	poatypes "github.com/Peersyst/exrp/v2/x/poa/types"
 
-	// "github.com/Peersyst/exrp/app/ante"
+	// "github.com/Peersyst/exrp/v2/app/ante"
 	"github.com/evmos/evmos/v15/app/ante"
 	srvflags "github.com/evmos/evmos/v15/server/flags"
 

@@ -1,7 +1,7 @@
 package poa_test
 
 import (
-	"github.com/Peersyst/exrp/tests/e2e"
+	"github.com/Peersyst/exrp/v2/tests/e2e"
 	"strings"
 )
 

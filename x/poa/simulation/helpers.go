@@ -1,8 +1,8 @@
 package simulation
 
 import (
-	"github.com/Peersyst/exrp/testutil/sims"
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/testutil/sims"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"

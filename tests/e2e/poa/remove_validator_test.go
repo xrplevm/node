@@ -1,7 +1,7 @@
 package poa_test
 
 import (
-	"github.com/Peersyst/exrp/tests/e2e"
+	"github.com/Peersyst/exrp/v2/tests/e2e"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"time"

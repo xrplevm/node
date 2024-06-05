@@ -36,7 +36,7 @@ import (
 	"path/filepath"
 	// this line is used by starport scaffolding # root/moduleImport
 
-	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/v2/app"
 	ethermintclient "github.com/evmos/evmos/v15/client"
 	ethermintserver "github.com/evmos/evmos/v15/server"
 	ethermintservercfg "github.com/evmos/evmos/v15/server/config"

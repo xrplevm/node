@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/Peersyst/exrp/testutil/network"
+	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
 	"time"

@@ -1,7 +1,7 @@
 package app_test
 
 import (
-	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/v2/app"
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"

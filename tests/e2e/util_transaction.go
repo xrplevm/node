@@ -2,13 +2,13 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
 	"time"
 
-	"github.com/Peersyst/exrp/testutil/network"
+	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/testutil"
