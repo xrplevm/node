@@ -1,4 +1,4 @@
-module github.com/Peersyst/exrp
+module github.com/Peersyst/exrp/v2
 
 go 1.20
 
