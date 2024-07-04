@@ -1,52 +1,70 @@
-# exrp
-**exrp** is a blockchain built using Cosmos SDK and Tendermint and created with [Ignite CLI](https://ignite.com/cli).
+<!--
+parent:
+  order: false
+-->
 
-## Get started
+<div align="center">
+  <h1> XRPL EVM Sidechain node </h1>
+</div>
 
-```
-ignite chain serve
-```
+<div align="center">
+  <a href="https://github.com/xrplevm/node/releases/latest">
+    <img alt="Version" src="https://img.shields.io/github/tag/xrplevm/node.svg" />
+  </a>
+  <a href="https://github.com/xrplevm/node/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/xrplevm/node.svg" />
+  </a>
+  <a href="https://pkg.go.dev/github.com/Peersyst/exrp">
+    <img alt="GoDoc" src="https://godoc.org/github.com/Peersyst/exrp?status.svg" />
+  </a>
+  <a href="https://goreportcard.com/report/github.com/Peersyst/exrp">
+    <img alt="Go report card" src="https://goreportcard.com/badge/github.com/Peersyst/exrp"/>
+  </a>
+</div>
+<div align="center">
+  <a href="https://discord.gg/xrplevm">
+    <img alt="Discord" src="https://img.shields.io/discord/809048090249134080.svg" />
+  </a>
+  <a href="https://codecov.io/gh/xrplevm/node">
+    <img alt="Code Coverage" src="https://codecov.io/gh/xrplevm/node/branch/main/graph/badge.svg" />
+  </a>
+  <a href="https://twitter.com/Peersyst">
+    <img alt="Twitter Follow Peersyst" src="https://img.shields.io/twitter/follow/Peersyst"/>
+  </a>
+</div>
 
-`serve` command installs dependencies, builds, initializes, and starts your blockchain in development.
+## About
 
-### Configure
+The XRP Ledger Ethereum Virtual Machine (EVM) sidechain is a fast and secure blockchain that brings web3 applications to the XRP Ledger community.
 
-Your blockchain in development can be configured with `config.yml`. To learn more, see the [Ignite CLI docs](https://docs.ignite.com).
+## Quick Start
 
-### Web Frontend
+To learn how the XRPL EVM Sidechain works from a high-level perspective,
+go to the [Protocol Overview](https://docs.xrplevm.org/introduction) section of the documentation.
 
-Ignite CLI has scaffolded a Vue.js-based web app in the `vue` directory. Run the following commands to install dependencies and start the app:
+## Documentation
 
-```
-cd vue
-npm install
-npm run serve
-```
+Find all the documentation at [docs.xrplevm.org](https://docs.xrplevm.org).
+Head over there and check it out.
 
-The frontend app is built using the `@starport/vue` and `@starport/vuex` packages. For details, see the [monorepo for Ignite front-end development](https://github.com/ignite/web).
+## Installation
 
-## Release
-To release a new version of your blockchain, create and push a new tag with `v` prefix. A new draft release with the configured targets will be created.
+For prerequisites and detailed build instructions
+please read the [Join the EVM Sidechian](https://opensource.ripple.com/docs/evm-sidechain/join-evm-sidechain-devnet/) instructions.
 
-```
-git tag v0.1
-git push origin v0.1
-```
+Or check out the latest [release](https://github.com/xrplevm/node/releases).
 
-After a draft release is created, make your final changes from the release page and publish it.
+## Community
 
-### Install
-To install the latest version of your blockchain node's binary, execute the following command on your machine:
+The following chat channels and forums are great spots to ask questions about the XRPL EVM Sidechain:
 
-```
-curl https://get.ignite.com/username/exrp@latest! | sudo bash
-```
-`username/exrp` should match the `username` and `repo_name` of the Github repository to which the source code was pushed. Learn more about [the install process](https://github.com/allinbits/starport-installer).
+- [Peersyst Twitter](https://twitter.com/Peersyst)
+- [XRPL EVM Sidechian Discord](https://discord.gg/xrplevm)
 
-## Learn more
+## Contributing
 
-- [Ignite CLI](https://ignite.com/cli)
-- [Tutorials](https://docs.ignite.com/guide)
-- [Ignite CLI docs](https://docs.ignite.com)
-- [Cosmos SDK docs](https://docs.cosmos.network)
-- [Developer Chat](https://discord.gg/ignite)
+Looking for a good place to start contributing?
+Check out some
+[`good first issues`](https://github.com/xrplevm/node/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
+
+For additional instructions, standards and style guides, please refer to the [Contributing](./CONTRIBUTING.md) document.
