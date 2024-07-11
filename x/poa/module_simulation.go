@@ -3,9 +3,9 @@ package poa
 import (
 	"math/rand"
 
-	"github.com/Peersyst/exrp/testutil/sample"
-	poasimulation "github.com/Peersyst/exrp/x/poa/simulation"
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/testutil/sample"
+	poasimulation "github.com/Peersyst/exrp/v2/x/poa/simulation"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"

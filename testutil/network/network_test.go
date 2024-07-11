@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/Peersyst/exrp/testutil/network"
+	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/evmos/evmos/v15/server/config"
 )

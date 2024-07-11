@@ -2,9 +2,10 @@ package keeper
 
 import (
 	"context"
+
 	"github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
 )
