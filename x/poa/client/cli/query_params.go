@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"

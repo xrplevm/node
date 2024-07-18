@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/Peersyst/exrp/x/poa/types"
+	"github.com/Peersyst/exrp/v2/x/poa/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

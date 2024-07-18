@@ -1,8 +1,12 @@
 package cmd
 
 import (
-	simappparams "cosmossdk.io/simapp/params"
 	"errors"
+	"io"
+	"os"
+	"path/filepath"
+
+	simappparams "cosmossdk.io/simapp/params"
 	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmcli "github.com/cometbft/cometbft/libs/cli"
@@ -31,12 +35,10 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"io"
-	"os"
-	"path/filepath"
+
 	// this line is used by starport scaffolding # root/moduleImport
 
-	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/v2/app"
 	ethermintclient "github.com/evmos/evmos/v15/client"
 	ethermintserver "github.com/evmos/evmos/v15/server"
 	ethermintservercfg "github.com/evmos/evmos/v15/server/config"

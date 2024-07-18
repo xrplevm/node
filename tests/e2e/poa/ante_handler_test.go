@@ -1,8 +1,9 @@
 package poa_test
 
 import (
-	"github.com/Peersyst/exrp/tests/e2e"
 	"strings"
+
+	"github.com/Peersyst/exrp/v2/tests/e2e"
 )
 
 func (s *TestSuite) Test_AnteHandlerForbiddenTransactions() {

@@ -1,10 +1,11 @@
 package unbonding_test
 
 import (
-	"github.com/Peersyst/exrp/tests/e2e"
-	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"sync"
 	"time"
+
+	"github.com/Peersyst/exrp/v2/tests/e2e"
+	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
 func (s *TestSuite) Test_AddUnbondingValidator() {

@@ -1,10 +1,11 @@
 package unbonding_test
 
 import (
-	"github.com/Peersyst/exrp/tests/e2e"
-	"github.com/stretchr/testify/suite"
 	"testing"
 	"time"
+
+	"github.com/Peersyst/exrp/v2/tests/e2e"
+	"github.com/stretchr/testify/suite"
 )
 
 type TestSuite struct {

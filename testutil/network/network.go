@@ -33,7 +33,7 @@ import (
 
 	"cosmossdk.io/simapp"
 	"cosmossdk.io/simapp/params"
-	"github.com/Peersyst/exrp/app"
+	"github.com/Peersyst/exrp/v2/app"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
