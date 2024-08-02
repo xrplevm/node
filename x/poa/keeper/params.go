@@ -1,8 +1,8 @@
 package keeper
 
 import (
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 // GetParams get all parameters as types.Params

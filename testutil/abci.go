@@ -7,7 +7,7 @@ import (
 	tmtypes "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/Peersyst/exrp/v2/app"
+	"github.com/xrplevm/node/v2/app"
 )
 
 // Commit commits a block at a given time. Reminder: At the end of each

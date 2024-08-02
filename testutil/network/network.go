@@ -33,7 +33,6 @@ import (
 
 	"cosmossdk.io/simapp"
 	"cosmossdk.io/simapp/params"
-	"github.com/Peersyst/exrp/v2/app"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -54,6 +53,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/evmos/v15/crypto/hd"
+	"github.com/xrplevm/node/v2/app"
 
 	"github.com/evmos/evmos/v15/server/config"
 	evmostypes "github.com/evmos/evmos/v15/types"

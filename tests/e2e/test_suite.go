@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v2/testutil/network"
 )
 
 type IntegrationTestSuite struct {

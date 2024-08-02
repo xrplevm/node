@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/cobra"
+	"github.com/xrplevm/node/v2/x/poa/types"
 
-	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/testutil"
@@ -20,6 +19,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingcli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
+	"github.com/xrplevm/node/v2/testutil/network"
 )
 
 func transactionFlags(s *IntegrationTestSuite, val network.Validator) []string {

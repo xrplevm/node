@@ -3,10 +3,10 @@ package cli
 import (
 	"context"
 
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 func CmdQueryParams() *cobra.Command {

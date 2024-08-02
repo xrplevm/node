@@ -3,11 +3,11 @@ package app
 import (
 	"fmt"
 
-	v2 "github.com/Peersyst/exrp/v2/app/upgrades/v2"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	v2 "github.com/xrplevm/node/v2/app/upgrades/v2"
 )
 
 func (app *App) setupUpgradeHandlers() {

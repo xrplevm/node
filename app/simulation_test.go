@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/app"
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -19,6 +18,7 @@ import (
 	ethante "github.com/evmos/evmos/v15/app/ante/evm"
 	evmostypes "github.com/evmos/evmos/v15/types"
 	"github.com/stretchr/testify/require"
+	"github.com/xrplevm/node/v2/app"
 )
 
 func init() {

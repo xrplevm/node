@@ -12,14 +12,14 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	"github.com/Peersyst/exrp/v2/x/poa/client/cli"
-	"github.com/Peersyst/exrp/v2/x/poa/keeper"
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/xrplevm/node/v2/x/poa/client/cli"
+	"github.com/xrplevm/node/v2/x/poa/keeper"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 var (
