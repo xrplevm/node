@@ -6,8 +6,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/errors"
 	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/node/xrplevm/v2/x/poa/types"
 )
 
 func (k msgServer) RemoveValidator(goCtx context.Context, msg *types.MsgRemoveValidator) (*types.MsgRemoveValidatorResponse, error) {

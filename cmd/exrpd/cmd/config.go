@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/Peersyst/exrp/v2/app"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethermint "github.com/evmos/evmos/v15/types"
+	"github.com/node/xrplevm/v2/app"
 )
 
 func initSDKConfig() {

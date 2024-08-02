@@ -15,11 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
-	"github.com/Peersyst/exrp/v2/app"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	cryptocodec "github.com/evmos/evmos/v15/crypto/codec"
 	"github.com/evmos/evmos/v15/ethereum/eip712"
 	"github.com/evmos/evmos/v15/types"
+	"github.com/node/xrplevm/v2/app"
 )
 
 type EIP712TxArgs struct {

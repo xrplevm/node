@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/testutil/network"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/node/xrplevm/v2/testutil/network"
 	"github.com/stretchr/testify/suite"
 )
 

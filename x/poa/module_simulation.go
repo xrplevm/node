@@ -3,14 +3,14 @@ package poa
 import (
 	"math/rand"
 
-	"github.com/Peersyst/exrp/v2/testutil/sample"
-	poasimulation "github.com/Peersyst/exrp/v2/x/poa/simulation"
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	"github.com/node/xrplevm/v2/testutil/sample"
+	poasimulation "github.com/node/xrplevm/v2/x/poa/simulation"
+	"github.com/node/xrplevm/v2/x/poa/types"
 )
 
 // avoid unused import issue

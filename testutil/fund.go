@@ -16,11 +16,11 @@
 package testutil
 
 import (
-	poatypes "github.com/Peersyst/exrp/v2/x/poa/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
+	poatypes "github.com/node/xrplevm/v2/x/poa/types"
 )
 
 // FundAccount is a utility function that funds an account by minting and

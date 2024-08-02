@@ -3,9 +3,9 @@ package poa_test
 import (
 	"time"
 
-	"github.com/Peersyst/exrp/v2/tests/e2e"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"github.com/node/xrplevm/v2/tests/e2e"
 )
 
 func (s *TestSuite) Test_RemoveNonexistentValidator() {

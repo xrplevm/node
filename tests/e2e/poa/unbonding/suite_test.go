@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/tests/e2e"
+	"github.com/node/xrplevm/v2/tests/e2e"
 	"github.com/stretchr/testify/suite"
 )
 

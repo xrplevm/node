@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Peersyst/exrp/v2/tests/e2e"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"github.com/node/xrplevm/v2/tests/e2e"
 )
 
 func (s *TestSuite) Test_AddUnbondingValidator() {

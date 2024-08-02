@@ -3,13 +3,13 @@ package simulation
 import (
 	"math/rand"
 
-	"github.com/Peersyst/exrp/v2/testutil/sims"
-	"github.com/Peersyst/exrp/v2/x/poa/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/node/xrplevm/v2/testutil/sims"
+	"github.com/node/xrplevm/v2/x/poa/types"
 )
 
 // FindAccount find a specific address from an account list

@@ -1,8 +1,8 @@
 package poa_test
 
 import (
-	"github.com/Peersyst/exrp/v2/tests/e2e"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/node/xrplevm/v2/tests/e2e"
 )
 
 func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
