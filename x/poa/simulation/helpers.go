@@ -8,8 +8,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	"github.com/node/xrplevm/v2/testutil/sims"
-	"github.com/node/xrplevm/v2/x/poa/types"
+	"github.com/xrplevm/node/v2/testutil/sims"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 // FindAccount find a specific address from an account list

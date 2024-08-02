@@ -6,7 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/node/xrplevm/v2/x/poa/types"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 func SimulateMsgAddValidator() simtypes.Operation {

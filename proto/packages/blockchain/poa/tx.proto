@@ -8,7 +8,7 @@ import "cosmos/staking/v1beta1/staking.proto";
 import "google/protobuf/any.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/node/xrplevm/v2/x/poa/types";
+option go_package = "github.com/xrplevm/node/v2/x/poa/types";
 
 // Msg defines the Msg service.
 service Msg {

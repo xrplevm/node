@@ -42,7 +42,7 @@ import (
 	ethermintserver "github.com/evmos/evmos/v15/server"
 	ethermintservercfg "github.com/evmos/evmos/v15/server/config"
 	ethermintserverflags "github.com/evmos/evmos/v15/server/flags"
-	"github.com/node/xrplevm/v2/app"
+	"github.com/xrplevm/node/v2/app"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

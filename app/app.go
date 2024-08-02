@@ -10,8 +10,8 @@ import (
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	ethante "github.com/evmos/evmos/v15/app/ante/evm"
-	poaante "github.com/node/xrplevm/v2/x/poa/ante"
 	"github.com/spf13/cast"
+	poaante "github.com/xrplevm/node/v2/x/poa/ante"
 
 	"cosmossdk.io/math"
 
@@ -28,7 +28,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"github.com/node/xrplevm/v2/x/poa"
+	"github.com/xrplevm/node/v2/x/poa"
 
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -109,11 +109,11 @@ import (
 
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
-	"github.com/node/xrplevm/v2/docs"
-	poakeeper "github.com/node/xrplevm/v2/x/poa/keeper"
-	poatypes "github.com/node/xrplevm/v2/x/poa/types"
+	"github.com/xrplevm/node/v2/docs"
+	poakeeper "github.com/xrplevm/node/v2/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v2/x/poa/types"
 
-	// "github.com/node/xrplevm/v2/app/ante"
+	// "github.com/xrplevm/node/v2/app/ante"
 	"github.com/evmos/evmos/v15/app/ante"
 	srvflags "github.com/evmos/evmos/v15/server/flags"
 

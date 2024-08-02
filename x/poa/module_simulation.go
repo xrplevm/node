@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	"github.com/node/xrplevm/v2/testutil/sample"
-	poasimulation "github.com/node/xrplevm/v2/x/poa/simulation"
-	"github.com/node/xrplevm/v2/x/poa/types"
+	"github.com/xrplevm/node/v2/testutil/sample"
+	poasimulation "github.com/xrplevm/node/v2/x/poa/simulation"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 // avoid unused import issue

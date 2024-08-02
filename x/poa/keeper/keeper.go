@@ -15,7 +15,7 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/node/xrplevm/v2/x/poa/types"
+	"github.com/xrplevm/node/v2/x/poa/types"
 )
 
 type (

@@ -1,5 +1,6 @@
 version: 1
 build:
+  binary: "exrpd"
   proto:
     path: proto
     third_party_paths:

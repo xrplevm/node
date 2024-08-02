@@ -4,7 +4,7 @@ package packages.blockchain.poa;
 import "gogoproto/gogo.proto";
 import "packages/blockchain/poa/params.proto";
 
-option go_package = "github.com/node/xrplevm/v2/x/poa/types";
+option go_package = "github.com/xrplevm/node/v2/x/poa/types";
 
 // GenesisState defines the poa module's genesis state.
 message GenesisState {

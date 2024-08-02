@@ -12,7 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/evmos/evmos/v15/server/config"
-	"github.com/node/xrplevm/v2/testutil/network"
+	"github.com/xrplevm/node/v2/testutil/network"
 )
 
 type IntegrationTestSuite struct {

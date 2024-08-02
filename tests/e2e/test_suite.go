@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/node/xrplevm/v2/testutil/network"
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v2/testutil/network"
 )
 
 type IntegrationTestSuite struct {

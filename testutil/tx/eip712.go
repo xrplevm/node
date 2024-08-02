@@ -19,7 +19,7 @@ import (
 	cryptocodec "github.com/evmos/evmos/v15/crypto/codec"
 	"github.com/evmos/evmos/v15/ethereum/eip712"
 	"github.com/evmos/evmos/v15/types"
-	"github.com/node/xrplevm/v2/app"
+	"github.com/xrplevm/node/v2/app"
 )
 
 type EIP712TxArgs struct {

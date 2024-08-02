@@ -14,11 +14,11 @@ parent:
   <a href="https://github.com/xrplevm/node/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/github/license/xrplevm/node.svg" />
   </a>
-  <a href="https://pkg.go.dev/github.com/node/xrplevm">
-    <img alt="GoDoc" src="https://godoc.org/github.com/node/xrplevm?status.svg" />
+  <a href="https://pkg.go.dev/github.com/xrplevm/node">
+    <img alt="GoDoc" src="https://godoc.org/github.com/xrplevm/node?status.svg" />
   </a>
-  <a href="https://goreportcard.com/report/github.com/node/xrplevm">
-    <img alt="Go report card" src="https://goreportcard.com/badge/github.com/node/xrplevm"/>
+  <a href="https://goreportcard.com/report/github.com/xrplevm/node">
+    <img alt="Go report card" src="https://goreportcard.com/badge/github.com/xrplevm/node"/>
   </a>
 </div>
 <div align="center">

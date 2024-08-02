@@ -7,7 +7,7 @@ import (
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	v2 "github.com/node/xrplevm/v2/app/upgrades/v2"
+	v2 "github.com/xrplevm/node/v2/app/upgrades/v2"
 )
 
 func (app *App) setupUpgradeHandlers() {
