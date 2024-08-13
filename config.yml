@@ -38,6 +38,7 @@ genesis:
 validators:
   - name: alice
     bonded: 1000000apoa
+    home: "./.exrpd"
     app:
       api:
         enable: true

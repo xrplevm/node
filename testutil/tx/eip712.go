@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	cryptocodec "github.com/evmos/evmos/v15/crypto/codec"
-	"github.com/evmos/evmos/v15/ethereum/eip712"
-	"github.com/evmos/evmos/v15/types"
+	cryptocodec "github.com/evmos/evmos/v19/crypto/codec"
+	"github.com/evmos/evmos/v19/ethereum/eip712"
+	"github.com/evmos/evmos/v19/types"
 	"github.com/xrplevm/node/v2/app"
 )
 

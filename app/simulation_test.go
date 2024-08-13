@@ -14,9 +14,9 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/evmos/v15/app/ante"
-	ethante "github.com/evmos/evmos/v15/app/ante/evm"
-	evmostypes "github.com/evmos/evmos/v15/types"
+	"github.com/evmos/evmos/v19/app/ante"
+	ethante "github.com/evmos/evmos/v19/app/ante/evm"
+	evmostypes "github.com/evmos/evmos/v19/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v2/app"
 )
