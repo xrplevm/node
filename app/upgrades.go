@@ -2,12 +2,14 @@ package app
 
 import (
 	"fmt"
+	erc20types "github.com/evmos/evmos/v19/x/erc20/types"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	v2 "github.com/xrplevm/node/v2/app/upgrades/v2"
+	v3 "github.com/xrplevm/node/v2/app/upgrades/v3"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -24,6 +26,16 @@ func (app *App) setupUpgradeHandlers() {
 			app.IBCKeeper.ClientKeeper,
 			app.ParamsKeeper,
 			app.appCodec,
+		),
+	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v3.UpgradeName,
+		v3.CreateUpgradeHandler(
+			app.mm, app.configurator,
+			app.EvmKeeper,
+			app.Erc20Keeper,
+			app.AccountKeeper,
+			app.StakingKeeper,
 		),
 	)
 
@@ -50,6 +62,13 @@ func (app *App) setupUpgradeHandlers() {
 			Added: []string{
 				consensusparamtypes.StoreKey,
 				crisistypes.ModuleName,
+			},
+			Deleted: []string{},
+		}
+	case v3.UpgradeName:
+		storeUpgrades = &storetypes.StoreUpgrades{
+			Added: []string{
+				erc20types.StoreKey,
 			},
 			Deleted: []string{},
 		}
