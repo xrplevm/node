@@ -235,7 +235,7 @@ replace (
 	// use Cosmos-SDK fork to enable Ledger functionality
 	github.com/cosmos/cosmos-sdk => github.com/evmos/cosmos-sdk v0.47.12-evmos.2
 	// use Evmos geth fork
-	github.com/ethereum/go-ethereum => github.com/evmos/go-ethereum v1.10.26-evmos-rc2
+	github.com/ethereum/go-ethereum => github.com/evmos/go-ethereum v1.10.26-evmos-rc4
 	// use exrp Evmos fork
 	github.com/evmos/evmos/v19 => ../evmos
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq

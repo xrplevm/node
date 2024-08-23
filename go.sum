@@ -528,8 +528,8 @@ github.com/envoyproxy/go-control-plane v0.10.2-0.20220325020618-49ff273808a1/go.
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/evmos/cosmos-sdk v0.47.12-evmos.2 h1:NODyhYKCqu8JNLeR6b6ff0+TS3KYdcBiMZ4sVzXXD8I=
 github.com/evmos/cosmos-sdk v0.47.12-evmos.2/go.mod h1:ADjORYzUQqQv/FxDi0H0K5gW/rAk1CiDR3ZKsExfJV0=
-github.com/evmos/go-ethereum v1.10.26-evmos-rc2 h1:tYghk1ZZ8X4/OQ4YI9hvtm8aSN8OSqO0g9vo/sCMdBo=
-github.com/evmos/go-ethereum v1.10.26-evmos-rc2/go.mod h1:/6CsT5Ceen2WPLI/oCA3xMcZ5sWMF/D46SjM/ayY0Oo=
+github.com/evmos/go-ethereum v1.10.26-evmos-rc4 h1:vwDVMScuB2KSu8ze5oWUuxm6v3bMUp6dL3PWvJNJY+I=
+github.com/evmos/go-ethereum v1.10.26-evmos-rc4/go.mod h1:/6CsT5Ceen2WPLI/oCA3xMcZ5sWMF/D46SjM/ayY0Oo=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
