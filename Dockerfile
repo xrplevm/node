@@ -17,7 +17,7 @@ RUN make build
 FROM base AS integration
 RUN make lint
 # Unit tests
-RUN go test $(go list ./... | grep -v github.com/xrplevm/node/tests/e2e/poa)
+RUN go test $(go list ./... | grep -v github.com/xrplevm/node/v2/tests/e2e)
 # End to end tests
 RUN TEST_CLEANUP_DIR=false go test -p 1 -v -timeout 30m ./tests/e2e/...
 RUN touch /test.lock
