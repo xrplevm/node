@@ -20,16 +20,16 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibctmmigrations "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint/migrations"
-	evmkeeper "github.com/evmos/evmos/v15/x/evm/keeper"
-	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v15/x/feemarket/types"
+	evmkeeper "github.com/evmos/evmos/v19/x/evm/keeper"
+	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
+	feemarkettypes "github.com/evmos/evmos/v19/x/feemarket/types"
 )
 
 // CreateUpgradeHandler creates an SDK upgrade handler for v13
 func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
-	ek *evmkeeper.Keeper,
+	_ *evmkeeper.Keeper,
 	ck consensuskeeper.Keeper,
 	clientKeeper ibctmmigrations.ClientKeeper,
 	pk paramskeeper.Keeper,
@@ -70,7 +70,8 @@ func CreateUpgradeHandler(
 			case ibctransfertypes.ModuleName:
 				keyTable = ibctransfertypes.ParamKeyTable()
 			case evmtypes.ModuleName:
-				keyTable = evmtypes.ParamKeyTable() //nolint:staticcheck
+				//nolint:staticcheck
+				keyTable = evmtypes.ParamKeyTable()
 			case feemarkettypes.ModuleName:
 				keyTable = feemarkettypes.ParamKeyTable()
 			default:

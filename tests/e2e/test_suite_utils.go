@@ -1,11 +1,12 @@
 package e2e
 
 import (
+	"strconv"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"strconv"
 )
 
 var (
@@ -17,7 +18,7 @@ var (
 )
 
 func (s *IntegrationTestSuite) ConsumeProposalCount() string {
-	s.ProposalCount = s.ProposalCount + 1
+	s.ProposalCount++
 	return strconv.Itoa(s.ProposalCount)
 }
 
@@ -25,6 +26,7 @@ func (s *IntegrationTestSuite) GetCtx() client.Context {
 	return s.Network.Validators[0].ClientCtx
 }
 
+//nolint:staticcheck
 func (s *IntegrationTestSuite) RequireValidator(address string, status *stakingtypes.BondStatus, tokens *sdk.Int) {
 	accAddr, _ := sdk.AccAddressFromBech32(address)
 	validatorInfo := GetValidator(s.GetCtx(), sdk.ValAddress(accAddr).String())
@@ -48,6 +50,7 @@ func (s *IntegrationTestSuite) RequireDelegation(valAddress string, delAddress s
 	}
 }
 
+//nolint:staticcheck
 func (s *IntegrationTestSuite) RequireBondBalance(address string, balance sdk.Int) {
 	originalBalance := GetBalance(s.GetCtx(), address, s.Cfg.BondDenom)
 	expected := sdk.NewCoin(s.Cfg.BondDenom, balance)

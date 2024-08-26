@@ -33,6 +33,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// MsgAddValidator defines a message for adding a new validator
 type MsgAddValidator struct {
 	Authority        string            `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
 	ValidatorAddress string            `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty"`
@@ -101,6 +102,7 @@ func (m *MsgAddValidator) GetPubkey() *types1.Any {
 	return nil
 }
 
+// MsgAddValidatorResponse defines the response for adding a new validator
 type MsgAddValidatorResponse struct {
 }
 
@@ -137,6 +139,7 @@ func (m *MsgAddValidatorResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgAddValidatorResponse proto.InternalMessageInfo
 
+// MsgRemoveValidator defines a message for removing an existing validator
 type MsgRemoveValidator struct {
 	Authority        string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
 	ValidatorAddress string `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty"`
@@ -189,6 +192,8 @@ func (m *MsgRemoveValidator) GetValidatorAddress() string {
 	return ""
 }
 
+// MsgRemoveValidatorResponse defines the response for removing an existing
+// validator
 type MsgRemoveValidatorResponse struct {
 }
 
@@ -282,7 +287,9 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MsgClient interface {
+	// Adds a new validator into the authority
 	AddValidator(ctx context.Context, in *MsgAddValidator, opts ...grpc.CallOption) (*MsgAddValidatorResponse, error)
+	// Removes an existing validator from the authority
 	RemoveValidator(ctx context.Context, in *MsgRemoveValidator, opts ...grpc.CallOption) (*MsgRemoveValidatorResponse, error)
 }
 
@@ -314,7 +321,9 @@ func (c *msgClient) RemoveValidator(ctx context.Context, in *MsgRemoveValidator,
 
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
+	// Adds a new validator into the authority
 	AddValidator(context.Context, *MsgAddValidator) (*MsgAddValidatorResponse, error)
+	// Removes an existing validator from the authority
 	RemoveValidator(context.Context, *MsgRemoveValidator) (*MsgRemoveValidatorResponse, error)
 }
 

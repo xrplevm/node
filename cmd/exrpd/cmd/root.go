@@ -30,19 +30,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v15/crypto/hd"
-	"github.com/evmos/evmos/v15/ethereum/eip712"
+	"github.com/evmos/evmos/v19/crypto/hd"
+	"github.com/evmos/evmos/v19/ethereum/eip712"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	ethermintclient "github.com/evmos/evmos/v15/client"
-	ethermintserver "github.com/evmos/evmos/v15/server"
-	ethermintservercfg "github.com/evmos/evmos/v15/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v15/server/flags"
-	"github.com/xrplevm/node/v2/app"
+	ethermintclient "github.com/evmos/evmos/v19/client"
+	ethermintserver "github.com/evmos/evmos/v19/server"
+	ethermintservercfg "github.com/evmos/evmos/v19/server/config"
+	ethermintserverflags "github.com/evmos/evmos/v19/server/flags"
+	"github.com/xrplevm/node/v3/app"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -224,7 +224,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 	set := func(s *pflag.FlagSet, key, val string) {
 		if f := s.Lookup(key); f != nil {
 			f.DefValue = val
-			// nolint:errcheck
+			//nolint:errcheck
 			f.Value.Set(val)
 		}
 	}

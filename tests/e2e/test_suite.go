@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v2/testutil/network"
+	"github.com/xrplevm/node/v3/testutil/network"
 )
 
 type IntegrationTestSuite struct {

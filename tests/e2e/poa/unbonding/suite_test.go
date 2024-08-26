@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v2/tests/e2e"
+	"github.com/xrplevm/node/v3/tests/e2e"
 )
 
 type TestSuite struct {

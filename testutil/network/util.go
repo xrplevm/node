@@ -3,11 +3,12 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"time"
+
 	"github.com/cometbft/cometbft/libs/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"path/filepath"
-	"time"
 
 	tmos "github.com/cometbft/cometbft/libs/os"
 	"github.com/cometbft/cometbft/node"
@@ -31,8 +32,8 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/evmos/v15/server"
-	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
+	"github.com/evmos/evmos/v19/server"
+	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
 )
 
 type FmtLogger struct {

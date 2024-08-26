@@ -13,8 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
-	"github.com/evmos/evmos/v15/utils"
-	"github.com/xrplevm/node/v2/app"
+	"github.com/evmos/evmos/v19/utils"
+	"github.com/xrplevm/node/v3/app"
 )
 
 var (

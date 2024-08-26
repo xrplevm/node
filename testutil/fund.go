@@ -19,8 +19,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	evmtypes "github.com/evmos/evmos/v15/x/evm/types"
-	poatypes "github.com/xrplevm/node/v2/x/poa/types"
+	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
+	poatypes "github.com/xrplevm/node/v3/x/poa/types"
 )
 
 // FundAccount is a utility function that funds an account by minting and

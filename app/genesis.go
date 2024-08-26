@@ -1,8 +1,9 @@
 package app
 
 import (
-	"cosmossdk.io/simapp"
 	"encoding/json"
+
+	"cosmossdk.io/simapp"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 )

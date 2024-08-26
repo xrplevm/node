@@ -2,8 +2,8 @@ package cmd
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ethermint "github.com/evmos/evmos/v15/types"
-	"github.com/xrplevm/node/v2/app"
+	ethermint "github.com/evmos/evmos/v19/types"
+	"github.com/xrplevm/node/v3/app"
 )
 
 func initSDKConfig() {

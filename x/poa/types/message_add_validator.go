@@ -1,6 +1,7 @@
 package types
 
 import (
+	"cosmossdk.io/errors"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -54,16 +55,16 @@ func (msg *MsgAddValidator) GetSignBytes() []byte {
 
 func (msg *MsgAddValidator) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return sdkerrors.Wrap(err, "authority")
+		return errors.Wrap(err, "authority")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.ValidatorAddress); err != nil {
-		return sdkerrors.Wrap(err, "validator_address")
+		return errors.Wrap(err, "validator_address")
 	}
 	if msg.Pubkey == nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "nil pubkey")
+		return errors.Wrap(sdkerrors.ErrInvalidRequest, "nil pubkey")
 	}
 	if msg.Description == (stakingtypes.Description{}) {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "empty description")
+		return errors.Wrap(sdkerrors.ErrInvalidRequest, "empty description")
 	}
 	return nil
 }

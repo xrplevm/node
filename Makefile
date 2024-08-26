@@ -89,17 +89,31 @@ endif
  
 #$(info $$BUILD_FLAGS is [$(BUILD_FLAGS)])
 
-all: install
-	@echo "--> project root: go mod tidy"	
-	@go mod tidy			
-	@echo "--> project root: linting --fix"	
-	@GOGC=1 golangci-lint run --fix --timeout=8m
+all: install lint
 
 install: go.sum
 	go install -mod=readonly $(BUILD_FLAGS) ./cmd/exrpd
 
 build:
-	go build $(BUILD_FLAGS) -o bin/exrpd ./cmd/exrpd
+	go build $(BUILD_FLAGS) -o ./bin/exrpd ./cmd/exrpd
+
+
+###############################################################################
+###                                Linting                                  ###
+###############################################################################
+golangci_lint_cmd=golangci-lint
+golangci_version=v1.53.3
+
+lint:
+	@echo "--> Running linter"
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
+	@$(golangci_lint_cmd) run --timeout=10m
+
+lint-fix:
+	@echo "--> Running linter"
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
+	@$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
+
 
 
 ###############################################################################
@@ -114,12 +128,11 @@ proto-all: proto-format proto-lint proto-gen
 
 proto-gen:
 	@echo "Generating Protobuf files"
-	@$(protoImage) sh ./scripts/protocgen.sh
+	@$(protoImage) sh ./proto/scripts/protocgen.sh
 
 proto-swagger-gen:
 	@echo "Generating Protobuf Swagger"
-	@$(protoImage) sh ./scripts/protoc-swagger-gen.sh
-	$(MAKE) update-swagger-docs
+	@$(protoImage) sh ./proto/scripts/protoc-swagger-gen.sh
 
 proto-format:
 	@$(protoImage) find ./ -name "*.proto" -exec clang-format -i {} \;
@@ -130,4 +143,8 @@ proto-lint:
 proto-check-breaking:
 	@$(protoImage) buf breaking --against $(HTTPS_GIT)#branch=main
 
-.PHONY: proto-all proto-gen proto-gen-any proto-swagger-gen proto-format proto-lint proto-check-breaking proto-update-deps docs
+proto-update-deps:
+	@echo "Updating Protobuf dependencies"
+	$(DOCKER) run --rm -v $(CURDIR)/proto:/workspace --workdir /workspace $(protoImageName) buf mod update
+
+.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking proto-update-deps

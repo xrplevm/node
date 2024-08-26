@@ -3,11 +3,11 @@ package keeper
 import (
 	"context"
 
-	"github.com/cosmos/cosmos-sdk/types/errors"
+	"cosmossdk.io/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/xrplevm/node/v2/x/poa/types"
+	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
 func (k msgServer) AddValidator(goCtx context.Context, msg *types.MsgAddValidator) (*types.MsgAddValidatorResponse, error) {

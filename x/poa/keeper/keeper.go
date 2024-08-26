@@ -3,6 +3,8 @@ package keeper
 import (
 	"fmt"
 
+	"cosmossdk.io/errors"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -11,11 +13,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/xrplevm/node/v2/x/poa/types"
+	stakingkeeper "github.com/evmos/evmos/v19/x/staking/keeper"
+
+	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
 type (
@@ -35,7 +37,6 @@ func NewKeeper(
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk stakingkeeper.Keeper,
-	slashingKeeper slashingkeeper.Keeper,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -63,8 +64,8 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 }
 
 // Router returns the gov keeper's router
-func (keeper Keeper) Router() *baseapp.MsgServiceRouter {
-	return keeper.router
+func (k Keeper) Router() *baseapp.MsgServiceRouter {
+	return k.router
 }
 
 func (k Keeper) GetAuthority() string {
@@ -134,7 +135,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 
 	pubKey, ok := msg.Pubkey.GetCachedValue().(cryptotypes.PubKey)
 	if !ok {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "Expecting cryptotypes.PubKey, got %T", pubKey)
+		return errors.Wrapf(sdkerrors.ErrInvalidType, "Expecting cryptotypes.PubKey, got %T", pubKey)
 	}
 	createValidatorMsg, err := stakingtypes.NewMsgCreateValidator(
 		valAddress,
