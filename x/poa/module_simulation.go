@@ -40,14 +40,17 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 }
 
 // ProposalContents doesn't return any content functions for governance proposals
-func (am AppModule) ProposalContents(simState module.SimulationState) []simtypes.WeightedProposalContent {
+//
+//nolint:staticcheck
+func (am AppModule) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
+	//nolint:staticcheck
 	proposalContents := make([]simtypes.WeightedProposalContent, 0)
 
 	return proposalContents
 }
 
 // ProposalMsgs returns msgs used for governance proposals for simulations.
-func (am AppModule) ProposalMsgs(simState module.SimulationState) []simtypes.WeightedProposalMsg {
+func (am AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
 	return []simtypes.WeightedProposalMsg{
 		// this line is used by starport scaffolding # simapp/module/OpMsg
 	}
@@ -57,7 +60,7 @@ func (am AppModule) ProposalMsgs(simState module.SimulationState) []simtypes.Wei
 func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {}
 
 // WeightedOperations returns the all the gov module operations with their respective weights.
-func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+func (am AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
 	operations := make([]simtypes.WeightedOperation, 0)
 	// this line is used by starport scaffolding # simapp/module/operation
 

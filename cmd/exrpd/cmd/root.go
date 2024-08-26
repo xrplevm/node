@@ -224,7 +224,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 	set := func(s *pflag.FlagSet, key, val string) {
 		if f := s.Lookup(key); f != nil {
 			f.DefValue = val
-			// nolint:errcheck
+			//nolint:errcheck
 			f.Value.Set(val)
 		}
 	}

@@ -29,7 +29,7 @@ import (
 func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
-	ek *evmkeeper.Keeper,
+	_ *evmkeeper.Keeper,
 	ck consensuskeeper.Keeper,
 	clientKeeper ibctmmigrations.ClientKeeper,
 	pk paramskeeper.Keeper,
@@ -70,7 +70,8 @@ func CreateUpgradeHandler(
 			case ibctransfertypes.ModuleName:
 				keyTable = ibctransfertypes.ParamKeyTable()
 			case evmtypes.ModuleName:
-				keyTable = evmtypes.ParamKeyTable() //nolint:staticcheck
+				//nolint:staticcheck
+				keyTable = evmtypes.ParamKeyTable()
 			case feemarkettypes.ModuleName:
 				keyTable = feemarkettypes.ParamKeyTable()
 			default:

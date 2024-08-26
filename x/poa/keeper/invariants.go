@@ -5,4 +5,4 @@ import (
 )
 
 // RegisterInvariants registers all module invariants
-func RegisterInvariants(ir sdk.InvariantRegistry, k Keeper) {}
+func RegisterInvariants(_ sdk.InvariantRegistry, _ Keeper) {}

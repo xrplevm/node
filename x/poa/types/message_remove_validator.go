@@ -1,8 +1,8 @@
 package types
 
 import (
+	"cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const TypeMsgRemoveValidator = "remove_validator"
@@ -39,10 +39,10 @@ func (msg *MsgRemoveValidator) GetSignBytes() []byte {
 
 func (msg *MsgRemoveValidator) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return sdkerrors.Wrap(err, "authority")
+		return errors.Wrap(err, "authority")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.ValidatorAddress); err != nil {
-		return sdkerrors.Wrap(err, "validator_address")
+		return errors.Wrap(err, "validator_address")
 	}
 	return nil
 }

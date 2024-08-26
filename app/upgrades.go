@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+
 	erc20types "github.com/evmos/evmos/v19/x/erc20/types"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
