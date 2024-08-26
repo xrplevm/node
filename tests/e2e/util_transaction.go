@@ -127,23 +127,24 @@ func ChangeValidator(
 		msg = removeValidatorMsg(initiator.ClientCtx, address.String())
 	}
 
-	proposalId := submitProposal(s, *initiator, msg)
+	proposalID := submitProposal(s, *initiator, msg)
 
 	s.Network.MustWaitForNextBlock()
 
 	for _, validator := range validators {
-		voteProposal(s, *validator, proposalId)
+		voteProposal(s, *validator, proposalID)
 	}
 	s.Network.MustWaitForNextBlock()
 
 	timeLimit := time.Now().Add(time.Minute * 2)
 	for time.Now().Before(timeLimit) &&
 		waitStatus != govtypesv1.StatusNil &&
-		GetProposal(initiator.ClientCtx, proposalId).Status != waitStatus {
+		GetProposal(initiator.ClientCtx, proposalID).Status != waitStatus {
 		s.Network.MustWaitForNextBlock()
 	}
 }
 
+//nolint:staticcheck
 func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int) {
 	clientCtx := validator.ClientCtx
 	cmd := stakingcli.NewCreateValidatorCmd()
@@ -170,6 +171,7 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 	}
 }
 
+//nolint:staticcheck
 func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int, wait bool) string {
 	cmd := stakingcli.NewUnbondCmd()
 
@@ -194,7 +196,8 @@ func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens 
 	return out
 }
 
-func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *network.Validator, tokens sdk.Int) string {
+//nolint:staticcheck
+func Delegate(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int) string {
 	cmd := stakingcli.NewDelegateCmd()
 
 	args := []string{
@@ -214,6 +217,7 @@ func Delegate(s *IntegrationTestSuite, delegator *network.Validator, validator *
 	return out
 }
 
+//nolint:staticcheck
 func Redelegate(s *IntegrationTestSuite, src *network.Validator, dst *network.Validator, tokens sdk.Int) string {
 	cmd := stakingcli.NewRedelegateCmd()
 	args := []string{

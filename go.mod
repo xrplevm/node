@@ -237,7 +237,7 @@ replace (
 	// use Evmos geth fork
 	github.com/ethereum/go-ethereum => github.com/evmos/go-ethereum v1.10.26-evmos-rc2
 	// use exrp Evmos fork
-	github.com/evmos/evmos/v19 => ../evmos
+	github.com/evmos/evmos/v19 => github.com/Peersyst/evmos/v19 v19.2.0-exrp.0
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 	// replace broken goleveldb

@@ -19,7 +19,7 @@ func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
 	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
 	s.RequireBondBalance(delegatorAddress, e2e.DefaultBondedTokens)
 
-	e2e.Delegate(&s.IntegrationTestSuite, delegator, validator, e2e.DefaultBondedTokens)
+	e2e.Delegate(&s.IntegrationTestSuite, validator, e2e.DefaultBondedTokens)
 
 	// Delegator should not have any shares and should have default bonded tokens in bank
 	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
@@ -46,7 +46,7 @@ func (s *TestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
 	s.RequireValidator(validatorAddress, &e2e.UnbondedStatus, &halfTokens)
 	s.RequireBondBalance(validatorAddress, halfTokens)
 
-	e2e.Delegate(&s.IntegrationTestSuite, validator, validator, halfTokens)
+	e2e.Delegate(&s.IntegrationTestSuite, validator, halfTokens)
 
 	// POST:
 	// Delegator should have all the tokens bonded and delegation should have happened

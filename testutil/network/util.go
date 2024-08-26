@@ -3,11 +3,12 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"time"
+
 	"github.com/cometbft/cometbft/libs/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"path/filepath"
-	"time"
 
 	tmos "github.com/cometbft/cometbft/libs/os"
 	"github.com/cometbft/cometbft/node"

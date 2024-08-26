@@ -92,6 +92,7 @@ func SignCheckDeliver(
 	chainID string, accNums, accSeqs []uint64, expSimPass, expPass bool, priv ...cryptotypes.PrivKey,
 ) (sdk.GasInfo, *sdk.Result, error) {
 	tx, err := GenSignedMockTx(
+		//nolint:gosec
 		rand.New(rand.NewSource(time.Now().UnixNano())),
 		txCfg,
 		msgs,

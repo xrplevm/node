@@ -61,7 +61,7 @@ func (s *TestSuite) Test_RemoveUnbondingValidator() {
 	// Height 11    -> Proposal is submitted
 	// Height 13    -> Validator is slashed unsigned h11 & h12 -> status updated to unbonding
 	// Height 15-16 -> Proposal is executed
-	// Height 18    -> Validator becames unbonded
+	// Height 18    -> Validator becomes unbonded
 
 	go func() {
 		defer wg.Done()

@@ -29,6 +29,7 @@ func handler(title string) http.HandlerFunc {
 	t, _ := httptemplate.ParseFS(template, indexFile)
 
 	return func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck
 		t.Execute(w, struct {
 			Title string
 			URL   string
