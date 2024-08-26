@@ -17,7 +17,7 @@ RUN make build
 FROM base AS integration
 RUN make lint
 # Unit tests
-RUN go test $(go list ./... | grep -v github.com/xrplevm/node/v2/tests/e2e)
+RUN go test $(go list ./... | grep -v github.com/xrplevm/node/v3/tests/e2e)
 # End to end tests
 RUN <<EOF
 #!/bin/bash
