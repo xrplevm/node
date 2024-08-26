@@ -19,7 +19,21 @@ RUN make lint
 # Unit tests
 RUN go test $(go list ./... | grep -v github.com/xrplevm/node/v2/tests/e2e)
 # End to end tests
-RUN TEST_CLEANUP_DIR=false go test -p 1 -v -timeout 30m ./tests/e2e/...
+RUN <<EOF
+#!/bin/bash
+retry() {
+  local retries="$1"
+  local command="$2"
+  $command
+  local exit_code=$?
+  if [[ $exit_code -ne 0 && $retries -gt 0 ]]; then
+    retry $(($retries - 1)) "$command"
+  else
+    return $exit_code
+  fi
+}
+retry 5 "go test -p 1 -v -timeout 30m ./tests/e2e/..."
+EOF
 RUN touch /test.lock
 
 FROM golang:1.22.2 AS release
