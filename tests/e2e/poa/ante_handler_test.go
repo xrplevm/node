@@ -3,7 +3,7 @@ package poa_test
 import (
 	"strings"
 
-	"github.com/xrplevm/node/v2/tests/e2e"
+	"github.com/xrplevm/node/v3/tests/e2e"
 )
 
 func (s *TestSuite) Test_AnteHandlerForbiddenTransactions() {

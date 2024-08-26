@@ -3,7 +3,7 @@ package cmd
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethermint "github.com/evmos/evmos/v19/types"
-	"github.com/xrplevm/node/v2/app"
+	"github.com/xrplevm/node/v3/app"
 )
 
 func initSDKConfig() {

@@ -17,7 +17,7 @@ import (
 
 	stakingkeeper "github.com/evmos/evmos/v19/x/staking/keeper"
 
-	"github.com/xrplevm/node/v2/x/poa/types"
+	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
 type (

@@ -53,7 +53,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/evmos/evmos/v19/crypto/hd"
-	"github.com/xrplevm/node/v2/app"
+	"github.com/xrplevm/node/v3/app"
 
 	"github.com/evmos/evmos/v19/server/config"
 	evmostypes "github.com/evmos/evmos/v19/types"

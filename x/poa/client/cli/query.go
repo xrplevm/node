@@ -10,7 +10,7 @@ import (
 	// "github.com/cosmos/cosmos-sdk/client/flags"
 	// sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/xrplevm/node/v2/x/poa/types"
+	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
 // GetQueryCmd returns the cli query commands for this module

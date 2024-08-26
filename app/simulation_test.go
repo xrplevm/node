@@ -18,7 +18,7 @@ import (
 	ethante "github.com/evmos/evmos/v19/app/ante/evm"
 	evmostypes "github.com/evmos/evmos/v19/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v2/app"
+	"github.com/xrplevm/node/v3/app"
 )
 
 func init() {

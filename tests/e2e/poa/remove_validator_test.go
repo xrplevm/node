@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	"github.com/xrplevm/node/v2/tests/e2e"
+	"github.com/xrplevm/node/v3/tests/e2e"
 )
 
 func (s *TestSuite) Test_RemoveNonexistentValidator() {
