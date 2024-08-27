@@ -55,4 +55,4 @@ jobs:
         run: |
           docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
              -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
-             goreleaser/goreleaser-cross:v1.20.2 release --clean --skip-validate
+             goreleaser/goreleaser-cross:v1.23.0 release --clean --skip-validate
