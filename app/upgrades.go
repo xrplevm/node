@@ -36,7 +36,7 @@ func (app *App) setupUpgradeHandlers() {
 			app.EvmKeeper,
 			app.Erc20Keeper,
 			app.AccountKeeper,
-			app.StakingKeeper,
+			app.BankKeeper,
 		),
 	)
 
