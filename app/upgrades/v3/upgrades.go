@@ -56,6 +56,14 @@ func CreateUpgradeHandler(
 			return nil, err
 		}
 
+		/** Custom migrations **/
+		// Disable default EVM Channels
+		params := ek.GetParams(ctx)
+		params.EVMChannels = []string{}
+		if err := ek.SetParams(ctx, params); err != nil {
+			logger.Error("failed to remove EVMChannels from evm params", "error", err.Error())
+			return nil, err
+		}
 		// Add XRP bank metadata for ERC20 recognition
 		bk.SetDenomMetaData(ctx, banktypes.Metadata{
 			Base: "axrp",

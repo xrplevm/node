@@ -5,6 +5,11 @@ on:
         branches:
             - "main"
 
+concurrency:
+  # Cancel old runs if there is a new commit in the same branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
     integration:
         runs-on: ubuntu-latest
