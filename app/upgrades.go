@@ -34,7 +34,6 @@ func (app *App) setupUpgradeHandlers() {
 		v3.CreateUpgradeHandler(
 			app.mm, app.configurator,
 			app.EvmKeeper,
-			app.Erc20Keeper,
 			app.AccountKeeper,
 			app.BankKeeper,
 		),

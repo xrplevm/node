@@ -8,10 +8,9 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	v16 "github.com/evmos/evmos/v19/app/upgrades/v16"
-	v192 "github.com/evmos/evmos/v19/app/upgrades/v19_2"
+	bankprecompile "github.com/evmos/evmos/v19/precompiles/bank"
 	"github.com/evmos/evmos/v19/precompiles/bech32"
 	"github.com/evmos/evmos/v19/precompiles/p256"
-	erc20keeper "github.com/evmos/evmos/v19/x/erc20/keeper"
 	evmkeeper "github.com/evmos/evmos/v19/x/evm/keeper"
 )
 
@@ -20,7 +19,6 @@ func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
 	ek *evmkeeper.Keeper,
-	erc20Keeper erc20keeper.Keeper,
 	ak authkeeper.AccountKeeper,
 	bk bankkeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
@@ -30,12 +28,6 @@ func CreateUpgradeHandler(
 		// Add Burner role to fee collector
 		if err := v16.MigrateFeeCollector(ak, ctx); err != nil {
 			logger.Error("failed to migrate the fee collector", "error", err.Error())
-			return nil, err
-		}
-
-		/** Evmos v19 upgrades (pre-module upgrades) **/
-		// Add code extensions
-		if err := v192.AddCodeToERC20Extensions(ctx, logger, erc20Keeper); err != nil {
 			return nil, err
 		}
 
@@ -51,7 +43,8 @@ func CreateUpgradeHandler(
 		// enable secp256r1 and bech32 precompiles
 		p256Address := p256.Precompile{}.Address()
 		bech32Address := bech32.Precompile{}.Address()
-		if err := ek.EnableStaticPrecompiles(ctx, p256Address, bech32Address); err != nil {
+		bankAddress := bankprecompile.Precompile{}.Address()
+		if err := ek.EnableStaticPrecompiles(ctx, p256Address, bech32Address, bankAddress); err != nil {
 			logger.Error("failed to enable precompiles", "error", err.Error())
 			return nil, err
 		}
