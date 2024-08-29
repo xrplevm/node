@@ -20,6 +20,8 @@ ENV DAEMON_RESTART_AFTER_UPGRADE=true
 
 COPY --from=build /root/cosmos-sdk/cosmovisor/cosmovisor /usr/local/bin/cosmovisor
 COPY --from=peersyst/xrp-evm-blockchain:latest /usr/bin/exrpd /usr/local/bin/exrpd
+COPY --from=peersyst/exrp:v2.0.0 /usr/bin/exrpd /usr/local/bin/exrpd_v2.0.0
+COPY --from=peersyst/exrp:v3.0.0 /usr/bin/exrpd /usr/local/bin/exrpd_v3.0.0
 
 ADD tools/cosmovisor/init.sh /usr/local/bin/initialize
 RUN chmod +x /usr/local/bin/initialize
