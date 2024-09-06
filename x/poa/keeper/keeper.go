@@ -15,8 +15,6 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	stakingkeeper "github.com/evmos/evmos/v19/x/staking/keeper"
-
 	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
@@ -27,7 +25,7 @@ type (
 		authority  string                    // the address capable of executing a poa change. Usually the gov module account
 		router     *baseapp.MsgServiceRouter // Msg server router
 		bk         types.BankKeeper
-		sk         stakingkeeper.Keeper
+		sk         types.StakingKeeper
 	}
 )
 
@@ -36,7 +34,7 @@ func NewKeeper(
 	ps paramtypes.Subspace,
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
-	sk stakingkeeper.Keeper,
+	sk types.StakingKeeper,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
