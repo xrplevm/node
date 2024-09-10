@@ -12,12 +12,13 @@ import (
 	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
-
 const (
-	OpWeightMsgAddValidator = "op_weight_msg_add_validator"
+	//nolint:gosec
+	OpWeightMsgAddValidator          = "op_weight_msg_add_validator"
 	DefaultWeightMsgAddValidator int = 80
-	
-	OpWeightMsgRemoveValidator = "op_weight_msg_remove_validator"
+
+	//nolint:gosec
+	OpWeightMsgRemoveValidator          = "op_weight_msg_remove_validator"
 	DefaultWeightMsgRemoveValidator int = 20
 )
 
@@ -41,8 +42,8 @@ func ProposalMsgs() []simtypes.WeightedProposalMsg {
 // randomDescription generates a random description for a validator
 func randomDescription(r *rand.Rand) stakingtypes.Description {
 	return stakingtypes.Description{
-		Moniker: 		 simtypes.RandStringOfLength(r, 10),
-		Identity: 		 simtypes.RandStringOfLength(r, 10),
+		Moniker:         simtypes.RandStringOfLength(r, 10),
+		Identity:        simtypes.RandStringOfLength(r, 10),
 		Website:         simtypes.RandStringOfLength(r, 10),
 		SecurityContact: simtypes.RandStringOfLength(r, 10),
 		Details:         simtypes.RandStringOfLength(r, 10),
@@ -60,15 +61,15 @@ func randomMsgAddValidator(r *rand.Rand, authAddr sdk.AccAddress) (*types.MsgAdd
 	}
 
 	return &types.MsgAddValidator{
-		Authority: authAddr.String(),
-		Description: randomDescription(r),
+		Authority:        authAddr.String(),
+		Description:      randomDescription(r),
 		ValidatorAddress: validatorAcc.Address.String(),
-		Pubkey: pubkey, 
+		Pubkey:           pubkey,
 	}, nil
 }
 
 // SimulateMsgAddValidator simulates the MsgAddValidator message
-func SimulateMsgAddValidator(r *rand.Rand, _ sdk.Context, accs []simtypes.Account) sdk.Msg {
+func SimulateMsgAddValidator(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) sdk.Msg {
 	var authAddr sdk.AccAddress = address.Module("gov")
 
 	randMsg, err := randomMsgAddValidator(r, authAddr)
@@ -76,7 +77,6 @@ func SimulateMsgAddValidator(r *rand.Rand, _ sdk.Context, accs []simtypes.Accoun
 		panic(err)
 	}
 	return randMsg
-
 }
 
 // MsgRemoveValidator simulation functions
@@ -86,7 +86,7 @@ func randomMsgRemoveValidator(r *rand.Rand, authAddr sdk.AccAddress, accs []simt
 	rmValidator, _ := simtypes.RandomAcc(r, accs)
 
 	return &types.MsgRemoveValidator{
-		Authority: authAddr.String(),
+		Authority:        authAddr.String(),
 		ValidatorAddress: rmValidator.Address.String(),
 	}
 }
@@ -94,7 +94,7 @@ func randomMsgRemoveValidator(r *rand.Rand, authAddr sdk.AccAddress, accs []simt
 // SimulateMsgRemoveValidator simulates the MsgRemoveValidator message
 func SimulateMsgRemoveValidator(r *rand.Rand, _ sdk.Context, accs []simtypes.Account) sdk.Msg {
 	var authAddr sdk.AccAddress = address.Module("gov")
-	
+
 	randMsg := randomMsgRemoveValidator(r, authAddr, accs)
 	return randMsg
 }
