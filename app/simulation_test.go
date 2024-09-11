@@ -1,6 +1,13 @@
 package app_test
 
 import (
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	ethante "github.com/evmos/evmos/v19/app/ante/evm"
+	"github.com/evmos/evmos/v19/crypto/ethsecp256k1"
+	poaante "github.com/xrplevm/node/v3/x/poa/ante"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -15,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/evmos/v19/app/ante"
-	ethante "github.com/evmos/evmos/v19/app/ante/evm"
 	evmostypes "github.com/evmos/evmos/v19/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/app"
@@ -59,6 +65,13 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         0,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(bApp.EvmKeeper),
+		StakingKeeper:          bApp.StakingKeeper,
+		DistributionKeeper:     bApp.DistrKeeper,
+		ExtraDecorator:         poaante.NewPoaDecorator(),
+		AuthzDisabledMsgTypes: []string{
+			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+		},
 	}
 
 	if err := options.Validate(); err != nil {
@@ -70,6 +83,25 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		return nil, err
 	}
 	return bApp, nil
+}
+
+// RandomAccounts generates n random accounts
+func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
+	accs := make([]simulationtypes.Account, n)
+
+	for i := 0; i < n; i++ {
+		// don't need that much entropy for simulation
+		privkeySeed := make([]byte, 32)
+		r.Read(privkeySeed)
+
+		accs[i].PrivKey = &ethsecp256k1.PrivKey{Key: privkeySeed}
+		accs[i].PubKey = accs[i].PrivKey.PubKey()
+		accs[i].Address = sdk.AccAddress(accs[i].PubKey.Address())
+
+		accs[i].ConsKey = ed25519.GenPrivKeyFromSecret(privkeySeed)
+	}
+
+	return accs
 }
 
 // BenchmarkSimulation run the chain simulation
@@ -114,7 +146,7 @@ func BenchmarkSimulation(b *testing.B) {
 			bApp.SimulationManager(),
 			app.NewDefaultGenesisState(bApp.AppCodec()),
 		),
-		simulationtypes.RandomAccounts,
+		RandomAccounts,
 		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
 		bApp.ModuleAccountAddrs(),
 		config,

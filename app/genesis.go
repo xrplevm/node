@@ -1,7 +1,9 @@
 package app
 
 import (
+	sdkmath "cosmossdk.io/math"
 	"encoding/json"
+	feemarkettypes "github.com/evmos/evmos/v19/x/feemarket/types"
 
 	"cosmossdk.io/simapp"
 
@@ -19,5 +21,12 @@ type GenesisState map[string]json.RawMessage
 
 // NewDefaultGenesisState generates the default state for the application.
 func NewDefaultGenesisState(cdc codec.JSONCodec) simapp.GenesisState {
-	return ModuleBasics.DefaultGenesis(cdc)
+	genState := ModuleBasics.DefaultGenesis(cdc)
+	var feeMarketState feemarkettypes.GenesisState
+	cdc.MustUnmarshalJSON(genState[feemarkettypes.ModuleName], &feeMarketState)
+	feeMarketState.Params.NoBaseFee = true
+	feeMarketState.Params.BaseFee = sdkmath.NewInt(0)
+	genState[feemarkettypes.ModuleName] = cdc.MustMarshalJSON(&feeMarketState)
+
+	return genState
 }
