@@ -7,7 +7,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+
 	"github.com/xrplevm/node/v3/testutil/sample"
 	poasimulation "github.com/xrplevm/node/v3/x/poa/simulation"
 	"github.com/xrplevm/node/v3/x/poa/types"

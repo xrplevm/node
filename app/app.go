@@ -126,6 +126,7 @@ import (
 	"github.com/evmos/evmos/v19/x/feemarket"
 	feemarketkeeper "github.com/evmos/evmos/v19/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/evmos/v19/x/feemarket/types"
+
 	// Overriders
 	"github.com/evmos/evmos/v19/x/ibc/transfer"
 	ibctransferkeeper "github.com/evmos/evmos/v19/x/ibc/transfer/keeper"

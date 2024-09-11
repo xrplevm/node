@@ -1,8 +1,10 @@
 package app
 
 import (
-	sdkmath "cosmossdk.io/math"
 	"encoding/json"
+
+	sdkmath "cosmossdk.io/math"
+
 	feemarkettypes "github.com/evmos/evmos/v19/x/feemarket/types"
 
 	"cosmossdk.io/simapp"
