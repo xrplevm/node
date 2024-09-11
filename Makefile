@@ -114,7 +114,6 @@ lint-fix:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
 	@$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
 
-
 ###############################################################################
 ###                                Testing                                  ###
 ###############################################################################
@@ -127,6 +126,17 @@ mocks:
 test_poa:
 	@echo "--> Running POA tests"
 	@go test $(EXCLUDED_POA_PACKAGES) 
+
+test-sim-benchmark-simulation:
+	@echo "Running simulation invariant benchmarks..."
+	cd ${CURDIR}/app && go test -mod=readonly -benchmem -bench=BenchmarkSimulation -run=^$ \
+	-Enabled=true -NumBlocks=100 -BlockSize=200 \
+	-Period=1 -Commit=true -Seed=57 -v -timeout 24h
+
+test-sim-full-app-fast:
+	@echo "Running custom genesis simulation..."
+	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
+		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -v -timeout 24h
 
 ###############################################################################
 ###                                Protobuf                                 ###

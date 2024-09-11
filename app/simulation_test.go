@@ -1,16 +1,17 @@
 package app_test
 
 import (
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ethante "github.com/evmos/evmos/v19/app/ante/evm"
 	"github.com/evmos/evmos/v19/crypto/ethsecp256k1"
 	poaante "github.com/xrplevm/node/v3/x/poa/ante"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/libs/log"
@@ -109,6 +110,8 @@ func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
 // `ignite chain simulate -v --numBlocks 200 --blockSize 50`
 // Running as go benchmark test:
 // `go test -benchmem -run=^$ -bench ^BenchmarkSimulation ./app -NumBlocks=200 -BlockSize 50 -Commit=true -Verbose=true -Enabled=true`
+//
+//nolint:dupl
 func BenchmarkSimulation(b *testing.B) {
 	simcli.FlagSeedValue = time.Now().Unix()
 	simcli.FlagVerboseValue = true
@@ -157,6 +160,61 @@ func BenchmarkSimulation(b *testing.B) {
 	err = simtestutil.CheckExportSimulation(bApp, config, simParams)
 	require.NoError(b, err)
 	require.NoError(b, simErr)
+
+	if config.Commit {
+		simtestutil.PrintStats(db)
+	}
+}
+
+//nolint:dupl
+func TestFullAppSimulation(t *testing.T) {
+	simcli.FlagSeedValue = time.Now().Unix()
+	simcli.FlagVerboseValue = true
+	simcli.FlagCommitValue = true
+	simcli.FlagEnabledValue = true
+
+	config := simcli.NewConfigFromFlags()
+	config.ChainID = SimAppChainID
+	db, dir, logger, _, err := simtestutil.SetupSimulation(
+		config,
+		"leveldb-bApp-sim",
+		"Simulation",
+		simcli.FlagVerboseValue,
+		simcli.FlagEnabledValue,
+	)
+
+	require.NoError(t, err, "simulation setup failed")
+
+	config.ChainID = SimAppChainID
+
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+		require.NoError(t, os.RemoveAll(dir))
+	})
+
+	bApp, _ := NewSimApp(logger, db, config)
+
+	// Run randomized simulations
+	_, simParams, simErr := simulation.SimulateFromSeed(
+		t,
+		os.Stdout,
+		bApp.BaseApp,
+		simtestutil.AppStateFn(
+			bApp.AppCodec(),
+			bApp.SimulationManager(),
+			app.NewDefaultGenesisState(bApp.AppCodec()),
+		),
+		RandomAccounts,
+		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
+		bApp.ModuleAccountAddrs(),
+		config,
+		bApp.AppCodec(),
+	)
+
+	// export state and simParams before the simulation error is checked
+	err = simtestutil.CheckExportSimulation(bApp, config, simParams)
+	require.NoError(t, err)
+	require.NoError(t, simErr)
 
 	if config.Commit {
 		simtestutil.PrintStats(db)
