@@ -15,11 +15,11 @@ import (
 const (
 	//nolint:gosec
 	OpWeightMsgAddValidator          = "op_weight_msg_add_validator"
-	DefaultWeightMsgAddValidator int = 80
+	DefaultWeightMsgAddValidator int = 100
 
 	//nolint:gosec
 	OpWeightMsgRemoveValidator          = "op_weight_msg_remove_validator"
-	DefaultWeightMsgRemoveValidator int = 20
+	DefaultWeightMsgRemoveValidator int = 5
 )
 
 func ProposalMsgs() []simtypes.WeightedProposalMsg {
