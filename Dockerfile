@@ -18,6 +18,8 @@ FROM base AS integration
 RUN make lint
 # Unit tests
 RUN go test $(go list ./... | grep -v github.com/xrplevm/node/v3/tests/e2e | grep -v github.com/xrplevm/node/v3/app)
+# Simulation tests
+RUN make test-sim-full-app-fast
 # End to end tests
 RUN <<EOF
 #!/bin/bash
