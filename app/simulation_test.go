@@ -8,10 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ethante "github.com/evmos/evmos/v19/app/ante/evm"
 	"github.com/evmos/evmos/v19/crypto/ethsecp256k1"
-	poaante "github.com/xrplevm/node/v3/x/poa/ante"
 
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/libs/log"
@@ -23,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/evmos/v19/app/ante"
-	evmostypes "github.com/evmos/evmos/v19/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/app"
 )
@@ -52,34 +48,16 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		appOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
-	// disable feemarket on native tx
-	options := ante.HandlerOptions{
-		Cdc:                    encodingConfig.Codec,
-		AccountKeeper:          bApp.AccountKeeper,
-		BankKeeper:             bApp.BankKeeper,
-		ExtensionOptionChecker: evmostypes.HasDynamicFeeExtensionOption,
-		EvmKeeper:              bApp.EvmKeeper,
-		FeegrantKeeper:         bApp.FeeGrantKeeper,
-		IBCKeeper:              bApp.IBCKeeper,
-		FeeMarketKeeper:        bApp.FeeMarketKeeper,
-		SignModeHandler:        encodingConfig.TxConfig.SignModeHandler(),
-		SigGasConsumer:         ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:         0,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(bApp.EvmKeeper),
-		StakingKeeper:          bApp.StakingKeeper,
-		DistributionKeeper:     bApp.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
-		AuthzDisabledMsgTypes: []string{
-			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
-		},
-	}
 
-	if err := options.Validate(); err != nil {
+	handlerOpts := app.NewAppAnteHandlerOptionsFromApp(bApp).
+		WithCodec(encodingConfig.Codec).
+		WithSignModeHandler(encodingConfig.TxConfig.SignModeHandler())
+
+	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
 
-	bApp.SetAnteHandler(ante.NewAnteHandler(options))
+	bApp.SetAnteHandler(ante.NewAnteHandler(handlerOpts.Options()))
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
