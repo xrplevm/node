@@ -12,10 +12,10 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
-type AppAnteHandlerOptions ante.HandlerOptions
+type AnteHandlerOptions ante.HandlerOptions
 
-func NewAppAnteHandlerOptionsFromApp(app *App) *AppAnteHandlerOptions {
-	return &AppAnteHandlerOptions{
+func NewAnteHandlerOptionsFromApp(app *App) *AnteHandlerOptions {
+	return &AnteHandlerOptions{
 		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
 		BankKeeper:             app.BankKeeper,
@@ -38,25 +38,25 @@ func NewAppAnteHandlerOptionsFromApp(app *App) *AppAnteHandlerOptions {
 	}
 }
 
-func (aa *AppAnteHandlerOptions) Validate() error {
+func (aa *AnteHandlerOptions) Validate() error {
 	return (*ante.HandlerOptions)(aa).Validate()
 }
 
-func (aa *AppAnteHandlerOptions) Options() ante.HandlerOptions {
+func (aa *AnteHandlerOptions) Options() ante.HandlerOptions {
 	return ante.HandlerOptions(*aa)
 }
 
-func (aa *AppAnteHandlerOptions) WithCodec(cdc codec.BinaryCodec) *AppAnteHandlerOptions {
+func (aa *AnteHandlerOptions) WithCodec(cdc codec.BinaryCodec) *AnteHandlerOptions {
 	aa.Cdc = cdc
 	return aa
 }
 
-func (aa *AppAnteHandlerOptions) WithSignModeHandler(signModeHandler authsigning.SignModeHandler) *AppAnteHandlerOptions {
+func (aa *AnteHandlerOptions) WithSignModeHandler(signModeHandler authsigning.SignModeHandler) *AnteHandlerOptions {
 	aa.SignModeHandler = signModeHandler
 	return aa
 }
 
-func (aa *AppAnteHandlerOptions) WithMaxTxGasWanted(maxTxGasWanted uint64) *AppAnteHandlerOptions {
+func (aa *AnteHandlerOptions) WithMaxTxGasWanted(maxTxGasWanted uint64) *AnteHandlerOptions {
 	aa.MaxTxGasWanted = maxTxGasWanted
 	return aa
 }

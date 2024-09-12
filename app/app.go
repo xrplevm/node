@@ -807,7 +807,7 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := NewAppAnteHandlerOptionsFromApp(app).
+	handlerOpts := NewAnteHandlerOptionsFromApp(app).
 		WithSignModeHandler(txConfig.SignModeHandler()).
 		WithMaxTxGasWanted(maxGasWanted)
 

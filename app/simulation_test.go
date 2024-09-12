@@ -49,7 +49,7 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		baseapp.SetChainID(config.ChainID),
 	)
 
-	handlerOpts := app.NewAppAnteHandlerOptionsFromApp(bApp).
+	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp).
 		WithCodec(encodingConfig.Codec).
 		WithSignModeHandler(encodingConfig.TxConfig.SignModeHandler())
 
