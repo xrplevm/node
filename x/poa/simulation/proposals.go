@@ -27,12 +27,12 @@ func ProposalMsgs() []simtypes.WeightedProposalMsg {
 		simulation.NewWeightedProposalMsg(
 			OpWeightMsgAddValidator,
 			DefaultWeightMsgAddValidator,
-			SimulateMsgAddValidator,
+			simulateMsgAddValidator,
 		),
 		simulation.NewWeightedProposalMsg(
 			OpWeightMsgRemoveValidator,
 			DefaultWeightMsgRemoveValidator,
-			SimulateMsgRemoveValidator,
+			simulateMsgRemoveValidator,
 		),
 	}
 }
@@ -69,7 +69,7 @@ func randomMsgAddValidator(r *rand.Rand, authAddr sdk.AccAddress) (*types.MsgAdd
 }
 
 // SimulateMsgAddValidator simulates the MsgAddValidator message
-func SimulateMsgAddValidator(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) sdk.Msg {
+func simulateMsgAddValidator(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) sdk.Msg {
 	var authAddr sdk.AccAddress = address.Module("gov")
 
 	randMsg, err := randomMsgAddValidator(r, authAddr)
@@ -92,7 +92,7 @@ func randomMsgRemoveValidator(r *rand.Rand, authAddr sdk.AccAddress, accs []simt
 }
 
 // SimulateMsgRemoveValidator simulates the MsgRemoveValidator message
-func SimulateMsgRemoveValidator(r *rand.Rand, _ sdk.Context, accs []simtypes.Account) sdk.Msg {
+func simulateMsgRemoveValidator(r *rand.Rand, _ sdk.Context, accs []simtypes.Account) sdk.Msg {
 	var authAddr sdk.AccAddress = address.Module("gov")
 
 	randMsg := randomMsgRemoveValidator(r, authAddr, accs)
