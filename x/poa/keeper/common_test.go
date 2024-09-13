@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"cosmossdk.io/math"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -40,18 +40,29 @@ func setupSdkConfig() {
 	config.SetPurpose(sdk.Purpose) // Shared
 }
 
-func setupPoAKeeper(t *testing.T) (
-	*Keeper,
-	sdk.Context,
-	*testutil.MockPubKey,
-) {
+func getStakingKeeperMock(t *testing.T, ctx sdk.Context, setExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper)) *testutil.MockStakingKeeper {
+	ctrl := gomock.NewController(t)
+	stakingKeeper := testutil.NewMockStakingKeeper(ctrl)
+	setExpectations(ctx, stakingKeeper)
+	return stakingKeeper
+}
+
+func getBankKeeperMock(t *testing.T, ctx sdk.Context, setExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper)) *testutil.MockBankKeeper {
+	ctrl := gomock.NewController(t)
+	bankKeeper := testutil.NewMockBankKeeper(ctrl)
+	setExpectations(ctx, bankKeeper)
+	return bankKeeper
+}
+
+func getCtxMock(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey) sdk.Context {
 	setupSdkConfig()
 
-	key := sdk.NewKVStoreKey(types.StoreKey)
-
-	tsKey := sdk.NewTransientStoreKey("transient_test")
 	testCtx := sdktestutil.DefaultContextWithDB(t, key, tsKey)
 	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
+	return ctx
+}
+
+func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey, ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper, bankKeeper *testutil.MockBankKeeper) *Keeper {
 	encCfg := moduletestutil.MakeTestEncodingConfig()
 
 	types.RegisterInterfaces(encCfg.InterfaceRegistry)
@@ -60,33 +71,8 @@ func setupPoAKeeper(t *testing.T) (
 	msr := baseapp.NewMsgServiceRouter()
 	msr.SetInterfaceRegistry(encCfg.InterfaceRegistry)
 
-	// gomock initializations
 	ctrl := gomock.NewController(t)
-	bankKeeper := testutil.NewMockBankKeeper(ctrl)
-	stakingKeeper := testutil.NewMockStakingKeeper(ctrl)
-	pubKey := testutil.NewMockPubKey(ctrl)
 	stakingMsr := testutil.NewMockStakingMsgServer(ctrl)
-	// bank keeper expectations
-	bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-		Amount: math.NewInt(0),
-	}).AnyTimes()
-	bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	bankKeeper.EXPECT().BurnCoins(ctx, stakingtypes.BondedPoolName, gomock.Any()).Return(nil).AnyTimes()
-	bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
-	// staking keeper expectations
-	stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-		BondDenom: "XRP",
-	}).AnyTimes()
-	stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, true).AnyTimes()
-	stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}).AnyTimes()
-	stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}).AnyTimes()
-	stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(sdk.ZeroInt()).AnyTimes()
-	stakingKeeper.EXPECT().RemoveDelegation(ctx, gomock.Any()).Return(nil).AnyTimes()
-	stakingKeeper.EXPECT().RemoveValidatorTokensAndShares(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, sdk.ZeroInt()).AnyTimes()
-	stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}).AnyTimes()
-	stakingKeeper.EXPECT().BondDenom(ctx).Return("XRP").AnyTimes()
 
 	stakingMsr.EXPECT().CreateValidator(gomock.Any(), gomock.Any()).Return(&stakingtypes.MsgCreateValidatorResponse{}, nil).AnyTimes()
 
@@ -102,5 +88,16 @@ func setupPoAKeeper(t *testing.T) (
 	types.RegisterMsgServer(msr, NewMsgServerImpl(*poaKeeper))
 	stakingtypes.RegisterMsgServer(msr, stakingMsr)
 
-	return poaKeeper, ctx, pubKey
+	return poaKeeper
+}
+
+func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper), setBankExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper)) (*Keeper, sdk.Context) {
+	key := storetypes.NewKVStoreKey(types.StoreKey)
+	tsKey := storetypes.NewTransientStoreKey("test")
+
+	ctx := getCtxMock(t, key, tsKey)
+	stakingKeeper := getStakingKeeperMock(t, ctx, setStakingExpectations)
+	bankKeeper := getBankKeeperMock(t, ctx, setBankExpectations)
+
+	return getMockedPoAKeeper(t, key, tsKey, ctx, stakingKeeper, bankKeeper), ctx
 }

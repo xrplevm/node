@@ -22,31 +22,7 @@ func StakingPowerInvariant(k Keeper) sdk.Invariant {
 			broken bool
 		)
 
-		k.bk.IterateAllBalances(ctx, 
-			func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
-				// Check if the coin denom matches the staking bond denom
-				if coin.Denom == k.sk.GetParams(ctx).BondDenom {
-					validator, found := k.sk.GetValidator(ctx, sdk.ValAddress(address))
-					// If the account is not a validator, skip it
-					if !found {
-						return false
-					}
-
-					// Check if the validator tokens are equal to the default power reduction
-					if !validator.Tokens.Equal(sdk.DefaultPowerReduction) {
-						msg = fmt.Sprintf("validator %s has %s tokens, not %s", 
-							validator.GetOperator().String(),
-							validator.Tokens.String(),
-							sdk.DefaultPowerReduction.String(),
-						)
-						broken = true
-						return true
-					}
-				}
-
-				return false
-			},
-		)
+		k.bk.IterateAllBalances(ctx, checkValidatorStakingPower(ctx, k, &msg, &broken))
 
 		return sdk.FormatInvariant(
 			types.ModuleName,
@@ -110,5 +86,32 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 			"self-delegation-invariant",
 			fmt.Sprintf("invalid validator self-delegation %s", msg),
 		), broken
+	}
+}
+
+func checkValidatorStakingPower(ctx sdk.Context, k Keeper, msg *string, broken *bool) func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
+	return func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
+		// Check if the coin denom matches the staking bond denom
+		if coin.Denom == k.sk.GetParams(ctx).BondDenom {
+			validator, found := k.sk.GetValidator(ctx, sdk.ValAddress(address))
+			// If the account is not a validator, skip it
+			if !found {
+				return false
+			}
+
+			// Check if the validator tokens are equal to the default power reduction
+			fmt.Println("validator tokens", validator.Tokens.String())
+			if !validator.Tokens.Equal(sdk.DefaultPowerReduction) {
+				*msg = fmt.Sprintf("validator %s has %s tokens, not %s", 
+					validator.GetOperator().String(),
+					validator.Tokens.String(),
+					sdk.DefaultPowerReduction.String(),
+				)
+				*broken = true
+				return true
+			}
+		}
+
+		return false
 	}
 }

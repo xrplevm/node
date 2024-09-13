@@ -5,10 +5,15 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+	"github.com/xrplevm/node/v3/x/poa/testutil"
 )
 
 func TestPoA_Hooks(t *testing.T) {
-	keeper, ctx, _ := setupPoAKeeper(t)
+	keeper, ctx := setupPoaKeeper(
+		t,
+		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
+		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+	)
 
 	hooks := keeper.Hooks()
 

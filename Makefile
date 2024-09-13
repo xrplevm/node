@@ -123,7 +123,7 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test_poa:
+test-poa:
 	@echo "--> Running POA tests"
 	@go test $(EXCLUDED_POA_PACKAGES) 
 

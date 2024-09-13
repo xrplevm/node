@@ -8,7 +8,7 @@ import (
 )
 
 func TestMsgServer_RemoveValidator(t *testing.T) {
-	poaKeeper, ctx, _ := setupPoAKeeper(t)
+	poaKeeper, ctx := poaKeeperTestSetup(t)
 
 	msgServer := NewMsgServerImpl(*poaKeeper)
 
