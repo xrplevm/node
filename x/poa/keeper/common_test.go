@@ -99,7 +99,7 @@ func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storety
 	return poaKeeper
 }
 
-func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper), setBankExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper), setSlashingExpectations func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper)	) (*Keeper, sdk.Context) {
+func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper), setBankExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper), setSlashingExpectations func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper)) (*Keeper, sdk.Context) {
 	key := storetypes.NewKVStoreKey(types.StoreKey)
 	tsKey := storetypes.NewTransientStoreKey("test")
 
