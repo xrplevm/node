@@ -11,6 +11,7 @@ import (
 func RegisterInvariants(ir sdk.InvariantRegistry, k Keeper) {
 	ir.RegisterRoute(types.ModuleName, "staking-power", StakingPowerInvariant(k))
 	ir.RegisterRoute(types.ModuleName, "self-delegation", SelfDelegationInvariant(k))
+	ir.RegisterRoute(types.ModuleName, "keeper-dependencies-params", CheckKeeperDependenciesParamsInvariant(k))
 }
 
 // StakingPowerInvariant checks that all validators have the same
