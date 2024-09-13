@@ -13,15 +13,6 @@ func RegisterInvariants(ir sdk.InvariantRegistry, k Keeper) {
 	ir.RegisterRoute(types.ModuleName, "self-delegation", SelfDelegationInvariant(k))
 }
 
-// AllInvariants runs all invariants of the module
-func AllInvariants(k Keeper) sdk.Invariant {
-	return func(ctx sdk.Context) (string, bool) {
-		// Add here module invariants
-		return StakingPowerInvariant(k)(ctx)
-		
-	}
-}
-
 // StakingPowerInvariant checks that all validators have the same
 // staking power as the default power reduction. If not, it returns an invariant error.
 func StakingPowerInvariant(k Keeper) sdk.Invariant {
@@ -33,12 +24,15 @@ func StakingPowerInvariant(k Keeper) sdk.Invariant {
 
 		k.bk.IterateAllBalances(ctx, 
 			func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
+				// Check if the coin denom matches the staking bond denom
 				if coin.Denom == k.sk.GetParams(ctx).BondDenom {
 					validator, found := k.sk.GetValidator(ctx, sdk.ValAddress(address))
+					// If the account is not a validator, skip it
 					if !found {
 						return false
 					}
 
+					// Check if the validator tokens are equal to the default power reduction
 					if !validator.Tokens.Equal(sdk.DefaultPowerReduction) {
 						msg = fmt.Sprintf("validator %s has %s tokens, not %s", 
 							validator.GetOperator().String(),
@@ -75,6 +69,7 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 			func(address sdk.AccAddress, coin sdk.Coin) (stop bool) {
 				valAddress := sdk.ValAddress(address)
 				_, found := k.sk.GetValidator(ctx, valAddress)
+				// If the account is not a validator, skip it
 				if !found {
 					return false
 				}
@@ -100,10 +95,11 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 						msg = fmt.Sprintf("validator %s and delegator %s addresses do not match", delAddress, valAddress)
 						return true
 					} else if !found {
-						broken = false
+						broken = true
 						msg = fmt.Sprintf("validator %s has no self delegation", address.String())
 						return true
 					}
+					// Check delegation shares (?)
 				}
 				return false
 			},
