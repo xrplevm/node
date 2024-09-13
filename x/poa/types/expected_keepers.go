@@ -30,6 +30,9 @@ type BankKeeper interface {
 type StakingKeeper interface {
 	GetParams(ctx sdk.Context) stakingtypes.Params
 	GetValidator(ctx sdk.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, found bool)
+	GetValidators(ctx sdk.Context, maxRetrieve uint32) (validators []stakingtypes.Validator)
+	GetAllValidators(ctx sdk.Context) (validators []stakingtypes.Validator)
+	GetAllDelegations(ctx sdk.Context) (delegations []stakingtypes.Delegation)
 	GetAllDelegatorDelegations(ctx sdk.Context, delegator sdk.AccAddress) []stakingtypes.Delegation
 	GetUnbondingDelegationsFromValidator(ctx sdk.Context, validator sdk.ValAddress) []stakingtypes.UnbondingDelegation
 	SlashUnbondingDelegation(ctx sdk.Context, ubd stakingtypes.UnbondingDelegation, infractionHeight int64, slashFactor sdk.Dec) (totalSlashAmount math.Int)

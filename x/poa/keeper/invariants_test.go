@@ -3,112 +3,92 @@ package keeper
 import (
 	"testing"
 
-	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/x/poa/testutil"
 )
 
-const (
-	mockDenom = "test"
-)
-
-var (
-	mockCoin = sdk.Coin{
-		Denom: mockDenom,
-	}
-)
-
-func TestCheckValidatorStakingPower_CoinDenomDoesNotMatchBondDenom(t *testing.T) {
-	var (
-		msg string
-		broken bool
-	)
-
+func TestStakingPowerInvariant_Valid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
 		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-				BondDenom: "mockDenom",
-			}).AnyTimes()
+			stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{
+				{
+					Tokens: sdk.DefaultPowerReduction,
+				},
+				{
+					Tokens: sdk.ZeroInt(),
+				},
+			})
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 	)
 
-	checkValidatorStakingPower(ctx, *poaKeeper, &msg, &broken)(sdk.AccAddress(""), sdk.NewCoin("unmatched", math.NewInt(100)))
-
-	require.False(t, broken)
+	invariant := StakingPowerInvariant(*poaKeeper)
+	msg, broken := invariant(ctx)
+	require.False(t, broken, msg)
 }
 
-func TestCheckValidatorStakingPower_ValidatorNotFound(t *testing.T) {
+func TestStakingPowerInvariant_Invalid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
 		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-				BondDenom: mockDenom,
-			}).AnyTimes()
-			stakingKeeper.EXPECT().GetValidator(ctx, sdk.ValAddress("")).Return(stakingtypes.Validator{}, false)
+			stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{
+				{
+					Tokens: sdk.DefaultPowerReduction,
+				},
+				{
+					Tokens: sdk.DefaultPowerReduction.Add(sdk.OneInt()),
+				},
+			})
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 	)
 
-	var (
-		msg string
-		broken bool
-	)
-
-	checkValidatorStakingPower(ctx, *poaKeeper, &msg, &broken)(sdk.AccAddress(""), mockCoin)
-
-	require.False(t, broken)
+	invariant := StakingPowerInvariant(*poaKeeper)
+	msg, broken := invariant(ctx)
+	require.True(t, broken, msg)
 }
 
-func TestCheckValidatorStakingPower_ValidatorMatchesStakingPower(t *testing.T) {
-	var (
-		msg string
-		broken bool
-	)
-
+func TestSelfDelegationInvariant_Valid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
 		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-				BondDenom: mockDenom,
-			}).AnyTimes()
-			stakingKeeper.EXPECT().GetValidator(ctx, sdk.ValAddress("")).Return(stakingtypes.Validator{
-				Tokens: sdk.DefaultPowerReduction,
-			}, true).AnyTimes()
+			stakingKeeper.EXPECT().GetAllDelegations(ctx).Return([]stakingtypes.Delegation{
+				{
+					DelegatorAddress: "ethm13ued6aqj3w7jvks4l270dunhue0a9y7tspnpn5",
+					ValidatorAddress: "ethmvaloper13ued6aqj3w7jvks4l270dunhue0a9y7tl3edtf",
+				},
+				{
+					DelegatorAddress: "ethm13ued6aqj3w7jvks4l270dunhue0a9y7tspnpn5",
+					ValidatorAddress: "ethmvaloper13ued6aqj3w7jvks4l270dunhue0a9y7tl3edtf",
+				},
+			})
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 	)
 
-	checkValidatorStakingPower(ctx, *poaKeeper, &msg, &broken)(sdk.AccAddress(""), mockCoin)
-
-	require.False(t, broken)
+	invariant := SelfDelegationInvariant(*poaKeeper)
+	msg, broken := invariant(ctx)
+	require.False(t, broken, msg)
 }
 
-func TestCheckValidatorStakingPower_ValidatorDoesNotMatchStakingPower(t *testing.T) {
-	var (
-		msg string
-		broken bool
-	)
-
+func TestSelfDelegationInvariant_Invalid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
 		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-				BondDenom: mockDenom,
-			}).AnyTimes()
-			stakingKeeper.EXPECT().GetValidator(ctx, sdk.ValAddress("")).Return(stakingtypes.Validator{
-				Tokens: math.NewInt(100),
-			}, true).AnyTimes()
+			stakingKeeper.EXPECT().GetAllDelegations(ctx).Return([]stakingtypes.Delegation{
+				{
+					DelegatorAddress: "ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq",
+					ValidatorAddress: "ethmvaloper13ued6aqj3w7jvks4l270dunhue0a9y7tl3edtf",
+				},
+			})
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 	)
 
-	checkValidatorStakingPower(ctx, *poaKeeper, &msg, &broken)(sdk.AccAddress(""), mockCoin)
-
-	require.True(t, broken)
+	invariant := SelfDelegationInvariant(*poaKeeper)
+	msg, broken := invariant(ctx)
+	require.True(t, broken, msg)
 }
-
-

@@ -14,7 +14,7 @@ import (
 )
 
 func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
-	stakingExpectations :=  func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+	stakingExpectations := func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 		stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 			BondDenom: "XRP",
 		}).AnyTimes()
@@ -30,7 +30,7 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 
 	bankExpectations := func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 		bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-				Amount: math.NewInt(0),
+			Amount: math.NewInt(0),
 		}).AnyTimes()
 		bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
