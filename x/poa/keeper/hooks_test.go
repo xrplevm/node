@@ -13,6 +13,7 @@ func TestPoA_Hooks(t *testing.T) {
 		t,
 		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
 	)
 
 	hooks := keeper.Hooks()

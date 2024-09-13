@@ -9,7 +9,8 @@ import (
 
 	math "cosmossdk.io/math"
 	types "github.com/cosmos/cosmos-sdk/types"
-	types0 "github.com/cosmos/cosmos-sdk/x/staking/types"
+	types0 "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	types1 "github.com/cosmos/cosmos-sdk/x/staking/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -170,10 +171,10 @@ func (mr *MockStakingKeeperMockRecorder) BondDenom(ctx interface{}) *gomock.Call
 }
 
 // GetAllDelegations mocks base method.
-func (m *MockStakingKeeper) GetAllDelegations(ctx types.Context) []types0.Delegation {
+func (m *MockStakingKeeper) GetAllDelegations(ctx types.Context) []types1.Delegation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllDelegations", ctx)
-	ret0, _ := ret[0].([]types0.Delegation)
+	ret0, _ := ret[0].([]types1.Delegation)
 	return ret0
 }
 
@@ -184,10 +185,10 @@ func (mr *MockStakingKeeperMockRecorder) GetAllDelegations(ctx interface{}) *gom
 }
 
 // GetAllDelegatorDelegations mocks base method.
-func (m *MockStakingKeeper) GetAllDelegatorDelegations(ctx types.Context, delegator types.AccAddress) []types0.Delegation {
+func (m *MockStakingKeeper) GetAllDelegatorDelegations(ctx types.Context, delegator types.AccAddress) []types1.Delegation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllDelegatorDelegations", ctx, delegator)
-	ret0, _ := ret[0].([]types0.Delegation)
+	ret0, _ := ret[0].([]types1.Delegation)
 	return ret0
 }
 
@@ -198,10 +199,10 @@ func (mr *MockStakingKeeperMockRecorder) GetAllDelegatorDelegations(ctx, delegat
 }
 
 // GetAllValidators mocks base method.
-func (m *MockStakingKeeper) GetAllValidators(ctx types.Context) []types0.Validator {
+func (m *MockStakingKeeper) GetAllValidators(ctx types.Context) []types1.Validator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllValidators", ctx)
-	ret0, _ := ret[0].([]types0.Validator)
+	ret0, _ := ret[0].([]types1.Validator)
 	return ret0
 }
 
@@ -212,10 +213,10 @@ func (mr *MockStakingKeeperMockRecorder) GetAllValidators(ctx interface{}) *gomo
 }
 
 // GetParams mocks base method.
-func (m *MockStakingKeeper) GetParams(ctx types.Context) types0.Params {
+func (m *MockStakingKeeper) GetParams(ctx types.Context) types1.Params {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetParams", ctx)
-	ret0, _ := ret[0].(types0.Params)
+	ret0, _ := ret[0].(types1.Params)
 	return ret0
 }
 
@@ -226,10 +227,10 @@ func (mr *MockStakingKeeperMockRecorder) GetParams(ctx interface{}) *gomock.Call
 }
 
 // GetUnbondingDelegationsFromValidator mocks base method.
-func (m *MockStakingKeeper) GetUnbondingDelegationsFromValidator(ctx types.Context, validator types.ValAddress) []types0.UnbondingDelegation {
+func (m *MockStakingKeeper) GetUnbondingDelegationsFromValidator(ctx types.Context, validator types.ValAddress) []types1.UnbondingDelegation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUnbondingDelegationsFromValidator", ctx, validator)
-	ret0, _ := ret[0].([]types0.UnbondingDelegation)
+	ret0, _ := ret[0].([]types1.UnbondingDelegation)
 	return ret0
 }
 
@@ -240,10 +241,10 @@ func (mr *MockStakingKeeperMockRecorder) GetUnbondingDelegationsFromValidator(ct
 }
 
 // GetValidator mocks base method.
-func (m *MockStakingKeeper) GetValidator(ctx types.Context, addr types.ValAddress) (types0.Validator, bool) {
+func (m *MockStakingKeeper) GetValidator(ctx types.Context, addr types.ValAddress) (types1.Validator, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetValidator", ctx, addr)
-	ret0, _ := ret[0].(types0.Validator)
+	ret0, _ := ret[0].(types1.Validator)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }
@@ -255,10 +256,10 @@ func (mr *MockStakingKeeperMockRecorder) GetValidator(ctx, addr interface{}) *go
 }
 
 // GetValidators mocks base method.
-func (m *MockStakingKeeper) GetValidators(ctx types.Context, maxRetrieve uint32) []types0.Validator {
+func (m *MockStakingKeeper) GetValidators(ctx types.Context, maxRetrieve uint32) []types1.Validator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetValidators", ctx, maxRetrieve)
-	ret0, _ := ret[0].([]types0.Validator)
+	ret0, _ := ret[0].([]types1.Validator)
 	return ret0
 }
 
@@ -269,7 +270,7 @@ func (mr *MockStakingKeeperMockRecorder) GetValidators(ctx, maxRetrieve interfac
 }
 
 // RemoveDelegation mocks base method.
-func (m *MockStakingKeeper) RemoveDelegation(ctx types.Context, delegation types0.Delegation) error {
+func (m *MockStakingKeeper) RemoveDelegation(ctx types.Context, delegation types1.Delegation) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveDelegation", ctx, delegation)
 	ret0, _ := ret[0].(error)
@@ -283,10 +284,10 @@ func (mr *MockStakingKeeperMockRecorder) RemoveDelegation(ctx, delegation interf
 }
 
 // RemoveValidatorTokens mocks base method.
-func (m *MockStakingKeeper) RemoveValidatorTokens(ctx types.Context, validator types0.Validator, tokensToRemove math.Int) types0.Validator {
+func (m *MockStakingKeeper) RemoveValidatorTokens(ctx types.Context, validator types1.Validator, tokensToRemove math.Int) types1.Validator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveValidatorTokens", ctx, validator, tokensToRemove)
-	ret0, _ := ret[0].(types0.Validator)
+	ret0, _ := ret[0].(types1.Validator)
 	return ret0
 }
 
@@ -297,10 +298,10 @@ func (mr *MockStakingKeeperMockRecorder) RemoveValidatorTokens(ctx, validator, t
 }
 
 // RemoveValidatorTokensAndShares mocks base method.
-func (m *MockStakingKeeper) RemoveValidatorTokensAndShares(ctx types.Context, validator types0.Validator, sharesToRemove math.LegacyDec) (types0.Validator, math.Int) {
+func (m *MockStakingKeeper) RemoveValidatorTokensAndShares(ctx types.Context, validator types1.Validator, sharesToRemove math.LegacyDec) (types1.Validator, math.Int) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveValidatorTokensAndShares", ctx, validator, sharesToRemove)
-	ret0, _ := ret[0].(types0.Validator)
+	ret0, _ := ret[0].(types1.Validator)
 	ret1, _ := ret[1].(math.Int)
 	return ret0, ret1
 }
@@ -312,7 +313,7 @@ func (mr *MockStakingKeeperMockRecorder) RemoveValidatorTokensAndShares(ctx, val
 }
 
 // SlashUnbondingDelegation mocks base method.
-func (m *MockStakingKeeper) SlashUnbondingDelegation(ctx types.Context, ubd types0.UnbondingDelegation, infractionHeight int64, slashFactor types.Dec) math.Int {
+func (m *MockStakingKeeper) SlashUnbondingDelegation(ctx types.Context, ubd types1.UnbondingDelegation, infractionHeight int64, slashFactor types.Dec) math.Int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SlashUnbondingDelegation", ctx, ubd, infractionHeight, slashFactor)
 	ret0, _ := ret[0].(math.Int)
@@ -323,4 +324,41 @@ func (m *MockStakingKeeper) SlashUnbondingDelegation(ctx types.Context, ubd type
 func (mr *MockStakingKeeperMockRecorder) SlashUnbondingDelegation(ctx, ubd, infractionHeight, slashFactor interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SlashUnbondingDelegation", reflect.TypeOf((*MockStakingKeeper)(nil).SlashUnbondingDelegation), ctx, ubd, infractionHeight, slashFactor)
+}
+
+// MockSlashingKeeper is a mock of SlashingKeeper interface.
+type MockSlashingKeeper struct {
+	ctrl     *gomock.Controller
+	recorder *MockSlashingKeeperMockRecorder
+}
+
+// MockSlashingKeeperMockRecorder is the mock recorder for MockSlashingKeeper.
+type MockSlashingKeeperMockRecorder struct {
+	mock *MockSlashingKeeper
+}
+
+// NewMockSlashingKeeper creates a new mock instance.
+func NewMockSlashingKeeper(ctrl *gomock.Controller) *MockSlashingKeeper {
+	mock := &MockSlashingKeeper{ctrl: ctrl}
+	mock.recorder = &MockSlashingKeeperMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSlashingKeeper) EXPECT() *MockSlashingKeeperMockRecorder {
+	return m.recorder
+}
+
+// GetParams mocks base method.
+func (m *MockSlashingKeeper) GetParams(ctx types.Context) types0.Params {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetParams", ctx)
+	ret0, _ := ret[0].(types0.Params)
+	return ret0
+}
+
+// GetParams indicates an expected call of GetParams.
+func (mr *MockSlashingKeeperMockRecorder) GetParams(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParams", reflect.TypeOf((*MockSlashingKeeper)(nil).GetParams), ctx)
 }

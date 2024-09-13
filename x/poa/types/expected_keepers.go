@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -40,6 +41,10 @@ type StakingKeeper interface {
 	RemoveValidatorTokensAndShares(ctx sdk.Context, validator stakingtypes.Validator, sharesToRemove math.LegacyDec) (stakingtypes.Validator, math.Int)
 	RemoveValidatorTokens(ctx sdk.Context, validator stakingtypes.Validator, tokensToRemove math.Int) stakingtypes.Validator
 	BondDenom(ctx sdk.Context) string
+}
+
+type SlashingKeeper interface {
+	GetParams(ctx sdk.Context) (params slashingtypes.Params)
 }
 
 type GovKeeper interface {

@@ -54,6 +54,13 @@ func getBankKeeperMock(t *testing.T, ctx sdk.Context, setExpectations func(ctx s
 	return bankKeeper
 }
 
+func getSlashingKeeperMock(t *testing.T, ctx sdk.Context, setExpectations func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper)) *testutil.MockSlashingKeeper {
+	ctrl := gomock.NewController(t)
+	slashingKeeper := testutil.NewMockSlashingKeeper(ctrl)
+	setExpectations(ctx, slashingKeeper)
+	return slashingKeeper
+}
+
 func getCtxMock(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey) sdk.Context {
 	setupSdkConfig()
 
@@ -62,7 +69,7 @@ func getCtxMock(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.Tran
 	return ctx
 }
 
-func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey, ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper, bankKeeper *testutil.MockBankKeeper) *Keeper {
+func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey, ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper, bankKeeper *testutil.MockBankKeeper, slashingKeeper *testutil.MockSlashingKeeper) *Keeper {
 	encCfg := moduletestutil.MakeTestEncodingConfig()
 
 	types.RegisterInterfaces(encCfg.InterfaceRegistry)
@@ -82,6 +89,7 @@ func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storety
 		msr,
 		bankKeeper,
 		stakingKeeper,
+		slashingKeeper,
 		"ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq",
 	)
 	poaKeeper.SetParams(ctx, types.DefaultParams())
@@ -91,13 +99,14 @@ func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storety
 	return poaKeeper
 }
 
-func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper), setBankExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper)) (*Keeper, sdk.Context) {
+func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper), setBankExpectations func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper), setSlashingExpectations func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper)	) (*Keeper, sdk.Context) {
 	key := storetypes.NewKVStoreKey(types.StoreKey)
 	tsKey := storetypes.NewTransientStoreKey("test")
 
 	ctx := getCtxMock(t, key, tsKey)
 	stakingKeeper := getStakingKeeperMock(t, ctx, setStakingExpectations)
 	bankKeeper := getBankKeeperMock(t, ctx, setBankExpectations)
+	slashingKeeper := getSlashingKeeperMock(t, ctx, setSlashingExpectations)
 
-	return getMockedPoAKeeper(t, key, tsKey, ctx, stakingKeeper, bankKeeper), ctx
+	return getMockedPoAKeeper(t, key, tsKey, ctx, stakingKeeper, bankKeeper, slashingKeeper), ctx
 }

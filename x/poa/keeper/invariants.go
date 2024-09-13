@@ -27,7 +27,7 @@ func StakingPowerInvariant(k Keeper) sdk.Invariant {
 
 		for _, validator := range validators {
 			if !validator.Tokens.Equal(sdk.DefaultPowerReduction) && !validator.Tokens.IsZero() {
-				msg = fmt.Sprintf("excessive staking power for account %s", validator.GetOperator().String())
+				msg = fmt.Sprintf("excessive staking power for account %s: %s", validator.GetOperator().String(), validator.Tokens.String())
 				broken = true
 				break
 			}
@@ -64,6 +64,32 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 			types.ModuleName,
 			"self-delegation-invariant",
 			fmt.Sprintf("invalid validator self-delegation %s", msg),
+		), broken
+	}
+}
+
+func CheckSlashingParamsInvariant(k Keeper) sdk.Invariant {
+	return func(ctx sdk.Context) (string, bool) {
+		var (
+			msg    string
+			broken bool
+		)
+		
+		params := k.ck.GetParams(ctx)
+
+		if !(params.SlashFractionDoubleSign.IsZero() && params.SlashFractionDowntime.IsZero()) {
+			msg = fmt.Sprintf(
+				"slashing params are not zero: slash_fraction_double_sign %s, slash_fraction_downtime %s",
+				params.SlashFractionDoubleSign.String(),
+				params.SlashFractionDowntime.String(),
+			)
+			broken = true
+		}
+
+		return sdk.FormatInvariant(
+			types.ModuleName,
+			"slashing-params-invariant",
+			fmt.Sprintf("slashing params are not zero: %s", msg),
 		), broken
 	}
 }
