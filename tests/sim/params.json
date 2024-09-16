@@ -6,5 +6,6 @@
     "op_weight_msg_undelegate": 0,
     "op_weight_msg_cancel_unbonding_delegation": 0,
     "slash_fraction_double_sign": "0",
-    "slash_fraction_downtime": "0"
+    "slash_fraction_downtime": "0",
+    "stake_per_account": "1000000"
 }
