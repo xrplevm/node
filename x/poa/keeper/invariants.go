@@ -16,7 +16,6 @@ func RegisterInvariants(ir sdk.InvariantRegistry, k Keeper) {
 
 // StakingPowerInvariant checks that all validators have the same
 // staking power as the default power reduction. If not, it returns an invariant error.
-// TODO: Check validation
 func StakingPowerInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var (
@@ -53,7 +52,6 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 
 		delegations := k.sk.GetAllDelegations(ctx)
 		for _, delegation := range delegations {
-			// TODO: Check delegation address conversion
 			if !delegation.GetValidatorAddr().Equals(sdk.ValAddress(delegation.GetDelegatorAddr())) {
 				msg = fmt.Sprintf("validator address %s and delegation address do not match %s", sdk.ValAddress(delegation.GetDelegatorAddr()), delegation.GetValidatorAddr())
 				broken = true
