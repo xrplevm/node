@@ -67,6 +67,10 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 	}
 }
 
+// CheckKeeperDependenciesParamsInvariant checks that keeper dependencies params
+// are set to the expected values.
+// This is to ensure that the keeper dependencies are correctly initialized.
+// Slashing params SlashFractionDoubleSign and SlashFractionDowntime should be zero.
 func CheckKeeperDependenciesParamsInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var (
