@@ -229,8 +229,8 @@ github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/Peersyst/evmos/v19 v19.2.0-exrp.5 h1:zrnwpBX6Ake5m0JW+ARKZcVK+B6n7wZErR1W7L4MqrI=
-github.com/Peersyst/evmos/v19 v19.2.0-exrp.5/go.mod h1:Lhs/n3iXgIb1uc5gYljhxzl80i9z5Lhs6GsPrlMMvg4=
+github.com/Peersyst/evmos/v19 v19.2.0-exrp.6 h1:vzaCdqEWyIYOJw5uq/AJSE6COOr91NuWZsLfgtJVraY=
+github.com/Peersyst/evmos/v19 v19.2.0-exrp.6/go.mod h1:Lhs/n3iXgIb1uc5gYljhxzl80i9z5Lhs6GsPrlMMvg4=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
