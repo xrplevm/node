@@ -1,19 +1,10 @@
-package types
+package testutil
 
 import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
-
-// AccountKeeper defines the expected account keeper used for simulations (noalias)
-type AccountKeeper interface {
-	GetAccount(ctx sdk.Context, addr sdk.AccAddress) types.AccountI
-	GetModuleAccount(ctx sdk.Context, moduleName string) types.ModuleAccountI
-	// Methods imported from account should be defined here
-}
 
 // BankKeeper defines the expected interface needed to retrieve account balances.
 type BankKeeper interface {
@@ -37,8 +28,4 @@ type StakingKeeper interface {
 	RemoveValidatorTokensAndShares(ctx sdk.Context, validator stakingtypes.Validator, sharesToRemove math.LegacyDec) (stakingtypes.Validator, math.Int)
 	RemoveValidatorTokens(ctx sdk.Context, validator stakingtypes.Validator, tokensToRemove math.Int) stakingtypes.Validator
 	BondDenom(ctx sdk.Context) string
-}
-
-type GovKeeper interface {
-	SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadata string) (v1.Proposal, error)
 }
