@@ -13,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
-	"github.com/evmos/evmos/v19/utils"
+	"github.com/evmos/evmos/v20/utils"
 	"github.com/xrplevm/node/v3/app"
 )
 

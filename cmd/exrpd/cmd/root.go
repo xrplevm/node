@@ -1,53 +1,79 @@
 package cmd
 
 import (
+	"cosmossdk.io/store"
+	storetypes "cosmossdk.io/store/types"
 	"errors"
+	"github.com/cosmos/cosmos-sdk/client/pruning"
+	"github.com/cosmos/cosmos-sdk/client/snapshot"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	"io"
 	"os"
 	"path/filepath"
 
-	simappparams "cosmossdk.io/simapp/params"
-	dbm "github.com/cometbft/cometbft-db"
+	"cosmossdk.io/log"
+	"cosmossdk.io/store/snapshots"
+	snapshottypes "cosmossdk.io/store/snapshots/types"
+	confixcmd "cosmossdk.io/tools/confix/cmd"
 	tmcfg "github.com/cometbft/cometbft/config"
-	tmcli "github.com/cometbft/cometbft/libs/cli"
-	"github.com/cometbft/cometbft/libs/log"
+	cmtcli "github.com/cometbft/cometbft/libs/cli"
 	tmtypes "github.com/cometbft/cometbft/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/config"
+	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/server"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/snapshots"
-	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v19/crypto/hd"
-	"github.com/evmos/evmos/v19/ethereum/eip712"
+	"github.com/evmos/evmos/v20/crypto/hd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	// this line is used by starport scaffolding # root/moduleImport
-
-	ethermintclient "github.com/evmos/evmos/v19/client"
-	ethermintserver "github.com/evmos/evmos/v19/server"
-	ethermintservercfg "github.com/evmos/evmos/v19/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v19/server/flags"
+	ethermintclient "github.com/evmos/evmos/v20/client"
+	ethermintserver "github.com/evmos/evmos/v20/server"
+	ethermintservercfg "github.com/evmos/evmos/v20/server/config"
+	servercfg "github.com/evmos/evmos/v20/server/config"
+	ethermintserverflags "github.com/evmos/evmos/v20/server/flags"
 	"github.com/xrplevm/node/v3/app"
 )
 
+type emptyAppOptions struct{}
+
+func (ao emptyAppOptions) Get(_ string) interface{} { return nil }
+
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
-	encodingConfig := app.MakeEncodingConfig()
+func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
+	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
+	// and the CLI options for the modules
+	// add keyring to autocli opts
+	tempApp := app.New(
+		log.NewNopLogger(),
+		dbm.NewMemDB(),
+		nil, true, nil,
+		tempDir(app.DefaultNodeHome),
+		0,
+		emptyAppOptions{},
+	)
+	encodingConfig := sdktestutil.TestEncodingConfig{
+		InterfaceRegistry: tempApp.InterfaceRegistry(),
+		Codec:             tempApp.AppCodec(),
+		TxConfig:          tempApp.GetTxConfig(),
+		Amino:             tempApp.LegacyAmino(),
+	}
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Codec).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -59,8 +85,6 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 		WithHomeDir(app.DefaultNodeHome).
 		WithKeyringOptions(hd.EthSecp256k1Option()).
 		WithViper("exrp")
-
-	eip712.SetEncodingConfig(encodingConfig)
 
 	rootCmd := &cobra.Command{
 		Use:   app.Name + "d",
@@ -78,6 +102,26 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 				return err
 			}
 
+			// This needs to go after ReadFromClientConfig, as that function
+			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
+			// is only available if the client is online.
+			if !initClientCtx.Offline {
+				enabledSignModes := append(tx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL) //nolint:gocritic
+				txConfigOpts := tx.ConfigOptions{
+					EnabledSignModes:           enabledSignModes,
+					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
+				}
+				txConfig, err := tx.NewTxConfigWithOptions(
+					initClientCtx.Codec,
+					txConfigOpts,
+				)
+				if err != nil {
+					return err
+				}
+
+				initClientCtx = initClientCtx.WithTxConfig(txConfig)
+			}
+
 			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
 				return err
 			}
@@ -90,7 +134,16 @@ func NewRootCmd() (*cobra.Command, simappparams.EncodingConfig) {
 		},
 	}
 
-	initRootCmd(rootCmd, encodingConfig)
+	initRootCmd(rootCmd, encodingConfig, tempApp)
+
+	autoCliOpts := tempApp.AutoCliOpts()
+	initClientCtx, _ = clientcfg.ReadFromClientConfig(initClientCtx)
+	autoCliOpts.ClientCtx = initClientCtx
+
+	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
+		panic(err)
+	}
+
 	registerDenoms()
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
@@ -109,35 +162,39 @@ func initTendermintConfig() *tmcfg.Config {
 
 func initRootCmd(
 	rootCmd *cobra.Command,
-	encodingConfig simappparams.EncodingConfig,
+	encodingConfig sdktestutil.TestEncodingConfig,
+	tempApp *app.App,
 ) {
 	// Set config
 	initSDKConfig()
 
+	a := appCreator{encodingConfig}
+
 	rootCmd.AddCommand(
 		ethermintclient.ValidateChainID(
-			genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+			genutilcli.InitCmd(tempApp.BasicModuleManager, app.DefaultNodeHome),
 		),
-		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, genutiltypes.DefaultMessageValidator),
-		genutilcli.MigrateGenesisCmd(),
-		genutilcli.GenTxCmd(
-			app.ModuleBasics,
-			encodingConfig.TxConfig,
+		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
+			genutiltypes.DefaultMessageValidator,
+			tempApp.GetTxConfig().SigningContext().ValidatorAddressCodec(),
 		),
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics),
+		genutilcli.GenTxCmd(
+			tempApp.BasicModuleManager, tempApp.GetTxConfig(),
+			banktypes.GenesisBalancesIterator{},
+			app.DefaultNodeHome,
+			tempApp.GetTxConfig().SigningContext().ValidatorAddressCodec(),
+		),
+		genutilcli.ValidateGenesisCmd(tempApp.BasicModuleManager),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
-		tmcli.NewCompletionCmd(rootCmd, true),
-		ethermintclient.NewTestnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
+		cmtcli.NewCompletionCmd(rootCmd, true),
+		ethermintclient.NewTestnetCmd(tempApp.BasicModuleManager, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
-		config.Cmd(),
-		// this line is used by starport scaffolding # root/commands
+		pruning.Cmd(a.newApp, app.DefaultNodeHome),
+		confixcmd.ConfigCommand(),
+		snapshot.Cmd(a.newApp),
 	)
-
-	a := appCreator{
-		encodingConfig,
-	}
 
 	// add server commands
 	ethermintserver.AddCommands(
@@ -149,7 +206,7 @@ func initRootCmd(
 
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
-		rpc.StatusCommand(),
+		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
 		ethermintclient.KeyCommands(app.DefaultNodeHome),
@@ -173,14 +230,15 @@ func queryCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		authcmd.GetAccountCmd(),
+		rpc.QueryEventForTxCmd(),
 		rpc.ValidatorCommand(),
-		rpc.BlockCommand(),
+		sdkserver.QueryBlockCmd(),
+		sdkserver.QueryBlocksCmd(),
+		sdkserver.QueryBlockResultsCmd(),
 		authcmd.QueryTxsByEventsCmd(),
 		authcmd.QueryTxCmd(),
 	)
 
-	app.ModuleBasics.AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return cmd
@@ -206,10 +264,12 @@ func txCommand() *cobra.Command {
 		authcmd.GetBroadcastCommand(),
 		authcmd.GetEncodeCommand(),
 		authcmd.GetDecodeCommand(),
-		authcmd.GetAuxToFeeCommand(),
+		authcmd.GetSimulateCmd(),
 	)
 
-	app.ModuleBasics.AddTxCommands(cmd)
+	// DefaultGasAdjustment value to use as default in gas-adjustment flag
+	flags.DefaultGasAdjustment = servercfg.DefaultGasAdjustment
+
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return cmd
@@ -238,7 +298,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 }
 
 type appCreator struct {
-	encodingConfig simappparams.EncodingConfig
+	encodingConfig sdktestutil.TestEncodingConfig
 }
 
 // newApp creates a new Cosmos SDK app
@@ -248,7 +308,7 @@ func (a appCreator) newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	var cache sdk.MultiStorePersistentCache
+	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(server.FlagInterBlockCache)) {
 		cache = store.NewCommitKVStoreCacheManager()
@@ -299,7 +359,6 @@ func (a appCreator) newApp(
 		skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
-		a.encodingConfig,
 		appOpts,
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(server.FlagMinGasPrices))),
@@ -340,7 +399,6 @@ func (a appCreator) appExport(
 		map[int64]bool{},
 		homePath,
 		uint(1),
-		a.encodingConfig,
 		appOpts,
 	)
 
@@ -359,4 +417,14 @@ func initAppConfig() (string, interface{}) {
 	// The following code snippet is just for reference.
 	customAppTemplate, customAppConfig := ethermintservercfg.AppConfig(BaseDenom)
 	return customAppTemplate, customAppConfig
+}
+
+func tempDir(defaultHome string) string {
+	dir, err := os.MkdirTemp("", "evmos")
+	if err != nil {
+		dir = defaultHome
+	}
+	defer os.RemoveAll(dir)
+
+	return dir
 }

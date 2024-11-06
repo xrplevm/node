@@ -110,6 +110,9 @@ $ %s tx poa add-validator \
 					Identity: identity,
 				},
 			)
+			if msg.ValidatorAddress == "" {
+
+			}
 			if err != nil {
 				return err
 			}

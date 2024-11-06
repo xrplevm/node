@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -19,9 +18,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-
-	ethermint "github.com/evmos/evmos/v19/types"
-	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
 )
 
 const (
@@ -43,7 +39,6 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
-
 			serverCtx := server.GetServerContextFromCmd(cmd)
 			config := serverCtx.Config
 
@@ -53,17 +48,14 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				inBuf := bufio.NewReader(cmd.InOrStdin())
-				keyringBackend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
+				keyringBackend, err := cmd.Flags().GetString(flags.FlagKeyringBackend)
+				if err != nil {
+					return err
+				}
 
 				if keyringBackend != "" && clientCtx.Keyring == nil {
 					var err error
-					kr, err = keyring.New(
-						sdk.KeyringServiceName(),
-						keyringBackend,
-						clientCtx.HomeDir,
-						inBuf,
-						clientCtx.Codec,
-					)
+					kr, err = keyring.New(sdk.KeyringServiceName(), keyringBackend, clientCtx.HomeDir, inBuf, clientCtx.Codec)
 					if err != nil {
 						return err
 					}
@@ -71,14 +63,14 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					kr = clientCtx.Keyring
 				}
 
-				info, err := kr.Key(args[0])
+				k, err := kr.Key(args[0])
 				if err != nil {
 					return fmt.Errorf("failed to get address from Keyring: %w", err)
 				}
 
-				addr, err = info.GetAddress()
+				addr, err = k.GetAddress()
 				if err != nil {
-					return fmt.Errorf("failed to get address from Keyring: %w", err)
+					return fmt.Errorf("failed to GetAddress() from Keyring: %w", err)
 				}
 			}
 
@@ -112,7 +104,10 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			baseAccount := authtypes.NewBaseAccount(addr, nil, 0, 0)
 
 			if !vestingAmt.IsZero() {
-				baseVestingAccount := authvesting.NewBaseVestingAccount(baseAccount, vestingAmt.Sort(), vestingEnd)
+				baseVestingAccount, err := authvesting.NewBaseVestingAccount(baseAccount, vestingAmt.Sort(), vestingEnd)
+				if err != nil {
+					return err
+				}
 
 				if (balances.Coins.IsZero() && !baseVestingAccount.OriginalVesting.IsZero()) ||
 					baseVestingAccount.OriginalVesting.IsAnyGT(balances.Coins) {
@@ -130,10 +125,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					return errors.New("invalid vesting parameters; must supply start and end time or end time")
 				}
 			} else {
-				genAccount = &ethermint.EthAccount{
-					BaseAccount: baseAccount,
-					CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
-				}
+				genAccount = baseAccount
 			}
 
 			if err := genAccount.Validate(); err != nil {
@@ -197,8 +189,8 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 		},
 	}
 
-	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|kwallet|pass|test)")
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
+	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|kwallet|pass|test)")
 	cmd.Flags().String(flagVestingAmt, "", "amount of coins for vesting accounts")
 	cmd.Flags().Int64(flagVestingStart, 0, "schedule start time (unix epoch) for vesting accounts")
 	cmd.Flags().Int64(flagVestingEnd, 0, "schedule end time (unix epoch) for vesting accounts")

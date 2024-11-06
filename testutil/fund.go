@@ -19,7 +19,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	poatypes "github.com/xrplevm/node/v3/x/poa/types"
 )
 

@@ -7,11 +7,11 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	v16 "github.com/evmos/evmos/v19/app/upgrades/v16"
-	bankprecompile "github.com/evmos/evmos/v19/precompiles/bank"
-	"github.com/evmos/evmos/v19/precompiles/bech32"
-	"github.com/evmos/evmos/v19/precompiles/p256"
-	evmkeeper "github.com/evmos/evmos/v19/x/evm/keeper"
+	v16 "github.com/evmos/evmos/v20/app/upgrades/v16"
+	bankprecompile "github.com/evmos/evmos/v20/precompiles/bank"
+	"github.com/evmos/evmos/v20/precompiles/bech32"
+	"github.com/evmos/evmos/v20/precompiles/p256"
+	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 )
 
 // CreateUpgradeHandler creates an SDK upgrade handler for v13

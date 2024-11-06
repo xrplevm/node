@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/cometbft/cometbft-db"
-	"github.com/cometbft/cometbft/libs/log"
+	"cosmossdk.io/log"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -14,9 +14,9 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/evmos/v19/app/ante"
-	ethante "github.com/evmos/evmos/v19/app/ante/evm"
-	evmostypes "github.com/evmos/evmos/v19/types"
+	"github.com/evmos/evmos/v20/app/ante"
+	ethante "github.com/evmos/evmos/v20/app/ante/evm"
+	evmostypes "github.com/evmos/evmos/v20/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/app"
 )

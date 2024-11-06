@@ -18,14 +18,14 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/log"
 	"cosmossdk.io/math"
-	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
-	"github.com/cometbft/cometbft/libs/log"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/node"
 	tmclient "github.com/cometbft/cometbft/rpc/client"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
@@ -52,12 +52,12 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/evmos/evmos/v19/crypto/hd"
+	"github.com/evmos/evmos/v20/crypto/hd"
 	"github.com/xrplevm/node/v3/app"
 
-	"github.com/evmos/evmos/v19/server/config"
-	evmostypes "github.com/evmos/evmos/v19/types"
-	evmtypes "github.com/evmos/evmos/v19/x/evm/types"
+	"github.com/evmos/evmos/v20/server/config"
+	evmostypes "github.com/evmos/evmos/v20/types"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 )
 
 // package-wide network lock to only allow one test network at a time

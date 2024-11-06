@@ -1,8 +1,9 @@
 package cmd
 
 import (
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ethermint "github.com/evmos/evmos/v19/types"
+	ethermint "github.com/evmos/evmos/v20/types"
 	"github.com/xrplevm/node/v3/app"
 )
 
@@ -33,11 +34,11 @@ const (
 )
 
 func registerDenoms() {
-	if err := sdk.RegisterDenom(DisplayDenom, sdk.OneDec()); err != nil {
+	if err := sdk.RegisterDenom(DisplayDenom, math.LegacyOneDec()); err != nil {
 		panic(err)
 	}
 
-	if err := sdk.RegisterDenom(BaseDenom, sdk.NewDecWithPrec(1, ethermint.BaseDenomUnit)); err != nil {
+	if err := sdk.RegisterDenom(BaseDenom, math.LegacyNewDecWithPrec(1, ethermint.BaseDenomUnit)); err != nil {
 		panic(err)
 	}
 }
