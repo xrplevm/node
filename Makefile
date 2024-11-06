@@ -115,6 +115,18 @@ lint-fix:
 	@$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
 
 
+###############################################################################
+###                                Testing                                  ###
+###############################################################################
+EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
+
+mocks:
+	@echo "--> Generating mocks"
+	@./scripts/mockgen.sh
+
+test_poa:
+	@echo "--> Running POA tests"
+	@go test $(EXCLUDED_POA_PACKAGES) 
 
 ###############################################################################
 ###                                Protobuf                                 ###
