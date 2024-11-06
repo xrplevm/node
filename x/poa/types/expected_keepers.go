@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -30,6 +31,9 @@ type BankKeeper interface {
 type StakingKeeper interface {
 	GetParams(ctx sdk.Context) stakingtypes.Params
 	GetValidator(ctx sdk.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, found bool)
+	GetValidators(ctx sdk.Context, maxRetrieve uint32) (validators []stakingtypes.Validator)
+	GetAllValidators(ctx sdk.Context) (validators []stakingtypes.Validator)
+	GetAllDelegations(ctx sdk.Context) (delegations []stakingtypes.Delegation)
 	GetAllDelegatorDelegations(ctx sdk.Context, delegator sdk.AccAddress) []stakingtypes.Delegation
 	GetUnbondingDelegationsFromValidator(ctx sdk.Context, validator sdk.ValAddress) []stakingtypes.UnbondingDelegation
 	SlashUnbondingDelegation(ctx sdk.Context, ubd stakingtypes.UnbondingDelegation, infractionHeight int64, slashFactor sdk.Dec) (totalSlashAmount math.Int)
@@ -37,6 +41,10 @@ type StakingKeeper interface {
 	RemoveValidatorTokensAndShares(ctx sdk.Context, validator stakingtypes.Validator, sharesToRemove math.LegacyDec) (stakingtypes.Validator, math.Int)
 	RemoveValidatorTokens(ctx sdk.Context, validator stakingtypes.Validator, tokensToRemove math.Int) stakingtypes.Validator
 	BondDenom(ctx sdk.Context) string
+}
+
+type SlashingKeeper interface {
+	GetParams(ctx sdk.Context) (params slashingtypes.Params)
 }
 
 type GovKeeper interface {

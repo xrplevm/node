@@ -5,13 +5,17 @@ import (
 
 	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"github.com/xrplevm/node/v3/x/poa/testutil"
 	"github.com/xrplevm/node/v3/x/poa/types"
 )
 
 func TestMsgServer_AddValidator(t *testing.T) {
-	poaKeeper, ctx, pubKey := setupPoAKeeper(t)
+	poaKeeper, ctx := poaKeeperTestSetup(t)
 
+	ctrl := gomock.NewController(t)
+	pubKey := testutil.NewMockPubKey(ctrl)
 	msgPubKey, _ := types1.NewAnyWithValue(pubKey)
 	msgServer := NewMsgServerImpl(*poaKeeper)
 
