@@ -452,6 +452,7 @@ func New(
 		app.MsgServiceRouter(),
 		app.BankKeeper,
 		*app.StakingKeeper,
+		app.SlashingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
@@ -837,33 +838,15 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	options := ante.HandlerOptions{
-		Cdc:                    app.appCodec,
-		AccountKeeper:          app.AccountKeeper,
-		BankKeeper:             app.BankKeeper,
-		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
-		EvmKeeper:              app.EvmKeeper,
-		FeegrantKeeper:         app.FeeGrantKeeper,
-		IBCKeeper:              app.IBCKeeper,
-		FeeMarketKeeper:        app.FeeMarketKeeper,
-		SignModeHandler:        txConfig.SignModeHandler(),
-		SigGasConsumer:         ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:         maxGasWanted,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
-		StakingKeeper:          app.StakingKeeper,
-		DistributionKeeper:     app.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
-		AuthzDisabledMsgTypes: []string{
-			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
-		},
-	}
+	handlerOpts := NewAnteHandlerOptionsFromApp(app).
+		WithSignModeHandler(txConfig.SignModeHandler()).
+		WithMaxTxGasWanted(maxGasWanted)
 
-	if err := options.Validate(); err != nil {
+	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
 
-	app.SetAnteHandler(ante.NewAnteHandler(options))
+	app.SetAnteHandler(ante.NewAnteHandler(handlerOpts.Options()))
 }
 
 func (app *App) setPostHandler() {

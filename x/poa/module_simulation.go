@@ -7,7 +7,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+
 	"github.com/xrplevm/node/v3/testutil/sample"
 	poasimulation "github.com/xrplevm/node/v3/x/poa/simulation"
 	"github.com/xrplevm/node/v3/x/poa/types"
@@ -16,7 +18,6 @@ import (
 // avoid unused import issue
 var (
 	_ = sample.AccAddress
-	_ = poasimulation.FindAccount
 	_ = simulation.MsgEntryKind
 	_ = baseapp.Paramspace
 	_ = rand.Rand{}
@@ -39,21 +40,9 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(&poaGenesis)
 }
 
-// ProposalContents doesn't return any content functions for governance proposals
-//
-//nolint:staticcheck
-func (am AppModule) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
-	//nolint:staticcheck
-	proposalContents := make([]simtypes.WeightedProposalContent, 0)
-
-	return proposalContents
-}
-
 // ProposalMsgs returns msgs used for governance proposals for simulations.
 func (am AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
-	return []simtypes.WeightedProposalMsg{
-		// this line is used by starport scaffolding # simapp/module/OpMsg
-	}
+	return poasimulation.ProposalMsgs()
 }
 
 // RegisterStoreDecoder registers a decoder
