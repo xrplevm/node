@@ -20,9 +20,9 @@ func TestStakingPowerInvariant_Valid(t *testing.T) {
 					Tokens: sdk.DefaultPowerReduction,
 				},
 				{
-					Tokens: sdk.ZeroInt(),
+					Tokens: math.ZeroInt(),
 				},
-			})
+			}, nil)
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
@@ -42,9 +42,9 @@ func TestStakingPowerInvariant_Invalid(t *testing.T) {
 					Tokens: sdk.DefaultPowerReduction,
 				},
 				{
-					Tokens: sdk.DefaultPowerReduction.Add(sdk.OneInt()),
+					Tokens: sdk.DefaultPowerReduction.Add(math.OneInt()),
 				},
-			})
+			}, nil)
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
@@ -68,7 +68,7 @@ func TestSelfDelegationInvariant_Valid(t *testing.T) {
 					DelegatorAddress: "ethm13ued6aqj3w7jvks4l270dunhue0a9y7tspnpn5",
 					ValidatorAddress: "ethmvaloper13ued6aqj3w7jvks4l270dunhue0a9y7tl3edtf",
 				},
-			})
+			}, nil)
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
@@ -88,7 +88,7 @@ func TestSelfDelegationInvariant_Invalid(t *testing.T) {
 					DelegatorAddress: "ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq",
 					ValidatorAddress: "ethmvaloper13ued6aqj3w7jvks4l270dunhue0a9y7tl3edtf",
 				},
-			})
+			}, nil)
 		},
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
@@ -108,7 +108,7 @@ func TestCheckKeeperDependenciesParamsInvariant_Valid(t *testing.T) {
 			slashingKeeper.EXPECT().GetParams(ctx).Return(slashingtypes.Params{
 				SlashFractionDoubleSign: math.LegacyZeroDec(),
 				SlashFractionDowntime:   math.LegacyZeroDec(),
-			})
+			}, nil)
 		},
 	)
 
@@ -124,9 +124,9 @@ func TestCheckKeeperDependenciesParamsInvariant_Invalid(t *testing.T) {
 		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {
 			slashingKeeper.EXPECT().GetParams(ctx).Return(slashingtypes.Params{
-				SlashFractionDoubleSign: sdk.NewDecWithPrec(5, 2), // 0.05
-				SlashFractionDowntime:   sdk.NewDecWithPrec(6, 1), // 0.6 (invalid, should be less than MinSignedPerWindow)
-			})
+				SlashFractionDoubleSign: math.LegacyNewDecWithPrec(5, 2), // 0.05
+				SlashFractionDowntime:   math.LegacyNewDecWithPrec(6, 1), // 0.6 (invalid, should be less than MinSignedPerWindow)
+			}, nil)
 		},
 	)
 

@@ -23,11 +23,14 @@ func StakingPowerInvariant(k Keeper) sdk.Invariant {
 			broken bool
 		)
 
-		validators := k.sk.GetAllValidators(ctx)
+		validators, err := k.sk.GetAllValidators(ctx)
+		if err != nil {
+			panic(err)
+		}
 
 		for _, validator := range validators {
 			if !validator.Tokens.Equal(sdk.DefaultPowerReduction) && !validator.Tokens.IsZero() {
-				msg = fmt.Sprintf("excessive staking power for account %s: %s", validator.GetOperator().String(), validator.Tokens.String())
+				msg = fmt.Sprintf("excessive staking power for account %s: %s", validator.GetOperator(), validator.Tokens.String())
 				broken = true
 				break
 			}
@@ -50,10 +53,21 @@ func SelfDelegationInvariant(k Keeper) sdk.Invariant {
 			broken bool
 		)
 
-		delegations := k.sk.GetAllDelegations(ctx)
+		delegations, err := k.sk.GetAllDelegations(ctx)
+		if err != nil {
+			panic(err)
+		}
 		for _, delegation := range delegations {
-			if !delegation.GetValidatorAddr().Equals(sdk.ValAddress(delegation.GetDelegatorAddr())) {
-				msg = fmt.Sprintf("validator address %s and delegation address do not match %s", sdk.ValAddress(delegation.GetDelegatorAddr()), delegation.GetValidatorAddr())
+			validatorAddress, err := sdk.ValAddressFromBech32(delegation.GetValidatorAddr())
+			if err != nil {
+				panic(err)
+			}
+			delegatorAddress, err := sdk.AccAddressFromBech32(delegation.GetDelegatorAddr())
+			if err != nil {
+				panic(err)
+			}
+			if !sdk.AccAddress(validatorAddress).Equals(delegatorAddress) {
+				msg = fmt.Sprintf("validator address %s and delegation address do not match %s", sdk.AccAddress(validatorAddress), delegatorAddress)
 				broken = true
 				break
 			}
@@ -78,7 +92,10 @@ func CheckKeeperDependenciesParamsInvariant(k Keeper) sdk.Invariant {
 			broken bool
 		)
 
-		params := k.ck.GetParams(ctx)
+		params, err := k.ck.GetParams(ctx)
+		if err != nil {
+			panic(err)
+		}
 
 		if !(params.SlashFractionDoubleSign.IsZero() && params.SlashFractionDowntime.IsZero()) {
 			msg = fmt.Sprintf(

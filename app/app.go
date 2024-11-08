@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v8"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibctransfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
@@ -25,18 +24,14 @@ import (
 	"path/filepath"
 	"sort"
 
+	"cosmossdk.io/math"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	ethante "github.com/evmos/evmos/v20/app/ante/evm"
 	"github.com/spf13/cast"
-	poaante "github.com/xrplevm/node/v3/x/poa/ante"
-
-	"cosmossdk.io/math"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
-	"cosmossdk.io/simapp"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
@@ -76,11 +71,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
@@ -115,6 +108,8 @@ import (
 	icahost "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host"
 	icahostkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/keeper"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 	ibcporttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
@@ -130,8 +125,6 @@ import (
 	"github.com/evmos/evmos/v20/app/ante"
 	srvflags "github.com/evmos/evmos/v20/server/flags"
 
-	// Ethermint
-	etherminttypes "github.com/evmos/evmos/v20/types"
 	"github.com/evmos/evmos/v20/x/erc20"
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
@@ -174,6 +167,8 @@ var (
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 		evmtypes.ModuleName:            {authtypes.Minter, authtypes.Burner}, // used for secure addition and subtraction of balance using module account
 		erc20types.ModuleName:          {authtypes.Minter, authtypes.Burner},
+		icatypes.ModuleName:            nil,
+		ratelimittypes.ModuleName:      nil,
 
 		poatypes.ModuleName: {authtypes.Minter, authtypes.Burner},
 	}
@@ -197,9 +192,9 @@ func init() {
 	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name+"d")
 
 	// Replace evmos defaults
-	sdk.DefaultPowerReduction = sdk.NewIntFromUint64(1000000)
-	feemarkettypes.DefaultMinGasPrice = sdk.ZeroDec()
-	feemarkettypes.DefaultMinGasMultiplier = sdk.NewDecWithPrec(50, 2)
+	sdk.DefaultPowerReduction = math.NewIntFromUint64(1000000)
+	feemarkettypes.DefaultMinGasPrice = math.LegacyZeroDec()
+	feemarkettypes.DefaultMinGasMultiplier = math.LegacyNewDecWithPrec(50, 2)
 	stakingtypes.DefaultMinCommissionRate = math.LegacyZeroDec()
 }
 
@@ -299,7 +294,7 @@ func New(
 		distrtypes.StoreKey, slashingtypes.StoreKey, govtypes.StoreKey,
 		paramstypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey, capabilitytypes.StoreKey, crisistypes.StoreKey, consensusparamtypes.StoreKey,
-
+		icahosttypes.StoreKey, ratelimittypes.StoreKey,
 		// Ethermint
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 		erc20types.StoreKey,
@@ -318,7 +313,7 @@ func New(
 		memKeys:           memKeys,
 	}
 
-	govAuthAddress := authtypes.NewModuleAddress(govtypes.ModuleName).String()
+	authAddress := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
@@ -331,7 +326,7 @@ func New(
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[consensusparamtypes.StoreKey]),
-		govAuthAddress,
+		authAddress,
 		runtime.EventService{},
 	)
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
@@ -356,7 +351,7 @@ func New(
 		maccPerms,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 		sdk.Bech32PrefixAccAddr,
-		govAuthAddress,
+		authAddress,
 	)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
@@ -371,7 +366,7 @@ func New(
 		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
 		app.AccountKeeper,
 		app.BlockedModuleAccountAddrs(),
-		govAuthAddress,
+		authAddress,
 		logger,
 	)
 
@@ -395,7 +390,7 @@ func New(
 		runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
 		app.AccountKeeper,
 		app.BankKeeper,
-		govAuthAddress,
+		authAddress,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
 	)
@@ -407,7 +402,7 @@ func New(
 		app.BankKeeper,
 		stakingKeeper,
 		authtypes.FeeCollectorName,
-		govAuthAddress,
+		authAddress,
 	)
 
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
@@ -415,7 +410,7 @@ func New(
 		app.LegacyAmino(),
 		runtime.NewKVStoreService(keys[slashingtypes.StoreKey]),
 		stakingKeeper,
-		govAuthAddress,
+		authAddress,
 	)
 
 	app.CrisisKeeper = crisiskeeper.NewKeeper(
@@ -424,7 +419,7 @@ func New(
 		invCheckPeriod,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		govAuthAddress,
+		authAddress,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 	)
 
@@ -443,19 +438,6 @@ func New(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	// ... other modules keepers
-
-	// exrp keepers
-	app.PoaKeeper = *poakeeper.NewKeeper(
-		appCodec,
-		app.GetSubspace(poatypes.ModuleName),
-		app.MsgServiceRouter(),
-		app.BankKeeper,
-		*app.StakingKeeper,
-		app.SlashingKeeper,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
-
 	stakingKeeper.SetHooks(
 		stakingtypes.NewMultiStakingHooks(
 			app.DistrKeeper.Hooks(),
@@ -467,6 +449,17 @@ func New(
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	// NOTE: Distr and Slashing must be created before calling the Hooks method to avoid returning a Keeper without its table generated
 	app.StakingKeeper = stakingKeeper
+
+	// exrp keepers
+	app.PoaKeeper = *poakeeper.NewKeeper(
+		appCodec,
+		app.GetSubspace(poatypes.ModuleName),
+		app.MsgServiceRouter(),
+		app.BankKeeper,
+		*app.StakingKeeper,
+		app.SlashingKeeper,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
 
 	// Ethermint keepers
 
@@ -506,7 +499,7 @@ func New(
 		app.StakingKeeper,
 		app.UpgradeKeeper,
 		scopedIBCKeeper,
-		govAuthAddress,
+		authAddress,
 	)
 	// Create the rate limit keeper
 	app.RateLimitKeeper = *ratelimitkeeper.NewKeeper(
@@ -530,7 +523,7 @@ func New(
 		app.BankKeeper,
 		scopedTransferKeeper,
 		app.Erc20Keeper, // Add ERC20 Keeper for ERC20 transfers
-		govAuthAddress,
+		authAddress,
 	)
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	// Create the app.ICAHostKeeper
@@ -543,7 +536,7 @@ func New(
 		app.AccountKeeper,
 		scopedICAHostKeeper,
 		bApp.MsgServiceRouter(),
-		govAuthAddress,
+		authAddress,
 	)
 	app.ICAHostKeeper.WithQueryRouter(bApp.GRPCQueryRouter())
 	// create host IBC module
@@ -571,7 +564,7 @@ func New(
 		app.DistrKeeper,
 		app.MsgServiceRouter(),
 		govConfig,
-		govAuthAddress,
+		authAddress,
 	)
 
 	app.GovKeeper = *govKeeper.SetHooks(
@@ -647,7 +640,6 @@ func New(
 			app.txConfig,
 		),
 		auth.NewAppModule(appCodec, app.AccountKeeper, nil, app.GetSubspace(authtypes.ModuleName)),
-		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
 		capability.NewAppModule(appCodec, *app.CapabilityKeeper, false),
 		crisis.NewAppModule(app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
@@ -792,7 +784,7 @@ func New(
 	// NOTE: this is not required apps that don't use the simulator for fuzz testing
 	// transactions
 	overrideModules := map[string]module.AppModuleSimulation{
-		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
+		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 	}
 	app.sm = module.NewSimulationManagerFromAppModules(app.mm.Modules, overrideModules)
 	app.sm.RegisterStoreDecoders()
@@ -838,9 +830,7 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := NewAnteHandlerOptionsFromApp(app).
-		WithSignModeHandler(txConfig.SignModeHandler()).
-		WithMaxTxGasWanted(maxGasWanted)
+	handlerOpts := NewAnteHandlerOptionsFromApp(app, txConfig)
 
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
@@ -875,7 +865,7 @@ func (app *App) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
 
 // InitChainer application update at chain initialization
 func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
-	var genesisState simapp.GenesisState
+	var genesisState GenesisState
 	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}

@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"cosmossdk.io/math"
 	"encoding/json"
 	"fmt"
 
@@ -50,7 +51,7 @@ func GetBalance(ctx client.Context, address string, denom string) sdk.Coin {
 			return coin
 		}
 	}
-	return sdk.NewCoin(denom, sdk.NewInt(0))
+	return sdk.NewCoin(denom, math.NewInt(0))
 }
 
 func GetValidator(ctx client.Context, address string) *stakingtypes.Validator {

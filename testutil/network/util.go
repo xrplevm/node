@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"fmt"
+	tmcfg "github.com/cometbft/cometbft/config"
 	"path/filepath"
 	"time"
 
@@ -32,7 +33,7 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/evmos/v20/server"
+	"github.com/cosmos/cosmos-sdk/server"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 )
 
@@ -56,16 +57,17 @@ func startInProcess(cfg Config, val *Validator) error {
 
 	app := cfg.AppConstructor(*val)
 
+	cmtApp := server.NewCometABCIWrapper(app)
 	genDocProvider := node.DefaultGenesisDocProviderFunc(tmCfg)
 	tmNode, err := node.NewNode(
 		tmCfg,
 		pvm.LoadOrGenFilePV(tmCfg.PrivValidatorKeyFile(), tmCfg.PrivValidatorStateFile()),
 		nodeKey,
-		proxy.NewLocalClientCreator(app),
+		proxy.NewLocalClientCreator(cmtApp),
 		genDocProvider,
-		node.DefaultDBProvider,
+		tmcfg.DefaultDBProvider,
 		node.DefaultMetricsProvider(tmCfg.Instrumentation),
-		logger.With("module", val.Moniker),
+		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger.With("server", "node")},
 	)
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"cosmossdk.io/log"
 	"math/rand"
 	"os"
 	"testing"
@@ -8,10 +9,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/evmos/evmos/v19/crypto/ethsecp256k1"
+	"github.com/evmos/evmos/v20/crypto/ethsecp256k1"
 
-	dbm "github.com/cometbft/cometbft-db"
-	"github.com/cometbft/cometbft/libs/log"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -19,7 +19,7 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/evmos/v19/app/ante"
+	"github.com/evmos/evmos/v20/app/ante"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/app"
 )
@@ -32,7 +32,6 @@ const SimAppChainID = "simulation_777-1"
 
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
 func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
-	encodingConfig := app.MakeEncodingConfig()
 	appOptions := make(simtestutil.AppOptionsMap, 0)
 	appOptions[flags.FlagHome] = app.DefaultNodeHome
 	appOptions[server.FlagInvCheckPeriod] = simcli.FlagPeriodValue
@@ -44,20 +43,16 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		false,
 		map[int64]bool{},
 		app.DefaultNodeHome,
-		simcli.FlagPeriodValue, encodingConfig,
+		simcli.FlagPeriodValue,
 		appOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
-
-	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp).
-		WithCodec(encodingConfig.Codec).
-		WithSignModeHandler(encodingConfig.TxConfig.SignModeHandler())
-
+	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig())
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
-
 	bApp.SetAnteHandler(ante.NewAnteHandler(handlerOpts.Options()))
+
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
@@ -125,7 +120,7 @@ func BenchmarkSimulation(b *testing.B) {
 		simtestutil.AppStateFn(
 			bApp.AppCodec(),
 			bApp.SimulationManager(),
-			app.NewDefaultGenesisState(bApp.AppCodec()),
+			app.NewDefaultGenesisState(bApp),
 		),
 		RandomAccounts,
 		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
@@ -180,7 +175,7 @@ func TestFullAppSimulation(t *testing.T) {
 		simtestutil.AppStateFn(
 			bApp.AppCodec(),
 			bApp.SimulationManager(),
-			app.NewDefaultGenesisState(bApp.AppCodec()),
+			app.NewDefaultGenesisState(bApp),
 		),
 		RandomAccounts,
 		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),

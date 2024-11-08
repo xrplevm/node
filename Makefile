@@ -120,6 +120,8 @@ lint-fix:
 EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
 mocks:
+	@echo "--> Installing mockgen"
+	go install github.com/golang/mock/mockgen@v1.6.0
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 

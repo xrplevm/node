@@ -1,6 +1,7 @@
 package poa_test
 
 import (
+	"cosmossdk.io/math"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -95,7 +96,7 @@ func (s *TestSuite) Test_RemoveUnbondedValidator() {
 	s.RequireValidatorSet().NotContains(validator.PubKey)
 	// Bond some tokens that are not enough for being bonded to make validator status being unbonded
 	// and then remove validator through PoA
-	halfTokens := sdk.NewDec(e2e.DefaultBondedTokens.Int64()).Quo(sdk.NewDec(2)).RoundInt()
+	halfTokens := math.LegacyNewDec(e2e.DefaultBondedTokens.Int64()).Quo(math.LegacyNewDec(2)).RoundInt()
 	e2e.BondTokens(&s.IntegrationTestSuite, validator, halfTokens)
 	s.RequireValidator(validatorAddress, &e2e.UnbondedStatus, &halfTokens)
 	s.RequireBondBalance(validatorAddress, halfTokens)

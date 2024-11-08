@@ -1,7 +1,6 @@
 package poa_test
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/xrplevm/node/v3/tests/e2e"
 )
@@ -9,8 +8,8 @@ import (
 func (s *TestSuite) Test_AddNewValidator() {
 	s.T().Logf("==== Test_AddNewValidator")
 
-	address, _ := sdk.AccAddressFromBech32("evmos1ycvhcxthjju0466d4ga0j7du7wt8kmaep28zqv")
-	validators := s.Network.Validators
+	keyIndx := s.Keyring.AddKey()
+	key := s.Keyring.GetKey(keyIndx)
 	pubKey := e2e.GenPubKey()
 
 	// PRE:
@@ -19,7 +18,7 @@ func (s *TestSuite) Test_AddNewValidator() {
 
 	// EXEC:
 	// Make a PoA change to add validator
-	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, address, pubKey, validators, govtypesv1.StatusPassed)
+	e2e.ChangeValidator(&s.IntegrationTestSuite, e2e.AddValidatorAction, key.AccAddr, pubKey, validators, govtypesv1.StatusPassed)
 	// Wait enough to be sure that the validator is in the validator set
 	s.Network.MustWaitForNextBlock()
 

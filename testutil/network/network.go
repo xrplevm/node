@@ -12,16 +12,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
-	tmcfg "github.com/cometbft/cometbft/config"
-	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/node"
 	tmclient "github.com/cometbft/cometbft/rpc/client"
@@ -31,8 +31,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
-	"cosmossdk.io/simapp"
-	"cosmossdk.io/simapp/params"
+	pruningtypes "cosmossdk.io/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -44,7 +43,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -60,8 +58,11 @@ import (
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 )
 
-// package-wide network lock to only allow one test network at a time
-var lock = new(sync.Mutex)
+var (
+	// package-wide network lock to only allow one test network at a time
+	lock     = new(sync.Mutex)
+	portPool = make(chan string, 200)
+)
 
 // AppConstructor defines a function which accepts a network configuration and
 // creates an ABCI Application to provide to Tendermint.
@@ -76,44 +77,49 @@ type Config struct {
 	InterfaceRegistry   codectypes.InterfaceRegistry
 	TxConfig            client.TxConfig
 	AccountRetriever    client.AccountRetriever
-	AppConstructor      AppConstructor      // the ABCI application constructor
-	GenesisState        simapp.GenesisState // custom gensis state to provide
-	TimeoutCommit       time.Duration       // the consensus commitment timeout
-	AccountTokens       math.Int            // the amount of unique validator tokens (e.g. 1000node0)
-	StakingTokens       math.Int            // the amount of tokens each validator has available to stake
-	BondedTokens        math.Int            // the amount of tokens each validator stakes
-	SignedBlocksWindow  int64               // slashing signed blocks window
-	NumValidators       int                 // the total number of validators to create and bond
-	NumBondedValidators int                 // the total number of validators with bonded tokens to create
-	ChainID             string              // the network chain-id
-	BondDenom           string              // the staking bond denomination
-	TokenDenom          string              // the fees token denomination
-	UnBoundingTime      time.Duration       // the time to unbound and accept governance proposals
-	MinGasPrices        string              // the minimum gas prices each validator will accept
-	PruningStrategy     string              // the pruning strategy each validator will have
-	SigningAlgo         string              // signing algorithm for keys
-	RPCAddress          string              // RPC listen address (including port)
-	JSONRPCAddress      string              // JSON-RPC listen address (including port)
-	APIAddress          string              // REST API listen address (including port)
-	GRPCAddress         string              // GRPC server listen address (including port)
-	EnableTMLogging     bool                // enable Tendermint logging to STDOUT
-	CleanupDir          bool                // remove base temporary directory during cleanup
-	PrintMnemonic       bool                // print the mnemonic of first validator as log output for testing
+	AppConstructor      AppConstructor   // the ABCI application constructor
+	GenesisState        app.GenesisState // custom gensis state to provide
+	TimeoutCommit       time.Duration    // the consensus commitment timeout
+	AccountTokens       math.Int         // the amount of unique validator tokens (e.g. 1000node0)
+	StakingTokens       math.Int         // the amount of tokens each validator has available to stake
+	BondedTokens        math.Int         // the amount of tokens each validator stakes
+	SignedBlocksWindow  int64            // slashing signed blocks window
+	NumValidators       int              // the total number of validators to create and bond
+	NumBondedValidators int              // the total number of validators with bonded tokens to create
+	ChainID             string           // the network chain-id
+	BondDenom           string           // the staking bond denomination
+	TokenDenom          string           // the fees token denomination
+	UnBoundingTime      time.Duration    // the time to unbound and accept governance proposals
+	MinGasPrices        string           // the minimum gas prices each validator will accept
+	PruningStrategy     string           // the pruning strategy each validator will have
+	SigningAlgo         string           // signing algorithm for keys
+	RPCAddress          string           // RPC listen address (including port)
+	JSONRPCAddress      string           // JSON-RPC listen address (including port)
+	APIAddress          string           // REST API listen address (including port)
+	GRPCAddress         string           // GRPC server listen address (including port)
+	EnableTMLogging     bool             // enable Tendermint logging to STDOUT
+	CleanupDir          bool             // remove base temporary directory during cleanup
+	PrintMnemonic       bool             // print the mnemonic of first validator as log output for testing
 }
 
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
 func DefaultConfig(numValidators int, numBondedValidators int, blockTime time.Duration, unbondingBlocks int64) Config {
-	encCfg := app.MakeEncodingConfig()
 	chainID := fmt.Sprintf("exrp_%d-1", tmrand.Int63n(9999999999999)+1)
+	dir, err := os.MkdirTemp("", "simapp")
+	if err != nil {
+		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
+	}
+	defer os.RemoveAll(dir)
+	tmpApp := app.New(log.NewNopLogger(), dbm.NewMemDB(), nil, true, nil, dir, 0, simutils.NewAppOptionsWithFlagHome(dir), baseapp.SetChainID(chainID))
 	return Config{
-		Codec:               encCfg.Codec,
-		TxConfig:            encCfg.TxConfig,
-		LegacyAmino:         encCfg.Amino,
-		InterfaceRegistry:   encCfg.InterfaceRegistry,
+		Codec:               tmpApp.AppCodec(),
+		TxConfig:            tmpApp.TxConfig(),
+		LegacyAmino:         tmpApp.LegacyAmino(),
+		InterfaceRegistry:   tmpApp.InterfaceRegistry(),
 		AccountRetriever:    authtypes.AccountRetriever{},
-		AppConstructor:      NewAppConstructor(encCfg, chainID),
-		GenesisState:        app.ModuleBasics.DefaultGenesis(encCfg.Codec),
+		AppConstructor:      NewAppConstructor(chainID),
+		GenesisState:        tmpApp.BasicModuleManager.DefaultGenesis(tmpApp.AppCodec()),
 		TimeoutCommit:       blockTime,
 		ChainID:             chainID,
 		NumValidators:       numValidators,
@@ -136,11 +142,10 @@ func DefaultConfig(numValidators int, numBondedValidators int, blockTime time.Du
 }
 
 // NewAppConstructor returns a new Evmos AppConstructor
-func NewAppConstructor(encodingCfg params.EncodingConfig, chainID string) AppConstructor {
+func NewAppConstructor(chainID string) AppConstructor {
 	return func(val Validator) servertypes.Application {
 		return app.New(
 			val.Ctx.Logger, dbm.NewMemDB(), nil, true, make(map[int64]bool), val.Ctx.Config.RootDir, 0,
-			encodingCfg,
 			simutils.NewAppOptionsWithFlagHome(val.Ctx.Config.RootDir),
 			baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 			baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
@@ -281,11 +286,11 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		if cfg.APIAddress != "" {
 			apiListenAddr = cfg.APIAddress
 		} else {
-			var err error
-			apiListenAddr, _, err = server.FreeTCPAddr()
-			if err != nil {
-				return nil, err
+			if len(portPool) == 0 {
+				return nil, fmt.Errorf("failed to get port for API server")
 			}
+			port := <-portPool
+			apiListenAddr = fmt.Sprintf("tcp://0.0.0.0:%s", port)
 		}
 
 		appCfg.API.Address = apiListenAddr
@@ -298,47 +303,40 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		if cfg.RPCAddress != "" {
 			tmCfg.RPC.ListenAddress = cfg.RPCAddress
 		} else {
-			rpcAddr, _, err := server.FreeTCPAddr()
-			if err != nil {
-				return nil, err
+			if len(portPool) == 0 {
+				return nil, fmt.Errorf("failed to get port for RPC server")
 			}
-			tmCfg.RPC.ListenAddress = rpcAddr
+			port := <-portPool
+			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%s", port)
 		}
 
 		if cfg.GRPCAddress != "" {
 			appCfg.GRPC.Address = cfg.GRPCAddress
 		} else {
-			_, grpcPort, err := server.FreeTCPAddr()
-			if err != nil {
-				return nil, err
+			if len(portPool) == 0 {
+				return nil, fmt.Errorf("failed to get port for GRPC server")
 			}
-			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%s", grpcPort)
+			port := <-portPool
+			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%s", port)
 		}
 		appCfg.GRPC.Enable = false
-
-		_, grpcWebPort, err := server.FreeTCPAddr()
-		if err != nil {
-			return nil, err
-		}
-		appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%s", grpcWebPort)
 		appCfg.GRPCWeb.Enable = false
 
 		if cfg.JSONRPCAddress != "" {
 			appCfg.JSONRPC.Address = cfg.JSONRPCAddress
 		} else {
-			_, jsonRPCPort, err := server.FreeTCPAddr()
-			if err != nil {
-				return nil, err
+			if len(portPool) == 0 {
+				return nil, fmt.Errorf("failed to get port for JSON-RPC server")
 			}
-			appCfg.JSONRPC.Address = fmt.Sprintf("0.0.0.0:%s", jsonRPCPort)
+			port := <-portPool
+			appCfg.JSONRPC.Address = fmt.Sprintf("0.0.0.0:%s", port)
 		}
 		appCfg.JSONRPC.Enable = false
 		appCfg.JSONRPC.API = config.GetAPINamespaces()
 
 		logger := log.NewNopLogger()
 		if cfg.EnableTMLogging && i == 0 {
-			logger = log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-			logger, _ = tmflags.ParseLogLevel("info", logger, tmcfg.DefaultLogLevel)
+			logger = log.NewLogger(os.Stdout)
 		}
 
 		ctx.Logger = logger
@@ -362,13 +360,18 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		tmCfg.Moniker = nodeDirName
 		monikers[i] = nodeDirName
 
-		proxyAddr, _, err := server.FreeTCPAddr()
-		if err != nil {
-			return nil, err
+		if len(portPool) == 0 {
+			return nil, fmt.Errorf("failed to get port for Proxy server")
 		}
+		port := <-portPool
+		proxyAddr := fmt.Sprintf("tcp://0.0.0.0:%s", port)
 		tmCfg.ProxyApp = proxyAddr
 
-		p2pAddr, _, err := server.FreeTCPAddr()
+		if len(portPool) == 0 {
+			return nil, fmt.Errorf("failed to get port for Proxy server")
+		}
+		port = <-portPool
+		p2pAddr := fmt.Sprintf("tcp://0.0.0.0:%s", port)
 		if err != nil {
 			return nil, err
 		}
@@ -429,7 +432,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			CodeHash:    common.BytesToHash(evmtypes.EmptyCodeHash).Hex(),
 		})
 
-		commission, err := sdk.NewDecFromStr("0.5")
+		commission, err := math.LegacyNewDecFromStr("0.5")
 		if err != nil {
 			return nil, err
 		}
@@ -437,12 +440,12 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		if i < cfg.NumBondedValidators {
 
 			createValMsg, err := stakingtypes.NewMsgCreateValidator(
-				sdk.ValAddress(addr),
+				sdk.ValAddress(addr).String(),
 				valPubKeys[i],
 				sdk.NewCoin(cfg.BondDenom, cfg.BondedTokens),
 				stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
-				stakingtypes.NewCommissionRates(commission, sdk.OneDec(), sdk.OneDec()),
-				sdk.OneInt(),
+				stakingtypes.NewCommissionRates(commission, math.LegacyOneDec(), math.LegacyOneDec()),
+				math.OneInt(),
 			)
 			if err != nil {
 				return nil, err
@@ -454,7 +457,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			}
 
 			memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
-			fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, sdk.NewInt(0)))
+			fee := sdk.NewCoins(sdk.NewCoin(cfg.BondDenom, math.NewInt(0)))
 			txBuilder := cfg.TxConfig.NewTxBuilder()
 			err = txBuilder.SetMsgs(createValMsg)
 			if err != nil {
@@ -471,7 +474,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 				WithKeybase(kb).
 				WithTxConfig(cfg.TxConfig)
 
-			if err := tx.Sign(txFactory, nodeDirName, txBuilder, true); err != nil {
+			if err := tx.Sign(context.Background(), txFactory, nodeDirName, txBuilder, true); err != nil {
 				return nil, err
 			}
 
@@ -544,7 +547,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 
 	// Ensure we cleanup incase any test was abruptly halted (e.g. SIGINT) as any
 	// defer in a test would not be called.
-	server.TrapSignal(network.Cleanup)
+	trapSignal(network.Cleanup)
 
 	return network, nil
 }
@@ -716,4 +719,28 @@ func centerText(text string, width int) string {
 	rightBuffer := strings.Repeat(" ", (width-textLen)/2+(width-textLen)%2)
 
 	return fmt.Sprintf("%s%s%s", leftBuffer, text, rightBuffer)
+}
+
+// trapSignal traps SIGINT and SIGTERM and calls os.Exit once a signal is received.
+func trapSignal(cleanupFunc func()) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+
+		if cleanupFunc != nil {
+			cleanupFunc()
+		}
+		exitCode := 128
+
+		switch sig {
+		case syscall.SIGINT:
+			exitCode += int(syscall.SIGINT)
+		case syscall.SIGTERM:
+			exitCode += int(syscall.SIGTERM)
+		}
+
+		os.Exit(exitCode)
+	}()
 }

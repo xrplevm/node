@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"cosmossdk.io/math"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ func transactionFlags(s *IntegrationTestSuite, val network.Validator) []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, sdk.NewCoins(sdk.NewCoin(s.Cfg.TokenDenom, sdk.NewInt(1000000000))).String()),
+		fmt.Sprintf("--%s=%s", flags.FlagGasPrices, sdk.NewCoins(sdk.NewCoin(s.Cfg.TokenDenom, math.NewInt(1000000000))).String()),
 		fmt.Sprintf("--%s=%s", flags.FlagGas, "1000000"),
 	}
 }
@@ -145,7 +146,7 @@ func ChangeValidator(
 }
 
 //nolint:staticcheck
-func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int) {
+func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens math.Int) {
 	clientCtx := validator.ClientCtx
 	cmd := stakingcli.NewCreateValidatorCmd()
 
@@ -172,7 +173,7 @@ func BondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sd
 }
 
 //nolint:staticcheck
-func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int, wait bool) string {
+func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens math.Int, wait bool) string {
 	cmd := stakingcli.NewUnbondCmd()
 
 	args := []string{
@@ -197,7 +198,7 @@ func UnBondTokens(s *IntegrationTestSuite, validator *network.Validator, tokens 
 }
 
 //nolint:staticcheck
-func Delegate(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.Int) string {
+func Delegate(s *IntegrationTestSuite, validator *network.Validator, tokens math.Int) string {
 	cmd := stakingcli.NewDelegateCmd()
 
 	args := []string{
@@ -218,7 +219,7 @@ func Delegate(s *IntegrationTestSuite, validator *network.Validator, tokens sdk.
 }
 
 //nolint:staticcheck
-func Redelegate(s *IntegrationTestSuite, src *network.Validator, dst *network.Validator, tokens sdk.Int) string {
+func Redelegate(s *IntegrationTestSuite, src *network.Validator, dst *network.Validator, tokens math.Int) string {
 	cmd := stakingcli.NewRedelegateCmd()
 	args := []string{
 		sdk.ValAddress(src.Address).String(),

@@ -1,6 +1,7 @@
 package ante
 
 import (
+	storetypes "cosmossdk.io/store/types"
 	"testing"
 	"time"
 
@@ -17,8 +18,8 @@ func setupPoaDecorator(t *testing.T) (
 	*PoaDecorator,
 	sdk.Context,
 ) {
-	key := sdk.NewKVStoreKey(types.StoreKey)
-	tsKey := sdk.NewTransientStoreKey("transient_test")
+	key := storetypes.NewKVStoreKey(types.StoreKey)
+	tsKey := storetypes.NewTransientStoreKey("transient_test")
 	testCtx := sdktestutil.DefaultContextWithDB(t, key, tsKey)
 	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 

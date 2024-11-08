@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -11,6 +12,7 @@ import (
 	bankprecompile "github.com/evmos/evmos/v20/precompiles/bank"
 	"github.com/evmos/evmos/v20/precompiles/bech32"
 	distprecompile "github.com/evmos/evmos/v20/precompiles/distribution"
+	govprecompile "github.com/evmos/evmos/v20/precompiles/gov"
 	ics20precompile "github.com/evmos/evmos/v20/precompiles/ics20"
 	"github.com/evmos/evmos/v20/precompiles/p256"
 	stakingprecompile "github.com/evmos/evmos/v20/precompiles/staking"
@@ -33,6 +35,7 @@ func NewAvailableStaticPrecompiles(
 	authzKeeper authzkeeper.Keeper,
 	transferKeeper transferkeeper.Keeper,
 	channelKeeper channelkeeper.Keeper,
+	govKeeper govkeeper.Keeper,
 ) map[common.Address]vm.PrecompiledContract {
 	// Clone the mapping from the latest EVM fork.
 	precompiles := maps.Clone(vm.PrecompiledContractsBerlin)
@@ -74,6 +77,11 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate bank precompile: %w", err))
 	}
 
+	govPrecompile, err := govprecompile.NewPrecompile(govKeeper, authzKeeper)
+	if err != nil {
+		panic(fmt.Errorf("failed to instantiate gov precompile: %w", err))
+	}
+
 	// Stateless precompiles
 	precompiles[bech32Precompile.Address()] = bech32Precompile
 	precompiles[p256Precompile.Address()] = p256Precompile
@@ -83,5 +91,6 @@ func NewAvailableStaticPrecompiles(
 	precompiles[distributionPrecompile.Address()] = distributionPrecompile
 	precompiles[ibcTransferPrecompile.Address()] = ibcTransferPrecompile
 	precompiles[bankPrecompile.Address()] = bankPrecompile
+	precompiles[govPrecompile.Address()] = govPrecompile
 	return precompiles
 }

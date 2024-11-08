@@ -1,7 +1,7 @@
 package poa_test
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"cosmossdk.io/math"
 	"github.com/xrplevm/node/v3/tests/e2e"
 )
 
@@ -16,13 +16,13 @@ func (s *TestSuite) Test_AddDelegationIsNotAllowedToOtherValidators() {
 	s.RequireValidator(validatorAddress, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
 	s.RequireBondBalance(validatorAddress, e2e.Zero)
 	// Delegator should not have any shares and should have default bonded tokens in bank
-	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
+	s.RequireDelegation(validatorAddress, delegatorAddress, math.LegacyZeroDec())
 	s.RequireBondBalance(delegatorAddress, e2e.DefaultBondedTokens)
 
 	e2e.Delegate(&s.IntegrationTestSuite, validator, e2e.DefaultBondedTokens)
 
 	// Delegator should not have any shares and should have default bonded tokens in bank
-	s.RequireDelegation(validatorAddress, delegatorAddress, sdk.ZeroDec())
+	s.RequireDelegation(validatorAddress, delegatorAddress, math.LegacyZeroDec())
 	s.RequireBondBalance(delegatorAddress, e2e.DefaultBondedTokens)
 	s.T().Logf("==== [V] Test_AddDelegationIsNotAllowedToOtherValidators")
 }
@@ -38,7 +38,7 @@ func (s *TestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
 	s.RequireBondBalance(validatorAddress, e2e.DefaultBondedTokens)
 
 	// EXEC:
-	halfTokens := sdk.NewDec(e2e.DefaultBondedTokens.Int64()).Quo(sdk.NewDec(2)).RoundInt()
+	halfTokens := math.LegacyNewDec(e2e.DefaultBondedTokens.Int64()).Quo(math.LegacyNewDec(2)).RoundInt()
 
 	e2e.BondTokens(&s.IntegrationTestSuite, validator, halfTokens)
 
@@ -51,6 +51,6 @@ func (s *TestSuite) Test_AddDelegationIsAllowedToSelfValidator() {
 	// POST:
 	// Delegator should have all the tokens bonded and delegation should have happened
 	s.RequireValidator(validatorAddress, &e2e.BondedStatus, &e2e.DefaultBondedTokens)
-	s.RequireBondBalance(validatorAddress, sdk.ZeroInt())
+	s.RequireBondBalance(validatorAddress, math.ZeroInt())
 	s.T().Logf("==== [V] Test_AddDelegationIsAllowedToSelfValidator")
 }

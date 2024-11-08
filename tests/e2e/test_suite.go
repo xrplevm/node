@@ -1,12 +1,11 @@
 package e2e
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
+	grpchandler "github.com/evmos/evmos/v20/testutil/integration/common/grpc"
+	testkeyring "github.com/evmos/evmos/v20/testutil/integration/evmos/keyring"
+	"github.com/evmos/evmos/v20/testutil/integration/evmos/network"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v3/testutil/network"
+	"time"
 )
 
 type IntegrationTestSuite struct {
@@ -14,30 +13,18 @@ type IntegrationTestSuite struct {
 
 	ProposalCount int
 	Cfg           network.Config
-	Network       *network.Network
+	Network       network.Network
+	Handler       grpchandler.Handler
+	Keyring       testkeyring.Keyring
 }
 
 func (s *IntegrationTestSuite) SetupNetwork(numValidators int, numBondedValidators int, blockTime time.Duration, unbondingBlocks int64) {
-	s.T().Log("setting up network test suite")
-
-	var err error
-	cfg := network.DefaultConfig(numValidators, numBondedValidators, blockTime, unbondingBlocks)
-
-	s.Network, err = network.New(s.T(), s.T().TempDir(), cfg)
-	s.Cfg = cfg
-	s.ProposalCount = 0
-
-	s.Require().NoError(err)
-	s.Require().NotNil(s.Network)
-
-	_, err = s.Network.WaitForHeight(2)
-	s.Require().NoError(err)
-
-	if s.Network.Validators[0].JSONRPCClient == nil {
-		address := fmt.Sprintf("http://%s", s.Network.Validators[0].AppConfig.JSONRPC.Address)
-		s.Network.Validators[0].JSONRPCClient, err = ethclient.Dial(address)
-		s.Require().NoError(err)
-	}
+	nw := network.New(
+		network.WithBalances(),
+	)
+	handler := grpchandler.NewIntegrationHandler(nw)
+	s.Network = nw
+	s.Handler = handler
 }
 
 func (s *IntegrationTestSuite) TearDownTest() {

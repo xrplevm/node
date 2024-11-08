@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"cosmossdk.io/math"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -38,6 +39,6 @@ func TestPoA_Hooks(t *testing.T) {
 	require.NoError(t, err)
 	err = hooks.AfterUnbondingInitiated(ctx, 0)
 	require.NoError(t, err)
-	err = hooks.BeforeValidatorSlashed(ctx, sdk.ValAddress(""), sdk.NewDec(0))
+	err = hooks.BeforeValidatorSlashed(ctx, sdk.ValAddress(""), math.LegacyNewDec(0))
 	require.NoError(t, err)
 }
