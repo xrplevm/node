@@ -21,7 +21,6 @@ service Msg {
 // MsgAddValidator defines a message for adding a new validator
 message MsgAddValidator {
   option (cosmos.msg.v1.signer) = "authority";
-  option (cosmos.msg.v1.signer) = "validator_address";
 
   string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   string validator_address = 2
@@ -37,6 +36,7 @@ message MsgAddValidatorResponse {}
 // MsgRemoveValidator defines a message for removing an existing validator
 message MsgRemoveValidator {
   option (cosmos.msg.v1.signer) = "authority";
+
   string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   string validator_address = 2
       [ (cosmos_proto.scalar) = "cosmos.AddressString" ];

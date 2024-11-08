@@ -138,7 +138,7 @@ test-sim-benchmark-simulation:
 test-sim-full-app-fast:
 	@echo "Running custom genesis simulation..."
 	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
-		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
+		-Enabled=true -NumBlocks=100 -BlockSize=2000 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
 
 ###############################################################################
 ###                                Protobuf                                 ###

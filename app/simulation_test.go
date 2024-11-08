@@ -87,7 +87,7 @@ func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
 //nolint:dupl
 func BenchmarkSimulation(b *testing.B) {
 	simcli.FlagSeedValue = time.Now().Unix()
-	simcli.FlagVerboseValue = true
+	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
 	simcli.FlagEnabledValue = true
 
@@ -142,7 +142,7 @@ func BenchmarkSimulation(b *testing.B) {
 //nolint:dupl
 func TestFullAppSimulation(t *testing.T) {
 	simcli.FlagSeedValue = time.Now().Unix()
-	simcli.FlagVerboseValue = true
+	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
 	simcli.FlagEnabledValue = true
 
