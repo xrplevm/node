@@ -28,6 +28,7 @@ type (
 		bk         types.BankKeeper
 		sk         types.StakingKeeper
 		ck         types.SlashingKeeper
+		hooks      stakingtypes.StakingHooks
 	}
 )
 
@@ -94,10 +95,9 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 
 	// Check if the validator has bonded tokens in the staking module
 	validator, err := k.sk.GetValidator(ctx, valAddress)
-	if err != nil {
+	if err != nil && !errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
 		return err
-	}
-	if !validator.Tokens.IsZero() {
+	} else if err == nil && !validator.Tokens.IsZero() {
 		// Validator already has staking tokens bonded
 		return types.ErrAddressHasBondedTokens
 	}
@@ -115,8 +115,9 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 				return err
 			}
 			delVal, err := k.sk.GetValidator(ctx, delegationValidatorAddress)
-			if err != nil {
-				ctx.Logger().Warn("Error getting validator delegation shares", "error", err)
+			if err != nil && !errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
+				return err
+			} else if errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
 				continue
 			}
 			if !delVal.Tokens.IsZero() {
@@ -229,6 +230,9 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		return nil
 	}
 
+	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
+		k.Logger(ctx).Error("failed to call before validator modified hook", "error", err)
+	}
 	// If address is a validator, we need to check if there are unbonding delegations currently
 	// and slash them. We also need to remove all the tokens from the validator and burn them
 	// from the staking module account
@@ -244,24 +248,13 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		ctx.Logger().Debug("Unbonding delegation slashed", "delegator", ubd.DelegatorAddress, "amount", totalSlashAmount)
 	}
 
-	// Remove delegator shares
-	delegations, err := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
-	if err != nil {
-		return err
-	}
-	for _, delegation := range delegations {
-		if !delegation.Shares.IsZero() {
-			if err := k.sk.RemoveDelegation(ctx, delegation); err != nil {
-				return err
-			}
-			ctx.Logger().Debug("Delegation removed", "delegator", delegation.DelegatorAddress, "validator", delegation.ValidatorAddress)
+	if validator.Tokens.IsPositive() {
+		// call the before-slashed hook
+		if err := k.sk.Hooks().BeforeValidatorSlashed(ctx, valAddress, math.LegacyOneDec()); err != nil {
+			k.Logger(ctx).Error("failed to call before validator slashed hook", "error", err)
 		}
 	}
 
-	validator, _, err = k.sk.RemoveValidatorTokensAndShares(ctx, validator, validator.DelegatorShares)
-	if err != nil {
-		return err
-	}
 	changedVal, err := k.sk.RemoveValidatorTokens(ctx, validator, validator.Tokens)
 	if err != nil {
 		return err
@@ -282,6 +275,12 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		}
 	default:
 		return types.ErrInvalidValidatorStatus
+	}
+
+	// Unbond self-delegation so the validator is removed after being unbonded
+	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, math.LegacyOneDec())
+	if err != nil {
+		return err
 	}
 
 	ctx.EventManager().EmitEvent(

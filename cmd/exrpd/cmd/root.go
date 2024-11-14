@@ -165,9 +165,6 @@ func initRootCmd(
 	encodingConfig sdktestutil.TestEncodingConfig,
 	tempApp *app.App,
 ) {
-	// Set config
-	initSDKConfig()
-
 	a := appCreator{encodingConfig}
 
 	rootCmd.AddCommand(

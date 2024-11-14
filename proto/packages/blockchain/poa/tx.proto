@@ -12,6 +12,8 @@ option go_package = "github.com/xrplevm/node/v3/x/poa/types";
 
 // Msg defines the Msg service.
 service Msg {
+  option (cosmos.msg.v1.service) = true;
+
   // Adds a new validator into the authority
   rpc AddValidator(MsgAddValidator) returns (MsgAddValidatorResponse);
   // Removes an existing validator from the authority

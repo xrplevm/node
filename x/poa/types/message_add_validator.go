@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	_ sdk.Msg = &MsgAddValidator{}
+	_ sdk.Msg                            = &MsgAddValidator{}
+	_ codectypes.UnpackInterfacesMessage = (*MsgAddValidator)(nil)
 )
 
 func NewMsgAddValidator(authority string, address string, pubKey cryptotypes.PubKey, description stakingtypes.Description) (*MsgAddValidator, error) {
@@ -25,4 +26,10 @@ func NewMsgAddValidator(authority string, address string, pubKey cryptotypes.Pub
 		Pubkey:           pkAny,
 		Description:      description,
 	}, nil
+}
+
+// UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
+func (msg *MsgAddValidator) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+	var pubKey cryptotypes.PubKey
+	return unpacker.UnpackAny(msg.Pubkey, &pubKey)
 }

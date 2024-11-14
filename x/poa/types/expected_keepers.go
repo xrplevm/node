@@ -41,6 +41,8 @@ type StakingKeeper interface {
 	RemoveValidatorTokensAndShares(ctx context.Context, validator stakingtypes.Validator, sharesToRemove math.LegacyDec) (stakingtypes.Validator, math.Int, error)
 	RemoveValidatorTokens(ctx context.Context, validator stakingtypes.Validator, tokensToRemove math.Int) (stakingtypes.Validator, error)
 	BondDenom(ctx context.Context) (string, error)
+	Unbond(ctx context.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress, shares math.LegacyDec) (amount math.Int, err error)
+	Hooks() stakingtypes.StakingHooks
 }
 
 type SlashingKeeper interface {

@@ -329,6 +329,20 @@ func (mr *MockStakingKeeperMockRecorder) GetValidators(ctx, maxRetrieve interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidators", reflect.TypeOf((*MockStakingKeeper)(nil).GetValidators), ctx, maxRetrieve)
 }
 
+// Hooks mocks base method.
+func (m *MockStakingKeeper) Hooks() types1.StakingHooks {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hooks")
+	ret0, _ := ret[0].(types1.StakingHooks)
+	return ret0
+}
+
+// Hooks indicates an expected call of Hooks.
+func (mr *MockStakingKeeperMockRecorder) Hooks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hooks", reflect.TypeOf((*MockStakingKeeper)(nil).Hooks))
+}
+
 // RemoveDelegation mocks base method.
 func (m *MockStakingKeeper) RemoveDelegation(ctx context.Context, delegation types1.Delegation) error {
 	m.ctrl.T.Helper()
@@ -387,6 +401,21 @@ func (m *MockStakingKeeper) SlashUnbondingDelegation(ctx context.Context, ubd ty
 func (mr *MockStakingKeeperMockRecorder) SlashUnbondingDelegation(ctx, ubd, infractionHeight, slashFactor interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SlashUnbondingDelegation", reflect.TypeOf((*MockStakingKeeper)(nil).SlashUnbondingDelegation), ctx, ubd, infractionHeight, slashFactor)
+}
+
+// Unbond mocks base method.
+func (m *MockStakingKeeper) Unbond(ctx context.Context, delAddr types.AccAddress, valAddr types.ValAddress, shares math.LegacyDec) (math.Int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unbond", ctx, delAddr, valAddr, shares)
+	ret0, _ := ret[0].(math.Int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Unbond indicates an expected call of Unbond.
+func (mr *MockStakingKeeperMockRecorder) Unbond(ctx, delAddr, valAddr, shares interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unbond", reflect.TypeOf((*MockStakingKeeper)(nil).Unbond), ctx, delAddr, valAddr, shares)
 }
 
 // MockSlashingKeeper is a mock of SlashingKeeper interface.
