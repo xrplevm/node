@@ -144,8 +144,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		panic(err)
 	}
 
-	registerDenoms()
-
 	overwriteFlagDefaults(rootCmd, map[string]string{
 		flags.FlagKeyringBackend: "test",
 	})
@@ -412,12 +410,12 @@ func (a appCreator) appExport(
 // return "", nil if no custom configuration is required for the application.
 func initAppConfig() (string, interface{}) {
 	// The following code snippet is just for reference.
-	customAppTemplate, customAppConfig := ethermintservercfg.AppConfig(BaseDenom)
+	customAppTemplate, customAppConfig := ethermintservercfg.AppConfig(app.BaseDenom)
 	return customAppTemplate, customAppConfig
 }
 
 func tempDir(defaultHome string) string {
-	dir, err := os.MkdirTemp("", "evmos")
+	dir, err := os.MkdirTemp("", "."+app.DefaultNodeHome+"d")
 	if err != nil {
 		dir = defaultHome
 	}

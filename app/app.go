@@ -153,6 +153,10 @@ const (
 	AccountAddressPrefix = "ethm"
 	Bip44CoinType        = 60
 	Name                 = "exrp"
+	// DisplayDenom defines the denomination displayed to users in client applications.
+	DisplayDenom = "xrp"
+	// BaseDenom defines to the default denomination used in EVM
+	BaseDenom = "axrp"
 )
 
 var (
