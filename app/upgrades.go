@@ -16,6 +16,7 @@ func (app *App) setupUpgradeHandlers() {
 			app.mm,
 			app.configurator,
 			app.EvmKeeper,
+			app.Erc20Keeper,
 			app.GovKeeper,
 		),
 	)

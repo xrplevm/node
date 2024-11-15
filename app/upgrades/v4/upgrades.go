@@ -3,12 +3,19 @@ package v4
 import (
 	"context"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	"github.com/evmos/evmos/v20/x/evm/types"
+)
+
+const (
+	XrpAddress      = "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517"
+	XrpOwnerAddress = "ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"
 )
 
 // CreateUpgradeHandler creates an SDK upgrade handler for v13
@@ -16,6 +23,7 @@ func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
 	ek *evmkeeper.Keeper,
+	erc20k erc20keeper.Keeper,
 	gk govkeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
@@ -39,6 +47,19 @@ func CreateUpgradeHandler(
 			logger.Error("error while updating gov params", "error", err.Error())
 		}
 
+		logger.Debug("Assigning XRP owner address...")
+		err = AssignXrpOwnerAddress(ctx, erc20k, sdk.MustAccAddressFromBech32(XrpOwnerAddress))
+		if err != nil {
+			logger.Error("error while assigning XRP owner address", "error", err.Error())
+			return vm, err
+		}
+
+		logger.Debug("Re-registering ERC-20 precompile code hashes...")
+		params := erc20k.GetParams(ctx)
+		if err := erc20k.SetParams(ctx, params); err != nil {
+			logger.Error("error while re-registering ERC-20 precompile code hashes", "error", err.Error())
+			return vm, err
+		}
 		return vm, nil
 	}
 }
@@ -79,4 +100,14 @@ func UpdateExpeditedPropsParams(ctx sdk.Context, gk govkeeper.Keeper) error {
 		return err
 	}
 	return gk.Params.Set(ctx, params)
+}
+
+func AssignXrpOwnerAddress(ctx sdk.Context, ek erc20keeper.Keeper, address sdk.AccAddress) error {
+	tokenPairId := ek.GetTokenPairID(ctx, XrpAddress)
+	tokenPair, found := ek.GetTokenPair(ctx, tokenPairId)
+	if !found {
+		return errors.New("token pair not found")
+	}
+	ek.SetTokenPairOwnerAddress(ctx, tokenPair, address.String())
+	return nil
 }
