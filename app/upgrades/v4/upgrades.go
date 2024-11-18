@@ -2,9 +2,12 @@ package v4
 
 import (
 	"context"
+	"errors"
+
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -129,8 +132,8 @@ func UpdateExpeditedPropsParams(ctx sdk.Context, gk govkeeper.Keeper) error {
 }
 
 func AssignXrpOwnerAddress(ctx sdk.Context, ek erc20keeper.Keeper, address sdk.AccAddress) error {
-	tokenPairId := ek.GetTokenPairID(ctx, XrpAddress)
-	tokenPair, found := ek.GetTokenPair(ctx, tokenPairId)
+	tokenPairID := ek.GetTokenPairID(ctx, XrpAddress)
+	tokenPair, found := ek.GetTokenPair(ctx, tokenPairID)
 	if !found {
 		return errors.New("token pair not found")
 	}

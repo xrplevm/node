@@ -1,8 +1,9 @@
 package keeper
 
 import (
-	"cosmossdk.io/math"
 	"testing"
+
+	"cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
@@ -12,9 +13,9 @@ import (
 func TestPoA_Hooks(t *testing.T) {
 	keeper, ctx := setupPoaKeeper(
 		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	hooks := keeper.Hooks()

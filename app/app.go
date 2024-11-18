@@ -1,10 +1,16 @@
 package app
 
 import (
-	"cosmossdk.io/client/v2/autocli"
-	"cosmossdk.io/core/appmodule"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sort"
+
+	"cosmossdk.io/client/v2/autocli"
+	"cosmossdk.io/core/appmodule"
+
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -21,10 +27,6 @@ import (
 	"github.com/evmos/evmos/v20/encoding"
 	"github.com/evmos/evmos/v20/utils"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
-	"io"
-	"os"
-	"path/filepath"
-	"sort"
 
 	"cosmossdk.io/math"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
@@ -58,7 +60,6 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/grpc/node"
 	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -178,9 +179,6 @@ var (
 
 		poatypes.ModuleName: {authtypes.Minter, authtypes.Burner},
 	}
-
-	// module accounts that are allowed to receive tokens
-	allowedReceivingModAcc = map[string]bool{}
 )
 
 var (
@@ -260,9 +258,6 @@ type App struct {
 
 	// sm is the simulation manager
 	sm *module.SimulationManager
-
-	// queryMultistore used on versionDB build
-	qms storetypes.MultiStore
 
 	configurator module.Configurator
 }
@@ -843,7 +838,7 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := NewAnteHandlerOptionsFromApp(app, txConfig)
+	handlerOpts := NewAnteHandlerOptionsFromApp(app, txConfig, maxGasWanted)
 
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
@@ -1024,7 +1019,7 @@ func (app *App) RegisterTendermintService(clientCtx client.Context) {
 
 // RegisterNodeService implements the Application.RegisterNodeService method.
 func (app *App) RegisterNodeService(clientCtx client.Context, cfg config.Config) {
-	node.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
+	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
 }
 
 // IBC Go TestingApp functions

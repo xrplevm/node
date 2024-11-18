@@ -1,11 +1,12 @@
 package app_test
 
 import (
-	"cosmossdk.io/log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"cosmossdk.io/log"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -47,7 +48,7 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		appOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig())
+	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig(), 0)
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}

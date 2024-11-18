@@ -1,11 +1,13 @@
 package main
 
 import (
-	"cosmossdk.io/math"
 	"fmt"
+	"os"
+
+	"cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethermint "github.com/evmos/evmos/v20/types"
-	"os"
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 

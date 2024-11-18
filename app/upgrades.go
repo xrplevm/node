@@ -1,9 +1,11 @@
 package app
 
 import (
+	"fmt"
+
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	"fmt"
+
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
@@ -42,6 +44,7 @@ func (app *App) setupUpgradeHandlers() {
 
 	var storeUpgrades *storetypes.StoreUpgrades
 
+	//nolint:gocritic
 	switch upgradeInfo.Name {
 	case v4.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{

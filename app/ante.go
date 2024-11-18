@@ -13,7 +13,7 @@ import (
 
 type AnteHandlerOptions ante.HandlerOptions
 
-func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig) *AnteHandlerOptions {
+func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWanted uint64) *AnteHandlerOptions {
 	return &AnteHandlerOptions{
 		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
@@ -25,7 +25,7 @@ func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig) *AnteHandl
 		FeeMarketKeeper:        app.FeeMarketKeeper,
 		SignModeHandler:        txConfig.SignModeHandler(),
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:         0,
+		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
 		StakingKeeper:          app.StakingKeeper,
 		DistributionKeeper:     app.DistrKeeper,

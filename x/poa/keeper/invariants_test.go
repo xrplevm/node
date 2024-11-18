@@ -24,8 +24,8 @@ func TestStakingPowerInvariant_Valid(t *testing.T) {
 				},
 			}, nil)
 		},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(sdk.Context, *testutil.MockBankKeeper) {},
+		func(sdk.Context, *testutil.MockSlashingKeeper) {},
 	)
 
 	invariant := StakingPowerInvariant(*poaKeeper)
@@ -46,8 +46,8 @@ func TestStakingPowerInvariant_Invalid(t *testing.T) {
 				},
 			}, nil)
 		},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	invariant := StakingPowerInvariant(*poaKeeper)
@@ -70,8 +70,8 @@ func TestSelfDelegationInvariant_Valid(t *testing.T) {
 				},
 			}, nil)
 		},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	invariant := SelfDelegationInvariant(*poaKeeper)
@@ -90,8 +90,8 @@ func TestSelfDelegationInvariant_Invalid(t *testing.T) {
 				},
 			}, nil)
 		},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	invariant := SelfDelegationInvariant(*poaKeeper)
@@ -102,8 +102,8 @@ func TestSelfDelegationInvariant_Invalid(t *testing.T) {
 func TestCheckKeeperDependenciesParamsInvariant_Valid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {
 			slashingKeeper.EXPECT().GetParams(ctx).Return(slashingtypes.Params{
 				SlashFractionDoubleSign: math.LegacyZeroDec(),
@@ -120,8 +120,8 @@ func TestCheckKeeperDependenciesParamsInvariant_Valid(t *testing.T) {
 func TestCheckKeeperDependenciesParamsInvariant_Invalid(t *testing.T) {
 	poaKeeper, ctx := setupPoaKeeper(
 		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {
 			slashingKeeper.EXPECT().GetParams(ctx).Return(slashingtypes.Params{
 				SlashFractionDoubleSign: math.LegacyNewDecWithPrec(5, 2), // 0.05

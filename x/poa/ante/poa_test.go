@@ -1,9 +1,10 @@
 package ante
 
 import (
-	storetypes "cosmossdk.io/store/types"
 	"testing"
 	"time"
+
+	storetypes "cosmossdk.io/store/types"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
@@ -33,7 +34,7 @@ func TestPoaDecorator_AnteHandle(t *testing.T) {
 	txMock := testutil.NewMockTx(ctrl)
 	txMock.EXPECT().GetMsgs().Return([]sdk.Msg{}).AnyTimes()
 
-	mockNext := func(ctx sdk.Context, tx sdk.Tx, simulate bool) (sdk.Context, error) {
+	mockNext := func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
 		return ctx, nil
 	}
 

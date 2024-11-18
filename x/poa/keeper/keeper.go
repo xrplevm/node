@@ -1,8 +1,9 @@
 package keeper
 
 import (
-	"cosmossdk.io/math"
 	"fmt"
+
+	"cosmossdk.io/math"
 
 	"cosmossdk.io/errors"
 
@@ -28,7 +29,6 @@ type (
 		bk         types.BankKeeper
 		sk         types.StakingKeeper
 		ck         types.SlashingKeeper
-		hooks      stakingtypes.StakingHooks
 	}
 )
 
