@@ -3,13 +3,15 @@ package keeper
 import (
 	"fmt"
 
+	"cosmossdk.io/math"
+
 	"cosmossdk.io/errors"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/cometbft/cometbft/libs/log"
+	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -80,7 +82,11 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
-	denom := k.sk.GetParams(ctx).BondDenom
+	params, err := k.sk.GetParams(ctx)
+	if err != nil {
+		return err
+	}
+	denom := params.BondDenom
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
 	if !balance.IsZero() {
 		// Validator already has staking tokens in bank
@@ -88,19 +94,30 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	}
 
 	// Check if the validator has bonded tokens in the staking module
-	validator, found := k.sk.GetValidator(ctx, valAddress)
-	if found && !validator.Tokens.IsZero() {
+	validator, err := k.sk.GetValidator(ctx, valAddress)
+	if err != nil && !errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
+		return err
+	} else if err == nil && !validator.Tokens.IsZero() {
 		// Validator already has staking tokens bonded
 		return types.ErrAddressHasBondedTokens
 	}
 
-	delegations := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
+	delegations, err := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
+	if err != nil {
+		return err
+	}
 	// Check if the delegations are greater than 0
 	// Validator has delegations to other validators, not eligible for new tokens
 	for _, delegation := range delegations {
 		if !delegation.Shares.IsZero() {
-			delVal, found := k.sk.GetValidator(ctx, delegation.GetValidatorAddr())
-			if !found {
+			delegationValidatorAddress, err := sdk.ValAddressFromBech32(delegation.GetValidatorAddr())
+			if err != nil {
+				return err
+			}
+			delVal, err := k.sk.GetValidator(ctx, delegationValidatorAddress)
+			if err != nil && !errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
+				return err
+			} else if errors.IsOf(err, stakingtypes.ErrNoValidatorFound) {
 				continue
 			}
 			if !delVal.Tokens.IsZero() {
@@ -111,8 +128,11 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 
 	// Check if address has unbonding delegations with balance
 	// If so, return error since the account already has staking power
-	unbondingBalance := sdk.ZeroInt()
-	ubds := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
+	unbondingBalance := math.ZeroInt()
+	ubds, err := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
+	if err != nil {
+		return err
+	}
 	for _, ubd := range ubds {
 		for _, entry := range ubd.Entries {
 			unbondingBalance = unbondingBalance.Add(entry.Balance)
@@ -139,12 +159,12 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 		return errors.Wrapf(sdkerrors.ErrInvalidType, "Expecting cryptotypes.PubKey, got %T", pubKey)
 	}
 	createValidatorMsg, err := stakingtypes.NewMsgCreateValidator(
-		valAddress,
+		valAddress.String(),
 		pubKey,
 		coin,
 		msg.Description,
-		stakingtypes.NewCommissionRates(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
-		sdk.OneInt(),
+		stakingtypes.NewCommissionRates(math.LegacyZeroDec(), math.LegacyZeroDec(), math.LegacyZeroDec()),
+		math.OneInt(),
 	)
 	if err != nil {
 		return err
@@ -173,70 +193,94 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	if err != nil {
 		return err
 	}
-	denom := k.sk.GetParams(ctx).BondDenom
-	valAddress := sdk.ValAddress(accAddress)
+	params, err := k.sk.GetParams(ctx)
+	if err != nil {
+		return err
+	}
+	denom := params.BondDenom
 
-	// Check if address is a validator or has balance some balance in bank
-	validator, found := k.sk.GetValidator(ctx, valAddress)
+	// Check if address has some balance in bank and withdraw in case of having
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
-	if balance.IsZero() && !found {
-		// Address has no balance in bank and is not a validator either
-		// NOTE: Since delegations are not enabled in this version, we don't need to check for them
-		return types.ErrAddressHasNoTokens
-	}
-
-	// If address is a validator, we need to check if there are unbonding delegations currently
-	// and slash them. We also need to remove all the tokens from the validator and burn them
-	// from the staking module account
-	if found {
-		ubds := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
-		for _, ubd := range ubds {
-			k.sk.SlashUnbondingDelegation(ctx, ubd, 0, sdk.OneDec())
-		}
-
-		// Remove delegator shares
-		delegations := k.sk.GetAllDelegatorDelegations(ctx, accAddress)
-		for _, delegation := range delegations {
-			if !delegation.Shares.IsZero() {
-				if err := k.sk.RemoveDelegation(ctx, delegation); err != nil {
-					return err
-				}
-			}
-		}
-
-		validator, _ = k.sk.RemoveValidatorTokensAndShares(ctx, validator, validator.DelegatorShares)
-		changedVal := k.sk.RemoveValidatorTokens(ctx, validator, validator.Tokens)
-
-		switch changedVal.GetStatus() {
-		case stakingtypes.Bonded:
-			coins := sdk.NewCoins(sdk.NewCoin(k.sk.BondDenom(ctx), validator.Tokens))
-			err = k.bk.BurnCoins(ctx, stakingtypes.BondedPoolName, coins)
-			if err != nil {
-				panic(err)
-			}
-		case stakingtypes.Unbonding, stakingtypes.Unbonded:
-			coins := sdk.NewCoins(sdk.NewCoin(k.sk.BondDenom(ctx), validator.Tokens))
-			err = k.bk.BurnCoins(ctx, stakingtypes.NotBondedPoolName, coins)
-			if err != nil {
-				panic(err)
-			}
-		default:
-			return types.ErrInvalidValidatorStatus
-		}
-	}
-
-	// If address also has tokens in the bank, we need to remove them and burn them
-	if !balance.IsZero() {
+	if balance.IsPositive() {
 		coins := sdk.NewCoins(balance)
 		err = k.bk.SendCoinsFromAccountToModule(ctx, accAddress, types.ModuleName, coins)
 		if err != nil {
+			// Fail hard if we can't send coins to the module account
 			return err
 		}
 
 		err = k.bk.BurnCoins(ctx, types.ModuleName, coins)
 		if err != nil {
+			// Fail hard if we can't burn coins
 			return err
 		}
+	}
+
+	// If address also has a validator, we need to check additional conditions
+	valAddress := sdk.ValAddress(accAddress)
+	validator, err := k.sk.GetValidator(ctx, valAddress)
+	if err != nil {
+		ctx.Logger().Warn("Error getting validator", "error", err)
+		if balance.IsZero() {
+			// Address has no balance in bank and is not a validator either
+			// NOTE: Since delegations are not enabled in this version, we don't need to check for them
+			return types.ErrAddressHasNoTokens
+		}
+		// Validator does not exist, but we already took its balance from bank, we can safely return
+		return nil
+	}
+
+	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
+		k.Logger(ctx).Error("failed to call before validator modified hook", "error", err)
+	}
+	// If address is a validator, we need to check if there are unbonding delegations currently
+	// and slash them. We also need to remove all the tokens from the validator and burn them
+	// from the staking module account
+	ubds, err := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
+	if err != nil {
+		return err
+	}
+	for _, ubd := range ubds {
+		totalSlashAmount, err := k.sk.SlashUnbondingDelegation(ctx, ubd, 0, math.LegacyOneDec())
+		if err != nil {
+			return err
+		}
+		ctx.Logger().Debug("Unbonding delegation slashed", "delegator", ubd.DelegatorAddress, "amount", totalSlashAmount)
+	}
+
+	if validator.Tokens.IsPositive() {
+		// call the before-slashed hook
+		if err := k.sk.Hooks().BeforeValidatorSlashed(ctx, valAddress, math.LegacyOneDec()); err != nil {
+			k.Logger(ctx).Error("failed to call before validator slashed hook", "error", err)
+		}
+	}
+
+	changedVal, err := k.sk.RemoveValidatorTokens(ctx, validator, validator.Tokens)
+	if err != nil {
+		return err
+	}
+
+	switch changedVal.GetStatus() {
+	case stakingtypes.Bonded:
+		coins := sdk.NewCoins(sdk.NewCoin(denom, validator.Tokens))
+		err = k.bk.BurnCoins(ctx, stakingtypes.BondedPoolName, coins)
+		if err != nil {
+			return err
+		}
+	case stakingtypes.Unbonding, stakingtypes.Unbonded:
+		coins := sdk.NewCoins(sdk.NewCoin(denom, validator.Tokens))
+		err = k.bk.BurnCoins(ctx, stakingtypes.NotBondedPoolName, coins)
+		if err != nil {
+			return err
+		}
+	default:
+		return types.ErrInvalidValidatorStatus
+	}
+
+	// Unbond self-delegation so the validator is removed after being unbonded
+	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, math.LegacyOneDec())
+	if err != nil {
+		return err
 	}
 
 	ctx.EventManager().EmitEvent(

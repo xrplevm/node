@@ -15,17 +15,23 @@ import (
 
 func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 	stakingExpectations := func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+		stakingHooks := testutil.NewMockStakingHooks(gomock.NewController(t))
+		stakingHooks.EXPECT().BeforeValidatorModified(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		stakingHooks.EXPECT().BeforeValidatorSlashed(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 		stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 			BondDenom: "XRP",
-		}).AnyTimes()
-		stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, true).AnyTimes()
-		stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}).AnyTimes()
-		stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}).AnyTimes()
-		stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(sdk.ZeroInt()).AnyTimes()
+		}, nil).AnyTimes()
+		stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).AnyTimes()
+		stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil).AnyTimes()
+		stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil).AnyTimes()
+		stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
 		stakingKeeper.EXPECT().RemoveDelegation(ctx, gomock.Any()).Return(nil).AnyTimes()
-		stakingKeeper.EXPECT().RemoveValidatorTokensAndShares(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, sdk.ZeroInt()).AnyTimes()
-		stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}).AnyTimes()
-		stakingKeeper.EXPECT().BondDenom(ctx).Return("XRP").AnyTimes()
+		stakingKeeper.EXPECT().RemoveValidatorTokensAndShares(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, math.ZeroInt(), nil).AnyTimes()
+		stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, nil).AnyTimes()
+		stakingKeeper.EXPECT().BondDenom(ctx).Return("XRP", nil).AnyTimes()
+		stakingKeeper.EXPECT().Unbond(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
+		stakingKeeper.EXPECT().Hooks().Return(stakingHooks).AnyTimes()
 	}
 
 	bankExpectations := func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
@@ -38,7 +44,7 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 
-	slashingExpectations := func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {}
+	slashingExpectations := func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {}
 
 	return setupPoaKeeper(t, stakingExpectations, bankExpectations, slashingExpectations)
 }

@@ -1,15 +1,11 @@
 package types
 
 import (
-	"cosmossdk.io/errors"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
-
-const TypeMsgAddValidator = "add_validator"
 
 var (
 	_ sdk.Msg                            = &MsgAddValidator{}
@@ -30,43 +26,6 @@ func NewMsgAddValidator(authority string, address string, pubKey cryptotypes.Pub
 		Pubkey:           pkAny,
 		Description:      description,
 	}, nil
-}
-
-func (msg *MsgAddValidator) Route() string {
-	return RouterKey
-}
-
-func (msg *MsgAddValidator) Type() string {
-	return TypeMsgAddValidator
-}
-
-func (msg *MsgAddValidator) GetSigners() []sdk.AccAddress {
-	addr, err := sdk.AccAddressFromBech32(msg.Authority)
-	if err != nil {
-		panic(err)
-	}
-	return []sdk.AccAddress{addr}
-}
-
-func (msg *MsgAddValidator) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(msg)
-	return sdk.MustSortJSON(bz)
-}
-
-func (msg *MsgAddValidator) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return errors.Wrap(err, "authority")
-	}
-	if _, err := sdk.AccAddressFromBech32(msg.ValidatorAddress); err != nil {
-		return errors.Wrap(err, "validator_address")
-	}
-	if msg.Pubkey == nil {
-		return errors.Wrap(sdkerrors.ErrInvalidRequest, "nil pubkey")
-	}
-	if msg.Description == (stakingtypes.Description{}) {
-		return errors.Wrap(sdkerrors.ErrInvalidRequest, "empty description")
-	}
-	return nil
 }
 
 // UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces

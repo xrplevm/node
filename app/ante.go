@@ -1,20 +1,19 @@
 package app
 
 import (
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/evmos/evmos/v19/app/ante"
-	ethante "github.com/evmos/evmos/v19/app/ante/evm"
-	etherminttypes "github.com/evmos/evmos/v19/types"
+	"github.com/evmos/evmos/v20/app/ante"
+	ethante "github.com/evmos/evmos/v20/app/ante/evm"
+	etherminttypes "github.com/evmos/evmos/v20/types"
 	poaante "github.com/xrplevm/node/v3/x/poa/ante"
-
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
 
 type AnteHandlerOptions ante.HandlerOptions
 
-func NewAnteHandlerOptionsFromApp(app *App) *AnteHandlerOptions {
+func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWanted uint64) *AnteHandlerOptions {
 	return &AnteHandlerOptions{
 		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
@@ -24,9 +23,9 @@ func NewAnteHandlerOptionsFromApp(app *App) *AnteHandlerOptions {
 		FeegrantKeeper:         app.FeeGrantKeeper,
 		IBCKeeper:              app.IBCKeeper,
 		FeeMarketKeeper:        app.FeeMarketKeeper,
-		SignModeHandler:        nil,
+		SignModeHandler:        txConfig.SignModeHandler(),
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:         0,
+		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
 		StakingKeeper:          app.StakingKeeper,
 		DistributionKeeper:     app.DistrKeeper,
@@ -48,11 +47,6 @@ func (aa *AnteHandlerOptions) Options() ante.HandlerOptions {
 
 func (aa *AnteHandlerOptions) WithCodec(cdc codec.BinaryCodec) *AnteHandlerOptions {
 	aa.Cdc = cdc
-	return aa
-}
-
-func (aa *AnteHandlerOptions) WithSignModeHandler(signModeHandler authsigning.SignModeHandler) *AnteHandlerOptions {
-	aa.SignModeHandler = signModeHandler
 	return aa
 }
 

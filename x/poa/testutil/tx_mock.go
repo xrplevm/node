@@ -9,6 +9,7 @@ import (
 
 	types "github.com/cosmos/cosmos-sdk/types"
 	gomock "github.com/golang/mock/gomock"
+	proto "google.golang.org/protobuf/proto"
 )
 
 // MockTx is a mock of Tx interface.
@@ -48,16 +49,17 @@ func (mr *MockTxMockRecorder) GetMsgs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMsgs", reflect.TypeOf((*MockTx)(nil).GetMsgs))
 }
 
-// ValidateBasic mocks base method.
-func (m *MockTx) ValidateBasic() error {
+// GetMsgsV2 mocks base method.
+func (m *MockTx) GetMsgsV2() ([]proto.Message, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateBasic")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "GetMsgsV2")
+	ret0, _ := ret[0].([]proto.Message)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// ValidateBasic indicates an expected call of ValidateBasic.
-func (mr *MockTxMockRecorder) ValidateBasic() *gomock.Call {
+// GetMsgsV2 indicates an expected call of GetMsgsV2.
+func (mr *MockTxMockRecorder) GetMsgsV2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBasic", reflect.TypeOf((*MockTx)(nil).ValidateBasic))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMsgsV2", reflect.TypeOf((*MockTx)(nil).GetMsgsV2))
 }

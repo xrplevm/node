@@ -3,6 +3,8 @@ package keeper
 import (
 	"testing"
 
+	"cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v3/x/poa/testutil"
@@ -11,9 +13,9 @@ import (
 func TestPoA_Hooks(t *testing.T) {
 	keeper, ctx := setupPoaKeeper(
 		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {},
-		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
-		func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	hooks := keeper.Hooks()
@@ -38,6 +40,6 @@ func TestPoA_Hooks(t *testing.T) {
 	require.NoError(t, err)
 	err = hooks.AfterUnbondingInitiated(ctx, 0)
 	require.NoError(t, err)
-	err = hooks.BeforeValidatorSlashed(ctx, sdk.ValAddress(""), sdk.NewDec(0))
+	err = hooks.BeforeValidatorSlashed(ctx, sdk.ValAddress(""), math.LegacyNewDec(0))
 	require.NoError(t, err)
 }

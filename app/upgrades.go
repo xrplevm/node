@@ -3,39 +3,30 @@ package app
 import (
 	"fmt"
 
-	erc20types "github.com/evmos/evmos/v19/x/erc20/types"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	v2 "github.com/xrplevm/node/v3/app/upgrades/v2"
-	v3 "github.com/xrplevm/node/v3/app/upgrades/v3"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
+	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
+	v4 "github.com/xrplevm/node/v3/app/upgrades/v4"
 )
 
 func (app *App) setupUpgradeHandlers() {
-	// !! ATTENTION !!
-	// v14 upgrade handler
-	// !! WHEN UPGRADING TO SDK v0.47 MAKE SURE TO INCLUDE THIS
-	// source: https://github.com/cosmos/cosmos-sdk/blob/release/v0.47.x/UPGRADING.md#xconsensus
+	authAddr := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 	app.UpgradeKeeper.SetUpgradeHandler(
-		v2.UpgradeName,
-		v2.CreateUpgradeHandler(
-			app.mm, app.configurator,
-			app.EvmKeeper,
-			app.ConsensusParamsKeeper,
-			app.IBCKeeper.ClientKeeper,
-			app.ParamsKeeper,
+		v4.UpgradeName,
+		v4.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
 			app.appCodec,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v3.UpgradeName,
-		v3.CreateUpgradeHandler(
-			app.mm, app.configurator,
+			app.GetKey("upgrade"),
+			app.ConsensusParamsKeeper,
+			authAddr,
 			app.EvmKeeper,
-			app.AccountKeeper,
-			app.BankKeeper,
+			app.Erc20Keeper,
+			app.GovKeeper,
 		),
 	)
 
@@ -53,22 +44,13 @@ func (app *App) setupUpgradeHandlers() {
 
 	var storeUpgrades *storetypes.StoreUpgrades
 
+	//nolint:gocritic
 	switch upgradeInfo.Name {
-	case v2.UpgradeName:
-		// !! ATTENTION !!
-		// !! WHEN UPGRADING TO SDK v0.47 MAKE SURE TO INCLUDE THIS
-		// source: https://github.com/cosmos/cosmos-sdk/blob/release/v0.47.x/UPGRADING.md
+	case v4.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{
 			Added: []string{
-				consensusparamtypes.StoreKey,
-				crisistypes.ModuleName,
-			},
-			Deleted: []string{},
-		}
-	case v3.UpgradeName:
-		storeUpgrades = &storetypes.StoreUpgrades{
-			Added: []string{
-				erc20types.StoreKey,
+				icahosttypes.StoreKey,
+				ratelimittypes.ModuleName,
 			},
 			Deleted: []string{},
 		}

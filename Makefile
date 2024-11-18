@@ -102,7 +102,7 @@ build:
 ###                                Linting                                  ###
 ###############################################################################
 golangci_lint_cmd=golangci-lint
-golangci_version=v1.53.3
+golangci_version=v1.62.0
 
 lint:
 	@echo "--> Running linter"
@@ -120,6 +120,8 @@ lint-fix:
 EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
 mocks:
+	@echo "--> Installing mockgen"
+	go install github.com/golang/mock/mockgen@v1.6.0
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
