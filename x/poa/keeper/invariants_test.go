@@ -8,7 +8,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v3/x/poa/testutil"
+	"github.com/xrplevm/node/v4/x/poa/testutil"
 )
 
 func TestStakingPowerInvariant_Valid(t *testing.T) {

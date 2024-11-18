@@ -11,8 +11,8 @@ import (
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
-	"github.com/xrplevm/node/v3/app"
-	"github.com/xrplevm/node/v3/cmd/exrpd/cmd"
+	"github.com/xrplevm/node/v4/app"
+	"github.com/xrplevm/node/v4/cmd/exrpd/cmd"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v3/x/poa/types"
+	"github.com/xrplevm/node/v4/x/poa/types"
 )
 
 func TestMsgServer_RemoveValidator(t *testing.T) {

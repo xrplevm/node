@@ -11,8 +11,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v3/x/poa/testutil"
-	"github.com/xrplevm/node/v3/x/poa/types"
+	"github.com/xrplevm/node/v4/x/poa/testutil"
+	"github.com/xrplevm/node/v4/x/poa/types"
 )
 
 func setupPoaDecorator(t *testing.T) (

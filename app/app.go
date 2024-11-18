@@ -42,7 +42,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"github.com/xrplevm/node/v3/x/poa"
+	"github.com/xrplevm/node/v4/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -120,11 +120,11 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
-	"github.com/xrplevm/node/v3/docs"
-	poakeeper "github.com/xrplevm/node/v3/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v3/x/poa/types"
+	"github.com/xrplevm/node/v4/docs"
+	poakeeper "github.com/xrplevm/node/v4/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v4/x/poa/types"
 
-	// "github.com/xrplevm/node/v3/app/ante"
+	// "github.com/xrplevm/node/v4/app/ante"
 	"github.com/evmos/evmos/v20/app/ante"
 	srvflags "github.com/evmos/evmos/v20/server/flags"
 
