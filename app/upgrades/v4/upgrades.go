@@ -2,9 +2,9 @@ package v4
 
 import (
 	"context"
+	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	"errors"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,6 +13,7 @@ import (
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
+	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	"github.com/evmos/evmos/v20/x/evm/types"
 )
@@ -80,10 +81,9 @@ func CreateUpgradeHandler(
 			return vm, err
 		}
 
-		logger.Debug("Re-registering ERC-20 precompile code hashes...")
-		params := erc20k.GetParams(ctx)
-		if err := erc20k.SetParams(ctx, params); err != nil {
-			logger.Error("error while re-registering ERC-20 precompile code hashes", "error", err.Error())
+		err = AddCodeToERC20Extensions(ctx, logger, erc20k)
+		if err != nil {
+			logger.Error("error while adding code hashes", "error", err.Error())
 			return vm, err
 		}
 		return vm, nil
@@ -136,4 +136,22 @@ func AssignXrpOwnerAddress(ctx sdk.Context, ek erc20keeper.Keeper, address sdk.A
 	}
 	ek.SetTokenPairOwnerAddress(ctx, tokenPair, address.String())
 	return nil
+}
+
+// AddCodeToERC20Extensions adds code and code hash to the ERC20 precompiles with the EVM.
+func AddCodeToERC20Extensions(
+	ctx sdk.Context,
+	logger log.Logger,
+	erc20Keeper erc20keeper.Keeper,
+) (err error) {
+	logger.Info("Adding code to erc20 extensions...")
+
+	erc20Keeper.IterateTokenPairs(ctx, func(tokenPair erc20types.TokenPair) bool {
+		logger.Info("Adding code to erc20 extensions", "tokenPair", tokenPair)
+		err = erc20Keeper.RegisterERC20CodeHash(ctx, tokenPair.GetERC20Contract())
+		return err != nil
+	})
+
+	logger.Info("Done with erc20 extensions")
+	return err
 }
