@@ -1,20 +1,27 @@
 package app
 
 import (
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"fmt"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
+	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
 	v4 "github.com/xrplevm/node/v3/app/upgrades/v4"
 )
 
 func (app *App) setupUpgradeHandlers() {
-	// !! ATTENTION !!
-	// v14 upgrade handler
-	// !! WHEN UPGRADING TO SDK v0.47 MAKE SURE TO INCLUDE THIS
-	// source: https://github.com/cosmos/cosmos-sdk/blob/release/v0.47.x/UPGRADING.md#xconsensus
+	authAddr := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 	app.UpgradeKeeper.SetUpgradeHandler(
 		v4.UpgradeName,
 		v4.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
+			app.appCodec,
+			app.GetKey("upgrade"),
+			app.ConsensusParamsKeeper,
+			authAddr,
 			app.EvmKeeper,
 			app.Erc20Keeper,
 			app.GovKeeper,
@@ -31,5 +38,23 @@ func (app *App) setupUpgradeHandlers() {
 
 	if app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
 		return
+	}
+
+	var storeUpgrades *storetypes.StoreUpgrades
+
+	switch upgradeInfo.Name {
+	case v4.UpgradeName:
+		storeUpgrades = &storetypes.StoreUpgrades{
+			Added: []string{
+				icahosttypes.StoreKey,
+				ratelimittypes.ModuleName,
+			},
+			Deleted: []string{},
+		}
+	}
+
+	if storeUpgrades != nil {
+		// configure store loader that checks if version == upgradeHeight and applies store upgrades
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
 	}
 }

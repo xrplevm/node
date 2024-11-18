@@ -415,7 +415,7 @@ func initAppConfig() (string, interface{}) {
 }
 
 func tempDir(defaultHome string) string {
-	dir, err := os.MkdirTemp("", "."+app.DefaultNodeHome+"d")
+	dir, err := os.MkdirTemp("", ".exrpd-tmp")
 	if err != nil {
 		dir = defaultHome
 	}

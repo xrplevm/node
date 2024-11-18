@@ -2,10 +2,14 @@ package v4
 
 import (
 	"context"
+	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"errors"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	consensusparamskeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
@@ -22,6 +26,10 @@ const (
 func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
+	cdc codec.Codec,
+	upgradeKey *storetypes.KVStoreKey,
+	consensusParamsKeeper consensusparamskeeper.Keeper,
+	authAddr string,
 	ek *evmkeeper.Keeper,
 	erc20k erc20keeper.Keeper,
 	gk govkeeper.Keeper,
@@ -30,6 +38,24 @@ func CreateUpgradeHandler(
 		ctx := sdk.UnwrapSDKContext(c)
 		logger := ctx.Logger().With("upgrade", UpgradeName)
 
+		// Fix previous consensusparams upgrade
+		logger.Info("Fixing previous consensusparams upgrade...")
+		storesvc := runtime.NewKVStoreService(upgradeKey)
+		consensuskeeper := consensusparamskeeper.NewKeeper(
+			cdc,
+			storesvc,
+			authAddr,
+			runtime.EventService{},
+		)
+		consensusParams, err := consensuskeeper.ParamsStore.Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+		err = consensusParamsKeeper.ParamsStore.Set(ctx, consensusParams)
+		if err != nil {
+			return nil, err
+		}
+
 		logger.Debug("Enabling gov precompile...")
 		if err := EnableGovPrecompile(ctx, ek); err != nil {
 			logger.Error("error while enabling gov precompile", "error", err.Error())
@@ -37,7 +63,7 @@ func CreateUpgradeHandler(
 
 		// run the sdk v0.50 migrations
 		logger.Debug("Running module migrations...")
-		vm, err := mm.RunMigrations(ctx, configurator, vm)
+		vm, err = mm.RunMigrations(ctx, configurator, vm)
 		if err != nil {
 			return vm, err
 		}
