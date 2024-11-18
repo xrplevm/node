@@ -1,4 +1,4 @@
-FROM golang:1.22.2 AS base
+FROM golang:1.22.7 AS base
 USER root
 RUN apt update && \
     apt-get install -y \
