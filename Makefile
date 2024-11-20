@@ -102,7 +102,7 @@ build:
 ###                                Linting                                  ###
 ###############################################################################
 golangci_lint_cmd=golangci-lint
-golangci_version=v1.53.3
+golangci_version=v1.62.0
 
 lint:
 	@echo "--> Running linter"
@@ -114,7 +114,31 @@ lint-fix:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
 	@$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
 
+###############################################################################
+###                                Testing                                  ###
+###############################################################################
+EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
+mocks:
+	@echo "--> Installing mockgen"
+	go install github.com/golang/mock/mockgen@v1.6.0
+	@echo "--> Generating mocks"
+	@./scripts/mockgen.sh
+
+test-poa:
+	@echo "--> Running POA tests"
+	@go test $(EXCLUDED_POA_PACKAGES) 
+
+test-sim-benchmark-simulation:
+	@echo "Running simulation invariant benchmarks..."
+	cd ${CURDIR}/app && go test -mod=readonly -benchmem -bench=BenchmarkSimulation -run=^$ \
+	-Enabled=true -NumBlocks=100 -BlockSize=200 -Params=${CURDIR}/tests/sim/params.json \
+	-Period=1 -Commit=true -v -timeout 24h
+
+test-sim-full-app-fast:
+	@echo "Running custom genesis simulation..."
+	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
+		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
 
 ###############################################################################
 ###                                Protobuf                                 ###
