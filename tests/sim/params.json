@@ -1,0 +1,12 @@
+{
+    "op_weight_msg_create_validator": 0,
+    "op_weight_msg_edit_validator": 0,
+    "op_weight_msg_delegate": 0,
+    "op_weight_msg_begin_redelegate": 0,
+    "op_weight_msg_undelegate": 0,
+    "op_weight_msg_cancel_unbonding_delegation": 0,
+    "op_weight_msg_update_params": 0,
+    "slash_fraction_double_sign": "0",
+    "slash_fraction_downtime": "0",
+    "stake_per_account": "1000000"
+}
