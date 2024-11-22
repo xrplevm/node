@@ -4,18 +4,18 @@
 package exrpnetwork
 
 import (
-	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	testtx "github.com/evmos/evmos/v20/testutil/tx"
 	evmostypes "github.com/evmos/evmos/v20/types"
-	"github.com/evmos/evmos/v20/utils"
 	"github.com/xrplevm/node/v4/app"
+)
+
+const (
+	ChainID = "exrp_1440002-1"
 )
 
 // Config defines the configuration for a chain.
@@ -29,6 +29,7 @@ type Config struct {
 	balances           []banktypes.Balance
 	denom              string
 	customGenesisState CustomGenesisState
+	genesisBytes       []byte
 	otherCoinDenom     []string
 	operatorsAddrs     []sdktypes.AccAddress
 	customBaseAppOpts  []func(*baseapp.BaseApp)
@@ -38,46 +39,14 @@ type CustomGenesisState map[string]interface{}
 
 // DefaultConfig returns the default configuration for a chain.
 func DefaultConfig() Config {
-	account, _ := testtx.NewAccAddressAndKey()
 	return Config{
-		chainID:            utils.MainnetChainID + "-1",
-		eip155ChainID:      big.NewInt(9001),
-		amountOfValidators: 3,
-		// Only one account besides the validators
-		preFundedAccounts: []sdktypes.AccAddress{account},
-		// NOTE: Per default, the balances are left empty, and the pre-funded accounts are used.
+		chainID:            ChainID,
+		eip155ChainID:      big.NewInt(1440002),
 		balances:           nil,
+		// MODIFIED
 		denom:              app.BaseDenom,
 		customGenesisState: nil,
 	}
-}
-
-// getGenAccountsAndBalances takes the network configuration and returns the used
-// genesis accounts and balances.
-//
-// NOTE: If the balances are set, the pre-funded accounts are ignored.
-func getGenAccountsAndBalances(cfg Config, validators []stakingtypes.Validator) (genAccounts []authtypes.GenesisAccount, balances []banktypes.Balance) {
-	if len(cfg.balances) > 0 {
-		balances = cfg.balances
-		accounts := getAccAddrsFromBalances(balances)
-		genAccounts = createGenesisAccounts(accounts)
-	} else {
-		genAccounts = createGenesisAccounts(cfg.preFundedAccounts)
-		balances = createBalances(cfg.preFundedAccounts, append(cfg.otherCoinDenom, cfg.denom))
-	}
-
-	// append validators to genesis accounts and balances
-	valAccs := make([]sdktypes.AccAddress, len(validators))
-	for i, v := range validators {
-		valAddr, err := sdktypes.ValAddressFromBech32(v.OperatorAddress)
-		if err != nil {
-			panic(fmt.Sprintf("failed to derive validator address from %q: %s", v.OperatorAddress, err.Error()))
-		}
-		valAccs[i] = sdktypes.AccAddress(valAddr.Bytes())
-	}
-	genAccounts = append(genAccounts, createGenesisAccounts(valAccs)...)
-
-	return
 }
 
 // ConfigOption defines a function that can modify the NetworkConfig.
@@ -151,5 +120,15 @@ func WithValidatorOperators(keys []sdktypes.AccAddress) ConfigOption {
 func WithCustomBaseAppOpts(opts ...func(*baseapp.BaseApp)) ConfigOption {
 	return func(cfg *Config) {
 		cfg.customBaseAppOpts = opts
+	}
+}
+
+func WithGenesisFile(genesisFile string) ConfigOption {
+	return func(cfg *Config) {
+		genesisBytes, err := os.ReadFile(genesisFile)
+		if err != nil {
+			panic(err)
+		}
+		cfg.genesisBytes = genesisBytes
 	}
 }

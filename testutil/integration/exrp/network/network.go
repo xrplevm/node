@@ -4,6 +4,7 @@
 package exrpnetwork
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -11,7 +12,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	"github.com/evmos/evmos/v20/types"
 	"github.com/xrplevm/node/v4/app"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
@@ -20,12 +20,14 @@ import (
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cometbft/cometbft/version"
+	"github.com/cosmos/cosmos-sdk/testutil/mock"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	commonnetwork "github.com/evmos/evmos/v20/testutil/integration/common/network"
+	"github.com/evmos/evmos/v20/types"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
@@ -39,6 +41,7 @@ type Network interface {
 	commonnetwork.Network
 
 	GetEIP155ChainID() *big.Int
+	// MODIFIED
 	// GetEVMChainConfig() *gethparams.ChainConfig
 
 	// Clients
@@ -57,7 +60,7 @@ type IntegrationNetwork struct {
 	cfg        Config
 	ctx        sdktypes.Context
 	validators []stakingtypes.Validator
-	app        *app.App 
+	app        *app.App
 
 	// This is only needed for IBC chain testing setup
 	valSet     *cmttypes.ValidatorSet
@@ -97,97 +100,69 @@ var (
 	PrefundedAccountInitialBalance, _ = sdkmath.NewIntFromString("100_000_000_000_000_000_000_000") // 100k
 )
 
+func getValidatorsAndSignersFromCustomGenesisState(stakingState stakingtypes.GenesisState) (*cmttypes.ValidatorSet, map[string]cmttypes.PrivValidator, error) {
+	genesisValidators := stakingState.Validators
+	validators := make([]stakingtypes.Validator, 0, len(genesisValidators))
+
+	tmValidators := make([]*cmttypes.Validator, 0, len(validators))
+	valSigners := make(map[string]cmttypes.PrivValidator, len(validators))
+
+	for i := 0; i < len(validators); i++ {
+		privVal := mock.NewPV()
+		pubKey, _ := privVal.GetPubKey()
+		validator := cmttypes.NewValidator(pubKey, 1)
+		tmValidators = append(tmValidators, validator)
+		valSigners[pubKey.Address().String()] = privVal
+	}
+
+	return cmttypes.NewValidatorSet(tmValidators), valSigners, nil
+}
+
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *IntegrationNetwork) configureAndInitChain() error {
-	// // Create validator set with the amount of validators specified in the config
-	// // with the default power of 1.
-	// valSet, valSigners := createValidatorSetAndSigners(n.cfg.amountOfValidators)
-	// totalBonded := DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.amountOfValidators)))
+	// Create a new EvmosApp with the following params
+	exrpApp := createExrpApp(n.cfg.chainID, n.cfg.customBaseAppOpts...)
 
-	// // Build staking type validators and delegations
-	validators, err := createStakingValidators(valSet.Validators, DefaultBondedAmount, n.cfg.operatorsAddrs)
-	// if err != nil {
-	// 	return err
-	// }
+	var genesisState app.GenesisState
+	err := json.Unmarshal(n.cfg.genesisBytes, &genesisState)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling genesis state: %w", err)
+	}
 
-	// // Create genesis accounts and funded balances based on the config
-	// genAccounts, fundedAccountBalances := getGenAccountsAndBalances(n.cfg, validators)
-
-	// fundedAccountBalances = addBondedModuleAccountToFundedBalances(
-	// 	fundedAccountBalances,
-	// 	sdktypes.NewCoin(n.cfg.denom, totalBonded),
-	// )
-
-	// delegations := createDelegations(validators, genAccounts[0].GetAddress())
-
-	// // Create a new EvmosApp with the following params
-	// evmosApp := createExrpApp(n.cfg.chainID, n.cfg.customBaseAppOpts...)
-
-	// stakingParams := StakingCustomGenesisState{
-	// 	denom:       n.cfg.denom,
-	// 	validators:  validators,
-	// 	delegations: delegations,
-	// }
-	// govParams := GovCustomGenesisState{
-	// 	denom: n.cfg.denom,
-	// }
-
-	// totalSupply := calculateTotalSupply(fundedAccountBalances)
-	// bankParams := BankCustomGenesisState{
-	// 	totalSupply: totalSupply,
-	// 	balances:    fundedAccountBalances,
-	// }
-
-	// // Get the corresponding slashing info and missed block info
-	// // for the created validators
-	// slashingParams, err := getValidatorsSlashingGen(validators, evmosApp.StakingKeeper)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Configure Genesis state
-	// genesisState := newDefaultGenesisState(
-	// 	evmosApp,
-	// 	defaultGenesisParams{
-	// 		genAccounts: genAccounts,
-	// 		staking:     stakingParams,
-	// 		bank:        bankParams,
-	// 		slashing:    slashingParams,
-	// 		gov:         govParams,
-	// 	},
-	// )
-
-	// // modify genesis state if there're any custom genesis state
-	// // for specific modules
-	// genesisState, err = customizeGenesis(evmosApp, n.cfg.customGenesisState, genesisState)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// ============================================================
-
-	evmosApp := createExrpApp(n.cfg.chainID, n.cfg.customBaseAppOpts...)
-	genesisState := n.cfg.customGenesisState
-
-	// Init chain
 	stateBytes, err := cmtjson.MarshalIndent(genesisState, "", " ")
 	if err != nil {
-		return err
+		return fmt.Errorf("error marshalling genesis state bytes: %w", err)
+	}
+
+	var appState map[string]json.RawMessage
+	err = json.Unmarshal(genesisState["app_state"], &appState)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling app state: %w", err)
+	}
+
+	var stakingState stakingtypes.GenesisState
+	err = exrpApp.AppCodec().UnmarshalJSON(appState["staking"], &stakingState)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling staking state: %w", err)
+	}
+
+	valSet, valSigners, err := getValidatorsAndSignersFromCustomGenesisState(stakingState)
+	if err != nil {
+		return fmt.Errorf("error getting validators and signers from custom genesis state: %w", err)
 	}
 
 	// Consensus module does not have a genesis state on the app,
 	// but can customize the consensus parameters of the chain on initialization
-	consensusParams := &cmtproto.ConsensusParams{}
-	// if gen, ok := n.cfg.customGenesisState[consensustypes.ModuleName]; ok {
-	// 	consensusParams, ok = gen.(*cmtproto.ConsensusParams)
-	// 	if !ok {
-	// 		return fmt.Errorf("invalid type for consensus parameters. Expected: cmtproto.ConsensusParams, got %T", gen)
-	// 	}
-	// }
+
+	fmt.Println("consensus_params", genesisState["consensus_params"])
+
+	var consensusParams *cmtproto.ConsensusParams
+	_  = json.Unmarshal(genesisState["consensus_params"], &consensusParams)
+	
 
 	now := time.Now().UTC()
-	if _, err := evmosApp.InitChain(
+	if _, err := exrpApp.InitChain(
 		&abcitypes.RequestInitChain{
 			Time:            now,
 			ChainId:         n.cfg.chainID,
@@ -201,8 +176,8 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	header := cmtproto.Header{
 		ChainID:            n.cfg.chainID,
-		Height:             evmosApp.LastBlockHeight() + 1,
-		AppHash:            evmosApp.LastCommitID().Hash,
+		Height:             exrpApp.LastBlockHeight() + 1,
+		AppHash:            exrpApp.LastCommitID().Hash,
 		Time:               now,
 		ValidatorsHash:     valSet.Hash(),
 		NextValidatorsHash: valSet.Hash(),
@@ -213,15 +188,15 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	}
 
 	req := buildFinalizeBlockReq(header, valSet.Validators)
-	if _, err := evmosApp.FinalizeBlock(req); err != nil {
+	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
 
 	// TODO - this might not be the best way to initilize the context
-	n.ctx = evmosApp.BaseApp.NewContextLegacy(false, header)
+	n.ctx = exrpApp.BaseApp.NewContextLegacy(false, header)
 
 	// Commit genesis changes
-	if _, err := evmosApp.Commit(); err != nil {
+	if _, err := exrpApp.Commit(); err != nil {
 		return err
 	}
 
@@ -231,11 +206,11 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		blockMaxGas = uint64(consensusParams.Block.MaxGas) //nolint:gosec // G115
 	}
 
-	n.app = evmosApp
+	n.app = exrpApp
 	n.ctx = n.ctx.WithConsensusParams(*consensusParams)
 	n.ctx = n.ctx.WithBlockGasMeter(types.NewInfiniteGasMeterWithLimit(blockMaxGas))
 
-	n.validators = validators
+	n.validators = stakingState.Validators
 	n.valSet = valSet
 	n.valSigners = valSigners
 
@@ -263,7 +238,8 @@ func (n *IntegrationNetwork) GetEIP155ChainID() *big.Int {
 	return n.cfg.eip155ChainID
 }
 
-// // GetChainConfig returns the network's chain config
+// MODIFIED
+// GetChainConfig returns the network's chain config
 // func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
 // 	return evmtypes.GetEthChainConfig()
 // }

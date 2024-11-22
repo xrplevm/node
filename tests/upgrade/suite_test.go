@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v4/app"
 )
 
 func TestUpgradeTestSuite(t *testing.T) {
@@ -14,5 +15,5 @@ func (s *UpgradeTestSuite) TestUpgrade() {
 
 	denom := s.network.GetDenom()
 	s.Require().NotEmpty(denom)
-	s.Require().Equal(denom, "uxrp")
+	s.Require().Equal(denom, app.BaseDenom)
 }

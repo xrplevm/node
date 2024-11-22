@@ -16,6 +16,7 @@ import (
 )
 
 func TestWithBalances(t *testing.T) {
+	// MODIFIED
 	key1Balance := sdk.NewCoins(sdk.NewInt64Coin(app.BaseDenom, 1e18))
 	key2Balance := sdk.NewCoins(
 		sdk.NewInt64Coin(app.BaseDenom, 2e18),
