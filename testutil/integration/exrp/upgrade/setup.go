@@ -1,10 +1,11 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
 
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/xrplevm/node/v4/app"
 
@@ -26,6 +27,15 @@ import (
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 )
+
+func MustGetIntegrationTestNodeHome() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	return wd + "/../../"
+}
 
 // genSetupFn is the type for the module genesis setup functions
 type genSetupFn func(evmosApp *app.App, genesisState app.GenesisState, customGenesis interface{}) (app.GenesisState, error)
@@ -70,7 +80,6 @@ func customizeGenesis(exrpApp *app.App, customGen CustomGenesisState, genesisSta
 		if fn, found := genesisSetupFunctions[mod]; found {
 			genesisState, err = fn(exrpApp, genesisState, modGenState)
 			if err != nil {
-				fmt.Println("error", err)
 				return genesisState, err
 			}
 		} else {
@@ -80,16 +89,17 @@ func customizeGenesis(exrpApp *app.App, customGen CustomGenesisState, genesisSta
 	return genesisState, err
 }
 
-// createExrpApp creates an evmos app
+// createExrpApp creates an exrp app
 func createExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp)) *app.App {
+	testNodeHome := MustGetIntegrationTestNodeHome()
 	// Create evmos app
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
-	homePath := app.DefaultNodeHome
+	homePath := testNodeHome
 	invCheckPeriod := uint(5)
-	appOptions := simutils.NewAppOptionsWithFlagHome(app.DefaultNodeHome)
+	appOptions := simutils.NewAppOptionsWithFlagHome(homePath)
 	baseAppOptions := append(customBaseAppOptions, baseapp.SetChainID(chainID)) //nolint:gocritic
 
 	return app.New(

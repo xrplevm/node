@@ -125,6 +125,10 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
+test-upgrade:
+	@echo "--> Running upgrade testsuite"
+	@go test -mod=readonly ./tests/upgrade
+
 test-poa:
 	@echo "--> Running POA tests"
 	@go test $(EXCLUDED_POA_PACKAGES) 

@@ -1,7 +1,7 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
 
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"math/big"
@@ -123,6 +123,7 @@ func WithCustomBaseAppOpts(opts ...func(*baseapp.BaseApp)) ConfigOption {
 	}
 }
 
+// WithGenesisFile sets the genesis file for the network.
 func WithGenesisFile(genesisFile string) ConfigOption {
 	return func(cfg *Config) {
 		genesisBytes, err := os.ReadFile(genesisFile)

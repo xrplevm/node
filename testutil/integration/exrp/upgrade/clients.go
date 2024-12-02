@@ -1,6 +1,6 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -29,74 +29,56 @@ func getQueryHelper(ctx sdktypes.Context, encCfg testutil.TestEncodingConfig) *b
 	return baseapp.NewQueryServerTestHelper(cacheCtx, interfaceRegistry)
 }
 
-func (n *IntegrationNetwork) GetERC20Client() erc20types.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetERC20Client() erc20types.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	erc20types.RegisterQueryServer(queryHelper, n.app.Erc20Keeper)
 	return erc20types.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetEvmClient() evmtypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetEvmClient() evmtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	evmtypes.RegisterQueryServer(queryHelper, n.app.EvmKeeper)
 	return evmtypes.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetGovClient() govtypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetGovClient() govtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	govtypes.RegisterQueryServer(queryHelper, govkeeper.NewQueryServer(&n.app.GovKeeper))
 	return govtypes.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetBankClient() banktypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetBankClient() banktypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	banktypes.RegisterQueryServer(queryHelper, n.app.BankKeeper)
 	return banktypes.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetFeeMarketClient() feemarkettypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetFeeMarketClient() feemarkettypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	feemarkettypes.RegisterQueryServer(queryHelper, n.app.FeeMarketKeeper)
 	return feemarkettypes.NewQueryClient(queryHelper)
 }
 
-// func (n *IntegrationNetwork) GetInflationClient() infltypes.QueryClient {
-// 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-// 	infltypes.RegisterQueryServer(queryHelper, n.app.InflationKeeper)
-// 	return infltypes.NewQueryClient(queryHelper)
-// }
-
-func (n *IntegrationNetwork) GetAuthClient() authtypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetAuthClient() authtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	authtypes.RegisterQueryServer(queryHelper, authkeeper.NewQueryServer(n.app.AccountKeeper))
 	return authtypes.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetAuthzClient() authz.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetAuthzClient() authz.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	authz.RegisterQueryServer(queryHelper, n.app.AuthzKeeper)
 	return authz.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetStakingClient() stakingtypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetStakingClient() stakingtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	stakingtypes.RegisterQueryServer(queryHelper, stakingkeeper.Querier{Keeper: n.app.StakingKeeper.Keeper})
 	return stakingtypes.NewQueryClient(queryHelper)
 }
 
-func (n *IntegrationNetwork) GetDistrClient() distrtypes.QueryClient {
+func (n *UpgradeIntegrationNetwork) GetDistrClient() distrtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	distrtypes.RegisterQueryServer(queryHelper, distrkeeper.Querier{Keeper: n.app.DistrKeeper})
 	return distrtypes.NewQueryClient(queryHelper)
 }
-
-// func (n *IntegrationNetwork) GetEpochsClient() epochstypes.QueryClient {
-// 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-// 	epochstypes.RegisterQueryServer(queryHelper, n.app.EpochsKeeper)
-// 	return epochstypes.NewQueryClient(queryHelper)
-// }
-
-// func (n *IntegrationNetwork) GetVestingClient() vestingtypes.QueryClient {
-// 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-// 	vestingtypes.RegisterQueryServer(queryHelper, n.app.VestingKeeper)
-// 	return vestingtypes.NewQueryClient(queryHelper)
-// }

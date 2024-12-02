@@ -1,6 +1,6 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"time"
@@ -13,13 +13,13 @@ import (
 
 // NextBlock is a private helper function that runs the EndBlocker logic, commits the changes,
 // updates the header and runs the BeginBlocker
-func (n *IntegrationNetwork) NextBlock() error {
+func (n *UpgradeIntegrationNetwork) NextBlock() error {
 	return n.NextBlockAfter(time.Second)
 }
 
 // NextBlockAfter is a private helper function that runs the FinalizeBlock logic, updates the context and
 // commits the changes to have a block time after the given duration.
-func (n *IntegrationNetwork) NextBlockAfter(duration time.Duration) error {
+func (n *UpgradeIntegrationNetwork) NextBlockAfter(duration time.Duration) error {
 	_, err := n.finalizeBlockAndCommit(duration)
 	return err
 }
@@ -27,14 +27,14 @@ func (n *IntegrationNetwork) NextBlockAfter(duration time.Duration) error {
 // NextBlockWithTxs is a helper function that runs the FinalizeBlock logic
 // with the provided tx bytes, updates the context and
 // commits the changes to have a block time after the given duration.
-func (n *IntegrationNetwork) NextBlockWithTxs(txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error) {
+func (n *UpgradeIntegrationNetwork) NextBlockWithTxs(txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error) {
 	return n.finalizeBlockAndCommit(time.Second, txBytes...)
 }
 
 // finalizeBlockAndCommit is a private helper function that runs the FinalizeBlock logic
 // with the provided txBytes, updates the context and
 // commits the changes to have a block time after the given duration.
-func (n *IntegrationNetwork) finalizeBlockAndCommit(duration time.Duration, txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error) {
+func (n *UpgradeIntegrationNetwork) finalizeBlockAndCommit(duration time.Duration, txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error) {
 	header := n.ctx.BlockHeader()
 	// Update block header and BeginBlock
 	header.Height++

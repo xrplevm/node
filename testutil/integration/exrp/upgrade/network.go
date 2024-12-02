@@ -1,7 +1,7 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
 
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"encoding/json"
@@ -10,17 +10,14 @@ import (
 	"math/big"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
-
 	"github.com/xrplevm/node/v4/app"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
-	cmtjson "github.com/cometbft/cometbft/libs/json"
+	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cometbft/cometbft/version"
-	"github.com/cosmos/cosmos-sdk/testutil/mock"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -41,22 +38,18 @@ type Network interface {
 	commonnetwork.Network
 
 	GetEIP155ChainID() *big.Int
-	// MODIFIED
-	// GetEVMChainConfig() *gethparams.ChainConfig
 
 	// Clients
 	GetERC20Client() erc20types.QueryClient
 	GetEvmClient() evmtypes.QueryClient
 	GetGovClient() govtypes.QueryClient
-	// GetInflationClient() infltypes.QueryClient
 	GetFeeMarketClient() feemarkettypes.QueryClient
-	// GetVestingClient() vestingtypes.QueryClient
 }
 
-var _ Network = (*IntegrationNetwork)(nil)
+var _ Network = (*UpgradeIntegrationNetwork)(nil)
 
-// IntegrationNetwork is the implementation of the Network interface for integration tests.
-type IntegrationNetwork struct {
+// UpgradeIntegrationNetwork is the implementation of the Network interface for integration tests.
+type UpgradeIntegrationNetwork struct {
 	cfg        Config
 	ctx        sdktypes.Context
 	validators []stakingtypes.Validator
@@ -72,7 +65,7 @@ type IntegrationNetwork struct {
 // it uses the default configuration.
 //
 // It panics if an error occurs.
-func New(opts ...ConfigOption) *IntegrationNetwork {
+func New(opts ...ConfigOption) *UpgradeIntegrationNetwork {
 	cfg := DefaultConfig()
 	// Modify the default config with the given options
 	for _, opt := range opts {
@@ -80,47 +73,59 @@ func New(opts ...ConfigOption) *IntegrationNetwork {
 	}
 
 	ctx := sdktypes.Context{}
-	network := &IntegrationNetwork{
+	network := &UpgradeIntegrationNetwork{
 		cfg:        cfg,
 		ctx:        ctx,
 		validators: []stakingtypes.Validator{},
 	}
 
-	err := network.configureAndInitChain()
+	var err error
+	if cfg.genesisBytes == nil {
+		// err = network.configureAndInitDefaultChain()
+	} else {
+		err = network.configureAndInitChainFromGenesisBytes()
+	}
 	if err != nil {
 		panic(err)
 	}
 	return network
 }
 
-var (
-	// DefaultBondedAmount is the amount of tokens that each validator will have initially bonded
-	DefaultBondedAmount = sdktypes.TokensFromConsensusPower(1, types.PowerReduction)
-	// PrefundedAccountInitialBalance is the amount of tokens that each prefunded account has at genesis
-	PrefundedAccountInitialBalance, _ = sdkmath.NewIntFromString("100_000_000_000_000_000_000_000") // 100k
-)
-
-func getValidatorsAndSignersFromCustomGenesisState(stakingState stakingtypes.GenesisState) (*cmttypes.ValidatorSet, map[string]cmttypes.PrivValidator, error) {
+func getValidatorsAndSignersFromCustomGenesisState(
+	stakingState stakingtypes.GenesisState,
+) (
+	*cmttypes.ValidatorSet,
+	map[string]cmttypes.PrivValidator,
+	[]abcitypes.ValidatorUpdate, error,
+) {
 	genesisValidators := stakingState.Validators
-	validators := make([]stakingtypes.Validator, 0, len(genesisValidators))
 
-	tmValidators := make([]*cmttypes.Validator, 0, len(validators))
-	valSigners := make(map[string]cmttypes.PrivValidator, len(validators))
+	tmValidators := make([]*cmttypes.Validator, 0, len(genesisValidators))
+	validatorsUpdates := make([]abcitypes.ValidatorUpdate, 0, len(genesisValidators))
+	valSigners := make(map[string]cmttypes.PrivValidator, len(genesisValidators))
 
-	for i := 0; i < len(validators); i++ {
-		privVal := mock.NewPV()
-		pubKey, _ := privVal.GetPubKey()
-		validator := cmttypes.NewValidator(pubKey, 1)
+	// For each validator, we need to get the pubkey and create a new validator
+	for _, val := range genesisValidators {
+		pb, err := val.CmtConsPublicKey()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		pubKey := ed25519.PubKey(pb.GetEd25519())
+
+		validator := cmttypes.NewValidator(pubKey, 10000000)
 		tmValidators = append(tmValidators, validator)
-		valSigners[pubKey.Address().String()] = privVal
+		validatorsUpdates = append(validatorsUpdates, abcitypes.ValidatorUpdate{
+			PubKey: pb,
+			Power:  val.GetConsensusPower(val.Tokens),
+		})
 	}
 
-	return cmttypes.NewValidatorSet(tmValidators), valSigners, nil
+	return cmttypes.NewValidatorSet(tmValidators), valSigners, validatorsUpdates, nil
 }
 
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
-func (n *IntegrationNetwork) configureAndInitChain() error {
+func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() error {
 	// Create a new EvmosApp with the following params
 	exrpApp := createExrpApp(n.cfg.chainID, n.cfg.customBaseAppOpts...)
 
@@ -130,9 +135,9 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		return fmt.Errorf("error unmarshalling genesis state: %w", err)
 	}
 
-	stateBytes, err := cmtjson.MarshalIndent(genesisState, "", " ")
-	if err != nil {
-		return fmt.Errorf("error marshalling genesis state bytes: %w", err)
+	stateBytes, ok := genesisState["app_state"]
+	if !ok {
+		return fmt.Errorf("app_state not found in genesis state")
 	}
 
 	var appState map[string]json.RawMessage
@@ -147,7 +152,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		return fmt.Errorf("error unmarshalling staking state: %w", err)
 	}
 
-	valSet, valSigners, err := getValidatorsAndSignersFromCustomGenesisState(stakingState)
+	valSet, valSigners, _, err := getValidatorsAndSignersFromCustomGenesisState(stakingState)
 	if err != nil {
 		return fmt.Errorf("error getting validators and signers from custom genesis state: %w", err)
 	}
@@ -155,11 +160,22 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	// Consensus module does not have a genesis state on the app,
 	// but can customize the consensus parameters of the chain on initialization
 
-	fmt.Println("consensus_params", genesisState["consensus_params"])
+	var consensusState map[string]json.RawMessage
+	err = json.Unmarshal(genesisState["consensus"], &consensusState)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling consensus state: %w", err)
+	}
 
 	var consensusParams *cmtproto.ConsensusParams
-	_  = json.Unmarshal(genesisState["consensus_params"], &consensusParams)
-	
+	err = json.Unmarshal(consensusState["params"], &consensusParams)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling consensus params: %w", err)
+	}
+
+	var initialHeight int64
+	if err := json.Unmarshal(genesisState["initial_height"], &initialHeight); err != nil {
+		return fmt.Errorf("initial_height is not an int64")
+	}
 
 	now := time.Now().UTC()
 	if _, err := exrpApp.InitChain(
@@ -169,6 +185,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 			Validators:      []abcitypes.ValidatorUpdate{},
 			ConsensusParams: consensusParams,
 			AppStateBytes:   stateBytes,
+			InitialHeight:   initialHeight,
 		},
 	); err != nil {
 		return err
@@ -176,7 +193,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	header := cmtproto.Header{
 		ChainID:            n.cfg.chainID,
-		Height:             exrpApp.LastBlockHeight() + 1,
+		Height:             initialHeight,
 		AppHash:            exrpApp.LastCommitID().Hash,
 		Time:               now,
 		ValidatorsHash:     valSet.Hash(),
@@ -218,49 +235,43 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 }
 
 // GetContext returns the network's context
-func (n *IntegrationNetwork) GetContext() sdktypes.Context {
+func (n *UpgradeIntegrationNetwork) GetContext() sdktypes.Context {
 	return n.ctx
 }
 
 // WithIsCheckTxCtx switches the network's checkTx property
-func (n *IntegrationNetwork) WithIsCheckTxCtx(isCheckTx bool) sdktypes.Context {
+func (n *UpgradeIntegrationNetwork) WithIsCheckTxCtx(isCheckTx bool) sdktypes.Context {
 	n.ctx = n.ctx.WithIsCheckTx(isCheckTx)
 	return n.ctx
 }
 
 // GetChainID returns the network's chainID
-func (n *IntegrationNetwork) GetChainID() string {
+func (n *UpgradeIntegrationNetwork) GetChainID() string {
 	return n.cfg.chainID
 }
 
 // GetEIP155ChainID returns the network EIp-155 chainID number
-func (n *IntegrationNetwork) GetEIP155ChainID() *big.Int {
+func (n *UpgradeIntegrationNetwork) GetEIP155ChainID() *big.Int {
 	return n.cfg.eip155ChainID
 }
 
-// MODIFIED
-// GetChainConfig returns the network's chain config
-// func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
-// 	return evmtypes.GetEthChainConfig()
-// }
-
 // GetDenom returns the network's denom
-func (n *IntegrationNetwork) GetDenom() string {
+func (n *UpgradeIntegrationNetwork) GetDenom() string {
 	return n.cfg.denom
 }
 
 // GetOtherDenoms returns network's other supported denoms
-func (n *IntegrationNetwork) GetOtherDenoms() []string {
+func (n *UpgradeIntegrationNetwork) GetOtherDenoms() []string {
 	return n.cfg.otherCoinDenom
 }
 
 // GetValidators returns the network's validators
-func (n *IntegrationNetwork) GetValidators() []stakingtypes.Validator {
+func (n *UpgradeIntegrationNetwork) GetValidators() []stakingtypes.Validator {
 	return n.validators
 }
 
 // GetOtherDenoms returns network's other supported denoms
-func (n *IntegrationNetwork) GetEncodingConfig() sdktestutil.TestEncodingConfig {
+func (n *UpgradeIntegrationNetwork) GetEncodingConfig() sdktestutil.TestEncodingConfig {
 	return sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: n.app.InterfaceRegistry(),
 		Codec:             n.app.AppCodec(),
@@ -271,7 +282,7 @@ func (n *IntegrationNetwork) GetEncodingConfig() sdktestutil.TestEncodingConfig 
 
 // BroadcastTxSync broadcasts the given txBytes to the network and returns the response.
 // TODO - this should be change to gRPC
-func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error) {
+func (n *UpgradeIntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error) {
 	header := n.ctx.BlockHeader()
 	// Update block header and BeginBlock
 	header.Height++
@@ -299,7 +310,7 @@ func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxRe
 
 // Simulate simulates the given txBytes to the network and returns the simulated response.
 // TODO - this should be change to gRPC
-func (n *IntegrationNetwork) Simulate(txBytes []byte) (*txtypes.SimulateResponse, error) {
+func (n *UpgradeIntegrationNetwork) Simulate(txBytes []byte) (*txtypes.SimulateResponse, error) {
 	gas, result, err := n.app.BaseApp.Simulate(txBytes)
 	if err != nil {
 		return nil, err
@@ -311,7 +322,7 @@ func (n *IntegrationNetwork) Simulate(txBytes []byte) (*txtypes.SimulateResponse
 }
 
 // CheckTx calls the BaseApp's CheckTx method with the given txBytes to the network and returns the response.
-func (n *IntegrationNetwork) CheckTx(txBytes []byte) (*abcitypes.ResponseCheckTx, error) {
+func (n *UpgradeIntegrationNetwork) CheckTx(txBytes []byte) (*abcitypes.ResponseCheckTx, error) {
 	req := &abcitypes.RequestCheckTx{Tx: txBytes}
 	res, err := n.app.BaseApp.CheckTx(req)
 	if err != nil {

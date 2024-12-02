@@ -1,6 +1,6 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-package exrpnetwork
+package exrpupgrade
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 // GetIBCChain returns a TestChain instance for the given network.
 // Note: the sender accounts are not populated. Do not use this accounts to send transactions during tests.
 // The keyring should be used instead.
-func (n *IntegrationNetwork) GetIBCChain(t *testing.T, coord *ibctesting.Coordinator) *ibctesting.TestChain {
+func (n *UpgradeIntegrationNetwork) GetIBCChain(t *testing.T, coord *ibctesting.Coordinator) *ibctesting.TestChain {
 	return &ibctesting.TestChain{
 		TB:            t,
 		Coordinator:   coord,

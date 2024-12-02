@@ -1,6 +1,6 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-package exrpnetwork
+package exrpupgrade
 
 import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -14,7 +14,7 @@ import (
 // It embeds the IntegrationNetwork struct to reuse its methods and
 // makes the App public for easier testing.
 type UnitTestNetwork struct {
-	IntegrationNetwork
+	UpgradeIntegrationNetwork
 	App *app.App
 }
 
@@ -29,7 +29,7 @@ var _ Network = (*UnitTestNetwork)(nil)
 func NewUnitTestNetwork(opts ...ConfigOption) *UnitTestNetwork {
 	network := New(opts...)
 	return &UnitTestNetwork{
-		IntegrationNetwork: *network,
+		UpgradeIntegrationNetwork: *network,
 		App:                network.app,
 	}
 }

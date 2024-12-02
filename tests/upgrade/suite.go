@@ -1,9 +1,14 @@
 package testupgrade
 
 import (
+	"os"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
 	exrpnetwork "github.com/xrplevm/node/v4/testutil/integration/exrp/network"
 )
+
+const defaultStateFile = "upgrade-state.json"
 
 type UpgradeTestSuite struct {
 	suite.Suite
@@ -12,12 +17,23 @@ type UpgradeTestSuite struct {
 }
 
 func (s *UpgradeTestSuite) SetupTest() {
-	// READ APP STATE FILE
+	// Get the state file from the environment variable, or use the default one
+	stateFile := os.Getenv("UPGRADE_STATE_FILE")
+	if stateFile == "" {
+		stateFile = defaultStateFile
+	}
+	s.Require().NotEmpty(stateFile)
 
+	// Setup the SDK config
+	s.network.SetupSdkConfig()
+
+	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
+
+	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		// LOAD APP STATE FROM FILE
-		exrpnetwork.WithGenesisFile("exported-state.json"),
+		exrpnetwork.WithGenesisFile(stateFile),
 	)
 
+	// Check that the network was created successfully
 	s.Require().NotNil(s.network)
 }
