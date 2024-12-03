@@ -7,8 +7,7 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	cmttypes "github.com/cometbft/cometbft/types"
+	exrpcommon "github.com/xrplevm/node/v4/testutil/integration/exrp/common"
 )
 
 // NextBlock is a private helper function that runs the EndBlocker logic, commits the changes,
@@ -44,7 +43,7 @@ func (n *UpgradeIntegrationNetwork) finalizeBlockAndCommit(duration time.Duratio
 	header.Time = newBlockTime
 
 	// FinalizeBlock to run endBlock, deliverTx & beginBlock logic
-	req := buildFinalizeBlockReq(header, n.valSet.Validators, txBytes...)
+	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes...)
 
 	res, err := n.app.FinalizeBlock(req)
 	if err != nil {
@@ -67,34 +66,4 @@ func (n *UpgradeIntegrationNetwork) finalizeBlockAndCommit(duration time.Duratio
 	_, err = n.app.Commit()
 
 	return res, err
-}
-
-// buildFinalizeBlockReq is a helper function to build
-// properly the FinalizeBlock request
-func buildFinalizeBlockReq(header cmtproto.Header, validators []*cmttypes.Validator, txs ...[]byte) *abcitypes.RequestFinalizeBlock {
-	// add validator's commit info to allocate corresponding tokens to validators
-	ci := getCommitInfo(validators)
-	return &abcitypes.RequestFinalizeBlock{
-		Height:             header.Height,
-		DecidedLastCommit:  ci,
-		Hash:               header.AppHash,
-		NextValidatorsHash: header.ValidatorsHash,
-		ProposerAddress:    header.ProposerAddress,
-		Time:               header.Time,
-		Txs:                txs,
-	}
-}
-
-func getCommitInfo(validators []*cmttypes.Validator) abcitypes.CommitInfo {
-	voteInfos := make([]abcitypes.VoteInfo, len(validators))
-	for i, val := range validators {
-		voteInfos[i] = abcitypes.VoteInfo{
-			Validator: abcitypes.Validator{
-				Address: val.Address,
-				Power:   val.VotingPower,
-			},
-			BlockIdFlag: cmtproto.BlockIDFlagCommit,
-		}
-	}
-	return abcitypes.CommitInfo{Votes: voteInfos}
 }

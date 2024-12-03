@@ -10,15 +10,15 @@ import (
 	"github.com/xrplevm/node/v4/app"
 )
 
-// UnitTestNetwork is the implementation of the Network interface for unit tests.
+// UnitTestUpgradeNetwork is the implementation of the Network interface for unit tests.
 // It embeds the IntegrationNetwork struct to reuse its methods and
 // makes the App public for easier testing.
-type UnitTestNetwork struct {
+type UnitTestUpgradeNetwork struct {
 	UpgradeIntegrationNetwork
 	App *app.App
 }
 
-var _ Network = (*UnitTestNetwork)(nil)
+var _ Network = (*UnitTestUpgradeNetwork)(nil)
 
 // NewUnitTestNetwork configures and initializes a new Evmos Network instance with
 // the given configuration options. If no configuration options are provided
@@ -26,16 +26,16 @@ var _ Network = (*UnitTestNetwork)(nil)
 //
 // It panics if an error occurs.
 // Note: Only uses for Unit Tests
-func NewUnitTestNetwork(opts ...ConfigOption) *UnitTestNetwork {
+func NewUnitTestUpgradeNetwork(opts ...UpgradeConfigOption) *UnitTestUpgradeNetwork {
 	network := New(opts...)
-	return &UnitTestNetwork{
+	return &UnitTestUpgradeNetwork{
 		UpgradeIntegrationNetwork: *network,
 		App:                network.app,
 	}
 }
 
 // GetStateDB returns the state database for the current block.
-func (n *UnitTestNetwork) GetStateDB() *statedb.StateDB {
+func (n *UnitTestUpgradeNetwork) GetStateDB() *statedb.StateDB {
 	headerHash := n.GetContext().HeaderHash()
 	return statedb.New(
 		n.GetContext(),
@@ -45,7 +45,7 @@ func (n *UnitTestNetwork) GetStateDB() *statedb.StateDB {
 }
 
 // FundAccount funds the given account with the given amount of coins.
-func (n *UnitTestNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
+func (n *UnitTestUpgradeNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
 	ctx := n.GetContext()
 
 	if err := n.app.BankKeeper.MintCoins(ctx, inflationtypes.ModuleName, coins); err != nil {

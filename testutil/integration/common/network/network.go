@@ -11,10 +11,6 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 )
@@ -35,11 +31,11 @@ type Network interface {
 	NextBlockWithTxs(txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error)
 
 	// Clients
-	GetAuthClient() authtypes.QueryClient
-	GetAuthzClient() authz.QueryClient
-	GetBankClient() banktypes.QueryClient
-	GetStakingClient() stakingtypes.QueryClient
-	GetDistrClient() distrtypes.QueryClient
+	// GetAuthClient() authtypes.QueryClient
+	// GetAuthzClient() authz.QueryClient
+	// GetBankClient() banktypes.QueryClient
+	// GetStakingClient() stakingtypes.QueryClient
+	// GetDistrClient() distrtypes.QueryClient
 
 	BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error)
 	Simulate(txBytes []byte) (*txtypes.SimulateResponse, error)

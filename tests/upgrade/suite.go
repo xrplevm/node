@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
-	exrpnetwork "github.com/xrplevm/node/v4/testutil/integration/exrp/network"
+	upgradenetwork "github.com/xrplevm/node/v4/testutil/integration/exrp/upgrade"
 )
 
 const defaultStateFile = "upgrade-state.json"
@@ -14,6 +14,10 @@ type UpgradeTestSuite struct {
 	suite.Suite
 
 	network *UpgradeTestNetwork
+}
+
+func (s *UpgradeTestSuite) Network() *UpgradeTestNetwork {
+	return s.network
 }
 
 func (s *UpgradeTestSuite) SetupTest() {
@@ -31,7 +35,7 @@ func (s *UpgradeTestSuite) SetupTest() {
 
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		exrpnetwork.WithGenesisFile(stateFile),
+		upgradenetwork.WithGenesisFile(stateFile),
 	)
 
 	// Check that the network was created successfully

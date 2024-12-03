@@ -1,6 +1,6 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
-package exrpupgrade
+package exrpcommon
 
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -9,6 +9,8 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -16,10 +18,29 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
+	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
+
+type NetworkKeepers interface {
+	GetContext() sdktypes.Context
+	GetEncodingConfig() testutil.TestEncodingConfig
+
+	ERC20Keeper() erc20keeper.Keeper
+	EvmKeeper() evmkeeper.Keeper
+	GovKeeper() *govkeeper.Keeper
+	BankKeeper() bankkeeper.Keeper
+	StakingKeeper() *stakingkeeper.Keeper
+	DistrKeeper() distrkeeper.Keeper
+	AccountKeeper() authkeeper.AccountKeeper
+	AuthzKeeper() authzkeeper.Keeper
+	FeeMarketKeeper() feemarketkeeper.Keeper
+}
 
 func getQueryHelper(ctx sdktypes.Context, encCfg testutil.TestEncodingConfig) *baseapp.QueryServiceTestHelper {
 	interfaceRegistry := encCfg.InterfaceRegistry
@@ -29,56 +50,56 @@ func getQueryHelper(ctx sdktypes.Context, encCfg testutil.TestEncodingConfig) *b
 	return baseapp.NewQueryServerTestHelper(cacheCtx, interfaceRegistry)
 }
 
-func (n *UpgradeIntegrationNetwork) GetERC20Client() erc20types.QueryClient {
+func GetERC20Client(n NetworkKeepers) erc20types.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	erc20types.RegisterQueryServer(queryHelper, n.app.Erc20Keeper)
+	erc20types.RegisterQueryServer(queryHelper, n.ERC20Keeper())
 	return erc20types.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetEvmClient() evmtypes.QueryClient {
+func GetEvmClient(n NetworkKeepers) evmtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	evmtypes.RegisterQueryServer(queryHelper, n.app.EvmKeeper)
+	evmtypes.RegisterQueryServer(queryHelper, n.EvmKeeper())
 	return evmtypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetGovClient() govtypes.QueryClient {
+func GetGovClient(n NetworkKeepers) govtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	govtypes.RegisterQueryServer(queryHelper, govkeeper.NewQueryServer(&n.app.GovKeeper))
+	govtypes.RegisterQueryServer(queryHelper, govkeeper.NewQueryServer(n.GovKeeper()))
 	return govtypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetBankClient() banktypes.QueryClient {
+func GetBankClient(n NetworkKeepers) banktypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	banktypes.RegisterQueryServer(queryHelper, n.app.BankKeeper)
+	banktypes.RegisterQueryServer(queryHelper, n.BankKeeper())
 	return banktypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetFeeMarketClient() feemarkettypes.QueryClient {
+func GetFeeMarketClient(n NetworkKeepers) feemarkettypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	feemarkettypes.RegisterQueryServer(queryHelper, n.app.FeeMarketKeeper)
+	feemarkettypes.RegisterQueryServer(queryHelper, n.FeeMarketKeeper())
 	return feemarkettypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetAuthClient() authtypes.QueryClient {
+func GetAuthClient(n NetworkKeepers) authtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	authtypes.RegisterQueryServer(queryHelper, authkeeper.NewQueryServer(n.app.AccountKeeper))
+	authtypes.RegisterQueryServer(queryHelper, authkeeper.NewQueryServer(n.AccountKeeper()))
 	return authtypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetAuthzClient() authz.QueryClient {
+func GetAuthzClient(n NetworkKeepers) authz.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	authz.RegisterQueryServer(queryHelper, n.app.AuthzKeeper)
+	authz.RegisterQueryServer(queryHelper, n.AuthzKeeper())
 	return authz.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetStakingClient() stakingtypes.QueryClient {
+func GetStakingClient(n NetworkKeepers) stakingtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	stakingtypes.RegisterQueryServer(queryHelper, stakingkeeper.Querier{Keeper: n.app.StakingKeeper.Keeper})
+	stakingtypes.RegisterQueryServer(queryHelper, stakingkeeper.Querier{Keeper: n.StakingKeeper()})
 	return stakingtypes.NewQueryClient(queryHelper)
 }
 
-func (n *UpgradeIntegrationNetwork) GetDistrClient() distrtypes.QueryClient {
+func GetDistrClient(n NetworkKeepers) distrtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	distrtypes.RegisterQueryServer(queryHelper, distrkeeper.Querier{Keeper: n.app.DistrKeeper})
+	distrtypes.RegisterQueryServer(queryHelper, distrkeeper.Querier{Keeper: n.DistrKeeper()})
 	return distrtypes.NewQueryClient(queryHelper)
 }

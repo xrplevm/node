@@ -3,19 +3,19 @@ package testupgrade
 import (
 	commonnetwork "github.com/xrplevm/node/v4/testutil/integration/common/network"
 	exrpcommon "github.com/xrplevm/node/v4/testutil/integration/exrp/common"
-	exrpnetwork "github.com/xrplevm/node/v4/testutil/integration/exrp/network"
+	upgradenetwork "github.com/xrplevm/node/v4/testutil/integration/exrp/upgrade"
 )
 
 var _ commonnetwork.Network = (*UpgradeTestNetwork)(nil)
 
 type UpgradeTestNetwork struct {
-	exrpnetwork.IntegrationNetwork
+	upgradenetwork.UpgradeIntegrationNetwork
 }
 
-func NewUpgradeTestNetwork(opts ...exrpnetwork.ConfigOption) *UpgradeTestNetwork {
-	network := exrpnetwork.New(opts...)
+func NewUpgradeTestNetwork(opts ...upgradenetwork.UpgradeConfigOption) *UpgradeTestNetwork {
+	network := upgradenetwork.New(opts...)
 	return &UpgradeTestNetwork{
-		IntegrationNetwork: *network,
+		UpgradeIntegrationNetwork: *network,
 	}
 }
 

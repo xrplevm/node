@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/xrplevm/node/v4/app"
+	exrpcommon "github.com/xrplevm/node/v4/testutil/integration/exrp/common"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -21,13 +22,9 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	commonnetwork "github.com/evmos/evmos/v20/testutil/integration/common/network"
+
 	"github.com/evmos/evmos/v20/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.
@@ -35,22 +32,16 @@ import (
 // It was designed to avoid users to access module's keepers directly and force integration tests
 // to be closer to the real user's behavior.
 type Network interface {
-	commonnetwork.Network
+	exrpcommon.Network
 
 	GetEIP155ChainID() *big.Int
-
-	// Clients
-	GetERC20Client() erc20types.QueryClient
-	GetEvmClient() evmtypes.QueryClient
-	GetGovClient() govtypes.QueryClient
-	GetFeeMarketClient() feemarkettypes.QueryClient
 }
 
 var _ Network = (*UpgradeIntegrationNetwork)(nil)
 
 // UpgradeIntegrationNetwork is the implementation of the Network interface for integration tests.
 type UpgradeIntegrationNetwork struct {
-	cfg        Config
+	cfg        UpgradeConfig
 	ctx        sdktypes.Context
 	validators []stakingtypes.Validator
 	app        *app.App
@@ -65,8 +56,8 @@ type UpgradeIntegrationNetwork struct {
 // it uses the default configuration.
 //
 // It panics if an error occurs.
-func New(opts ...ConfigOption) *UpgradeIntegrationNetwork {
-	cfg := DefaultConfig()
+func New(opts ...UpgradeConfigOption) *UpgradeIntegrationNetwork {
+	cfg := DefaultUpgradeConfig()
 	// Modify the default config with the given options
 	for _, opt := range opts {
 		opt(&cfg)
@@ -80,7 +71,7 @@ func New(opts ...ConfigOption) *UpgradeIntegrationNetwork {
 	}
 
 	var err error
-	if cfg.genesisBytes == nil {
+	if cfg.GenesisBytes == nil {
 		// err = network.configureAndInitDefaultChain()
 	} else {
 		err = network.configureAndInitChainFromGenesisBytes()
@@ -127,10 +118,10 @@ func getValidatorsAndSignersFromCustomGenesisState(
 // It creates the genesis state and starts the network.
 func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() error {
 	// Create a new EvmosApp with the following params
-	exrpApp := createExrpApp(n.cfg.chainID, n.cfg.customBaseAppOpts...)
+	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
 	var genesisState app.GenesisState
-	err := json.Unmarshal(n.cfg.genesisBytes, &genesisState)
+	err := json.Unmarshal(n.cfg.GenesisBytes, &genesisState)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling genesis state: %w", err)
 	}
@@ -181,7 +172,7 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() erro
 	if _, err := exrpApp.InitChain(
 		&abcitypes.RequestInitChain{
 			Time:            now,
-			ChainId:         n.cfg.chainID,
+			ChainId:         n.cfg.ChainID,
 			Validators:      []abcitypes.ValidatorUpdate{},
 			ConsensusParams: consensusParams,
 			AppStateBytes:   stateBytes,
@@ -192,7 +183,7 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() erro
 	}
 
 	header := cmtproto.Header{
-		ChainID:            n.cfg.chainID,
+		ChainID:            n.cfg.ChainID,
 		Height:             initialHeight,
 		AppHash:            exrpApp.LastCommitID().Hash,
 		Time:               now,
@@ -204,7 +195,7 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() erro
 		},
 	}
 
-	req := buildFinalizeBlockReq(header, valSet.Validators)
+	req := exrpcommon.BuildFinalizeBlockReq(header, valSet.Validators)
 	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
@@ -247,22 +238,22 @@ func (n *UpgradeIntegrationNetwork) WithIsCheckTxCtx(isCheckTx bool) sdktypes.Co
 
 // GetChainID returns the network's chainID
 func (n *UpgradeIntegrationNetwork) GetChainID() string {
-	return n.cfg.chainID
+	return n.cfg.ChainID
 }
 
 // GetEIP155ChainID returns the network EIp-155 chainID number
 func (n *UpgradeIntegrationNetwork) GetEIP155ChainID() *big.Int {
-	return n.cfg.eip155ChainID
+	return n.cfg.Eip155ChainID
 }
 
 // GetDenom returns the network's denom
 func (n *UpgradeIntegrationNetwork) GetDenom() string {
-	return n.cfg.denom
+	return n.cfg.Denom
 }
 
 // GetOtherDenoms returns network's other supported denoms
 func (n *UpgradeIntegrationNetwork) GetOtherDenoms() []string {
-	return n.cfg.otherCoinDenom
+	return n.cfg.OtherCoinDenom
 }
 
 // GetValidators returns the network's validators
@@ -291,7 +282,7 @@ func (n *UpgradeIntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.E
 	newBlockTime := header.Time.Add(time.Second)
 	header.Time = newBlockTime
 
-	req := buildFinalizeBlockReq(header, n.valSet.Validators, txBytes)
+	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes)
 
 	// dont include the DecidedLastCommit because we're not committing the changes
 	// here, is just for broadcasting the tx. To persist the changes, use the
