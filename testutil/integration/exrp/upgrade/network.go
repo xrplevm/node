@@ -70,12 +70,10 @@ func New(opts ...UpgradeConfigOption) *UpgradeIntegrationNetwork {
 		validators: []stakingtypes.Validator{},
 	}
 
-	var err error
 	if cfg.GenesisBytes == nil {
-		// err = network.configureAndInitDefaultChain()
-	} else {
-		err = network.configureAndInitChainFromGenesisBytes()
+		panic("GenesisBytes is nil")
 	}
+	err := network.configureAndInitChain()
 	if err != nil {
 		panic(err)
 	}
@@ -116,7 +114,7 @@ func getValidatorsAndSignersFromCustomGenesisState(
 
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
-func (n *UpgradeIntegrationNetwork) configureAndInitChainFromGenesisBytes() error {
+func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	// Create a new EvmosApp with the following params
 	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
