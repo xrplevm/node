@@ -137,6 +137,7 @@ import (
 	"github.com/evmos/evmos/v20/x/feemarket"
 	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
+
 	// Overriders
 	"github.com/evmos/evmos/v20/x/ibc/transfer"
 	ibctransferkeeper "github.com/evmos/evmos/v20/x/ibc/transfer/keeper"
@@ -225,7 +226,7 @@ type App struct {
 	AuthzKeeper           authzkeeper.Keeper
 	BankKeeper            bankkeeper.Keeper
 	CapabilityKeeper      *capabilitykeeper.Keeper
-	StakingKeeper         stakingkeeper.Keeper
+	StakingKeeper         *stakingkeeper.Keeper
 	SlashingKeeper        slashingkeeper.Keeper
 	DistrKeeper           distrkeeper.Keeper
 	GovKeeper             govkeeper.Keeper
@@ -449,7 +450,7 @@ func New(
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	// NOTE: Distr and Slashing must be created before calling the Hooks method to avoid returning a Keeper without its table generated
-	app.StakingKeeper = *stakingKeeper
+	app.StakingKeeper = stakingKeeper
 
 	// exrp keepers
 	app.PoaKeeper = *poakeeper.NewKeeper(
@@ -582,7 +583,7 @@ func New(
 
 	app.EvmKeeper.WithStaticPrecompiles(
 		NewAvailableStaticPrecompiles(
-			app.StakingKeeper,
+			*app.StakingKeeper,
 			app.DistrKeeper,
 			app.BankKeeper,
 			app.Erc20Keeper,
@@ -618,6 +619,7 @@ func New(
 	var transferStack ibcporttypes.IBCModule
 
 	transferStack = transfer.NewIBCModule(app.TransferKeeper)
+	transferStack = ratelimit.NewIBCMiddleware(app.RateLimitKeeper, transferStack)
 	transferStack = erc20.NewIBCMiddleware(app.Erc20Keeper, transferStack)
 
 	// Create static IBC router, add transfer route, then set and seal it
@@ -654,7 +656,7 @@ func New(
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.InterfaceRegistry()),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
-		staking.NewAppModule(appCodec, &app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
+		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
 		upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
@@ -728,6 +730,7 @@ func New(
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
 		feegrant.ModuleName,
+		ratelimittypes.ModuleName,
 	)
 
 	genesisModuleOrder := []string{
@@ -1036,7 +1039,7 @@ func (app *App) GetStakingKeeper() ibctestingtypes.StakingKeeper {
 
 // GetStakingKeeperSDK implements the TestingApp interface.
 func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
-	return &app.StakingKeeper
+	return app.StakingKeeper
 }
 
 // GetIBCKeeper implements the TestingApp interface.
