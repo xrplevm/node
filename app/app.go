@@ -720,6 +720,7 @@ func New(
 		ibcexported.ModuleName,
 		authz.ModuleName,
 		feegrant.ModuleName,
+		ratelimittypes.ModuleName,
 	)
 
 	app.mm.SetOrderEndBlockers(

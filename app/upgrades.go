@@ -5,12 +5,12 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
 	v4 "github.com/xrplevm/node/v4/app/upgrades/v4"
+	v5 "github.com/xrplevm/node/v4/app/upgrades/v5"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -29,6 +29,13 @@ func (app *App) setupUpgradeHandlers() {
 			app.GovKeeper,
 		),
 	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v5.UpgradeName,
+		v5.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+		),
+	)
 
 	// When a planned update height is reached, the old binary will panic
 	// writing on disk the height and name of the update that triggered it
@@ -44,7 +51,6 @@ func (app *App) setupUpgradeHandlers() {
 
 	var storeUpgrades *storetypes.StoreUpgrades
 
-	//nolint:gocritic
 	switch upgradeInfo.Name {
 	case v4.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{
@@ -54,6 +60,9 @@ func (app *App) setupUpgradeHandlers() {
 			},
 			Deleted: []string{},
 		}
+	case v5.UpgradeName:
+		// No store upgrades for v5
+		storeUpgrades = &storetypes.StoreUpgrades{}
 	}
 
 	if storeUpgrades != nil {
