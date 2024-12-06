@@ -17,9 +17,9 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/xrplevm/node/v4/x/poa/client/cli"
-	"github.com/xrplevm/node/v4/x/poa/keeper"
-	"github.com/xrplevm/node/v4/x/poa/types"
+	"github.com/xrplevm/node/v5/x/poa/client/cli"
+	"github.com/xrplevm/node/v5/x/poa/keeper"
+	"github.com/xrplevm/node/v5/x/poa/types"
 )
 
 var (
