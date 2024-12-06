@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v4/x/poa/types"
+	"github.com/xrplevm/node/v5/x/poa/types"
 )
 
 // RegisterInvariants registers all module invariants
