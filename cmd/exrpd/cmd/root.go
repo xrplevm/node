@@ -47,7 +47,7 @@ import (
 	ethermintserver "github.com/evmos/evmos/v20/server"
 	ethermintservercfg "github.com/evmos/evmos/v20/server/config"
 	ethermintserverflags "github.com/evmos/evmos/v20/server/flags"
-	"github.com/xrplevm/node/v4/app"
+	"github.com/xrplevm/node/v5/app"
 )
 
 type emptyAppOptions struct{}
