@@ -9,8 +9,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v4/x/poa/testutil"
-	"github.com/xrplevm/node/v4/x/poa/types"
+	"github.com/xrplevm/node/v5/x/poa/testutil"
+	"github.com/xrplevm/node/v5/x/poa/types"
 )
 
 func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
