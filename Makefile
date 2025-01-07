@@ -127,7 +127,11 @@ mocks:
 
 test-upgrade:
 	@echo "--> Running upgrade testsuite"
-	@go test -mod=readonly ./tests/upgrade
+	@go test -mod=readonly -v ./tests/upgrade
+
+test-integration:
+	@echo "--> Running integration testsuite"
+	@go test -mod=readonly -v ./tests/integration
 
 test-poa:
 	@echo "--> Running POA tests"
