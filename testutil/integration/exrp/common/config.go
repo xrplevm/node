@@ -7,14 +7,12 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	evmostypes "github.com/evmos/evmos/v20/types"
-	"github.com/xrplevm/node/v4/app"
+	"github.com/xrplevm/node/v5/app"
 )
 
 const (
-	accountAddressPrefix = "ethm"
-	bip44CoinType        = 60
-
-	ChainID = "exrp_1440002-1"
+	bip44CoinType = 60
+	ChainID       = "exrp_1440002-1"
 )
 
 // Config defines the configuration for a chain.
@@ -22,7 +20,7 @@ const (
 // testing needs.
 type Config struct {
 	ChainID            string
-	Eip155ChainID      *big.Int
+	EIP155ChainID      *big.Int
 	AmountOfValidators int
 	PreFundedAccounts  []sdktypes.AccAddress
 	Balances           []banktypes.Balance
@@ -39,12 +37,10 @@ type CustomGenesisState map[string]interface{}
 // DefaultConfig returns the default configuration for a chain.
 func DefaultConfig() Config {
 	return Config{
-		ChainID:            ChainID,
-		Eip155ChainID:      big.NewInt(1440002),
-		Balances:           nil,
-		// MODIFIED
-		Denom:              app.BaseDenom,
-		CustomGenesisState: nil,
+		ChainID:       ChainID,
+		EIP155ChainID: big.NewInt(1440002),
+		Balances:      nil,
+		Denom:         app.BaseDenom,
 	}
 }
 
@@ -61,7 +57,7 @@ func WithChainID(chainID string) ConfigOption {
 	}
 	return func(cfg *Config) {
 		cfg.ChainID = chainID
-		cfg.Eip155ChainID = chainIDNum
+		cfg.EIP155ChainID = chainIDNum
 	}
 }
 

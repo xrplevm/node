@@ -1,70 +1,54 @@
 package exrpcommon
 
 import (
+	"fmt"
 	"os"
 
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 
-	"fmt"
-
 	dbm "github.com/cosmos/cosmos-db"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/xrplevm/node/v4/app"
-
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
+	"github.com/xrplevm/node/v5/app"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
-// genSetupFn is the type for the module genesis setup functions
-type genSetupFn func(exrpApp *app.App, genesisState app.GenesisState, customGenesis interface{}) (app.GenesisState, error)
+// GenSetupFn is the type for the module genesis setup functions
+type GenSetupFn func(exrpApp *app.App, genesisState app.GenesisState, customGenesis interface{}) (app.GenesisState, error)
 
-var genesisSetupFunctions = map[string]genSetupFn{
-	evmtypes.ModuleName:       GenStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
-	erc20types.ModuleName:     GenStateSetter[*erc20types.GenesisState](erc20types.ModuleName),
-	govtypes.ModuleName:       GenStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
-	feemarkettypes.ModuleName: GenStateSetter[*feemarkettypes.GenesisState](feemarkettypes.ModuleName),
-	distrtypes.ModuleName:     GenStateSetter[*distrtypes.GenesisState](distrtypes.ModuleName),
-	banktypes.ModuleName:      GenStateSetter[*banktypes.GenesisState](banktypes.ModuleName),
-	authtypes.ModuleName:      GenStateSetter[*authtypes.GenesisState](authtypes.ModuleName),
+var genesisSetupFunctions = map[string]GenSetupFn{
+	evmtypes.ModuleName:        GenStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
+	erc20types.ModuleName:      GenStateSetter[*erc20types.GenesisState](erc20types.ModuleName),
+	govtypes.ModuleName:        GenStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
+	feemarkettypes.ModuleName:  GenStateSetter[*feemarkettypes.GenesisState](feemarkettypes.ModuleName),
+	distrtypes.ModuleName:      GenStateSetter[*distrtypes.GenesisState](distrtypes.ModuleName),
+	banktypes.ModuleName:       GenStateSetter[*banktypes.GenesisState](banktypes.ModuleName),
+	authtypes.ModuleName:       GenStateSetter[*authtypes.GenesisState](authtypes.ModuleName),
 	capabilitytypes.ModuleName: GenStateSetter[*capabilitytypes.GenesisState](capabilitytypes.ModuleName),
-	genutiltypes.ModuleName:  GenStateSetter[*genutiltypes.GenesisState](genutiltypes.ModuleName),
+	genutiltypes.ModuleName:    GenStateSetter[*genutiltypes.GenesisState](genutiltypes.ModuleName),
 }
 
 // GenStateSetter is a generic function to set module-specific genesis state
-func GenStateSetter[T proto.Message](moduleName string) genSetupFn {
+func GenStateSetter[T proto.Message](moduleName string) GenSetupFn {
 	return func(exrpApp *app.App, genesisState app.GenesisState, customGenesis interface{}) (app.GenesisState, error) {
-		var customGen T
-		err := exrpApp.AppCodec().UnmarshalJSON(genesisState[moduleName], customGen)
-		
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling %s module genesis state: %w", moduleName, err)
+		moduleGenesis, ok := customGenesis.(T)
+		if !ok {
+			return nil, fmt.Errorf("invalid type %T for %s module genesis state", customGenesis, moduleName)
 		}
-		// moduleGenesis, ok := customGenesis.(T)
-		// if !ok {
-		// 	return nil, fmt.Errorf("invalid type %T for %s module genesis state", customGenesis, moduleName)
-		// }
 
-		genesisState[moduleName] = exrpApp.AppCodec().MustMarshalJSON(customGen)
+		genesisState[moduleName] = exrpApp.AppCodec().MustMarshalJSON(moduleGenesis)
 		return genesisState, nil
 	}
 }
@@ -86,17 +70,16 @@ func CustomizeGenesis(exrpApp *app.App, customGen CustomGenesisState, genesisSta
 	return genesisState, err
 }
 
-
 func SetupSdkConfig() {
-	accountPubKeyPrefix := accountAddressPrefix + "pub"
-	validatorAddressPrefix := accountAddressPrefix + "valoper"
-	validatorPubKeyPrefix := accountAddressPrefix + "valoperpub"
-	consNodeAddressPrefix := accountAddressPrefix + "valcons"
-	consNodePubKeyPrefix := accountAddressPrefix + "valconspub"
+	accountPubKeyPrefix := app.AccountAddressPrefix + "pub"
+	validatorAddressPrefix := app.AccountAddressPrefix + "valoper"
+	validatorPubKeyPrefix := app.AccountAddressPrefix + "valoperpub"
+	consNodeAddressPrefix := app.AccountAddressPrefix + "valcons"
+	consNodePubKeyPrefix := app.AccountAddressPrefix + "valconspub"
 
 	// Set config
 	config := sdktypes.GetConfig()
-	config.SetBech32PrefixForAccount(accountAddressPrefix, accountPubKeyPrefix)
+	config.SetBech32PrefixForAccount(app.AccountAddressPrefix, accountPubKeyPrefix)
 	config.SetBech32PrefixForValidator(validatorAddressPrefix, validatorPubKeyPrefix)
 	config.SetBech32PrefixForConsensusNode(consNodeAddressPrefix, consNodePubKeyPrefix)
 	config.SetCoinType(bip44CoinType)

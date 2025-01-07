@@ -35,4 +35,3 @@ func GetCommitInfo(validators []*cmttypes.Validator) abcitypes.CommitInfo {
 	}
 	return abcitypes.CommitInfo{Votes: voteInfos}
 }
-
