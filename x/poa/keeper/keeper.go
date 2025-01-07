@@ -20,6 +20,16 @@ import (
 	"github.com/xrplevm/node/v5/x/poa/types"
 )
 
+var _ types.QueryServer = Querier{}
+
+type Querier struct {
+	Keeper
+}
+
+func NewQuerier(keeper Keeper) Querier {
+	return Querier{Keeper: keeper}
+}
+
 type (
 	Keeper struct {
 		cdc        codec.Codec

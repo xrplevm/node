@@ -25,6 +25,8 @@ import (
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
+	poakeeper "github.com/xrplevm/node/v5/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v5/x/poa/types"
 )
 
 type NetworkKeepers interface {
@@ -40,6 +42,7 @@ type NetworkKeepers interface {
 	AccountKeeper() authkeeper.AccountKeeper
 	AuthzKeeper() authzkeeper.Keeper
 	FeeMarketKeeper() feemarketkeeper.Keeper
+	PoaKeeper() poakeeper.Keeper
 }
 
 func getQueryHelper(ctx sdktypes.Context, encCfg testutil.TestEncodingConfig) *baseapp.QueryServiceTestHelper {
@@ -102,4 +105,10 @@ func GetDistrClient(n NetworkKeepers) distrtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	distrtypes.RegisterQueryServer(queryHelper, distrkeeper.Querier{Keeper: n.DistrKeeper()})
 	return distrtypes.NewQueryClient(queryHelper)
+}
+
+func GetPoaClient(n NetworkKeepers) poatypes.QueryClient {
+	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
+	poatypes.RegisterQueryServer(queryHelper, poakeeper.Querier{Keeper: n.PoaKeeper()})
+	return poatypes.NewQueryClient(queryHelper)
 }

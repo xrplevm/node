@@ -11,6 +11,7 @@ import (
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
+	poakeeper "github.com/xrplevm/node/v5/x/poa/keeper"
 )
 
 func (n *UpgradeIntegrationNetwork) BankKeeper() bankkeeper.Keeper {
@@ -47,4 +48,8 @@ func (n *UpgradeIntegrationNetwork) AuthzKeeper() authzkeeper.Keeper {
 
 func (n *UpgradeIntegrationNetwork) FeeMarketKeeper() feemarketkeeper.Keeper {
 	return n.app.FeeMarketKeeper
+}
+
+func (n *UpgradeIntegrationNetwork) PoaKeeper() poakeeper.Keeper {
+	return n.app.PoaKeeper
 }

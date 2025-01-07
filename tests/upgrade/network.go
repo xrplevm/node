@@ -13,6 +13,7 @@ import (
 	commonnetwork "github.com/xrplevm/node/v5/testutil/integration/common/network"
 	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 	upgradenetwork "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
+	poatypes "github.com/xrplevm/node/v5/x/poa/types"
 )
 
 var _ commonnetwork.Network = (*UpgradeTestNetwork)(nil)
@@ -66,4 +67,8 @@ func (n *UpgradeTestNetwork) StakingClient() stakingtypes.QueryClient {
 
 func (n *UpgradeTestNetwork) DistrClient() distrtypes.QueryClient {
 	return exrpcommon.GetDistrClient(n)
+}
+
+func (n *UpgradeTestNetwork) PoaClient() poatypes.QueryClient {
+	return exrpcommon.GetPoaClient(n)
 }
