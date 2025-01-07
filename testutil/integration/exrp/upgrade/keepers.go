@@ -13,7 +13,6 @@ import (
 	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
 )
 
-
 func (n *UpgradeIntegrationNetwork) BankKeeper() bankkeeper.Keeper {
 	return n.app.BankKeeper
 }

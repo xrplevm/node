@@ -7,7 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/evmos/evmos/v20/x/evm/statedb"
 	inflationtypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
-	"github.com/xrplevm/node/v4/app"
+	"github.com/xrplevm/node/v5/app"
+	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
 // UnitTestUpgradeNetwork is the implementation of the Network interface for unit tests.
@@ -26,11 +27,11 @@ var _ Network = (*UnitTestUpgradeNetwork)(nil)
 //
 // It panics if an error occurs.
 // Note: Only uses for Unit Tests
-func NewUnitTestUpgradeNetwork(opts ...UpgradeConfigOption) *UnitTestUpgradeNetwork {
+func NewUnitTestUpgradeNetwork(opts ...exrpcommon.ConfigOption) *UnitTestUpgradeNetwork {
 	network := New(opts...)
 	return &UnitTestUpgradeNetwork{
 		UpgradeIntegrationNetwork: *network,
-		App:                network.app,
+		App:                       network.app,
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
-	exrpcommon "github.com/xrplevm/node/v4/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
 // NextBlock is a private helper function that runs the EndBlocker logic, commits the changes,

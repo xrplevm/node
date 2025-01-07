@@ -10,8 +10,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/xrplevm/node/v4/app"
-	exrpcommon "github.com/xrplevm/node/v4/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v5/app"
+	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -41,7 +41,7 @@ var _ Network = (*UpgradeIntegrationNetwork)(nil)
 
 // UpgradeIntegrationNetwork is the implementation of the Network interface for integration tests.
 type UpgradeIntegrationNetwork struct {
-	cfg        UpgradeConfig
+	cfg        exrpcommon.Config
 	ctx        sdktypes.Context
 	validators []stakingtypes.Validator
 	app        *app.App
@@ -56,7 +56,7 @@ type UpgradeIntegrationNetwork struct {
 // it uses the default configuration.
 //
 // It panics if an error occurs.
-func New(opts ...UpgradeConfigOption) *UpgradeIntegrationNetwork {
+func New(opts ...exrpcommon.ConfigOption) *UpgradeIntegrationNetwork {
 	cfg := DefaultUpgradeConfig()
 	// Modify the default config with the given options
 	for _, opt := range opts {
@@ -241,7 +241,7 @@ func (n *UpgradeIntegrationNetwork) GetChainID() string {
 
 // GetEIP155ChainID returns the network EIp-155 chainID number
 func (n *UpgradeIntegrationNetwork) GetEIP155ChainID() *big.Int {
-	return n.cfg.Eip155ChainID
+	return n.cfg.EIP155ChainID
 }
 
 // GetDenom returns the network's denom
