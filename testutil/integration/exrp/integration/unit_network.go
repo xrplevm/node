@@ -7,18 +7,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/evmos/evmos/v20/x/evm/statedb"
 	inflationtypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
-	"github.com/xrplevm/node/v4/app"
+	"github.com/xrplevm/node/v5/app"
+	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
-// UnitTestNetwork is the implementation of the Network interface for unit tests.
+// UnitTestIntegrationNetwork is the implementation of the Network interface for unit tests.
 // It embeds the IntegrationNetwork struct to reuse its methods and
 // makes the App public for easier testing.
-type UnitTestNetwork struct {
+type UnitTestIntegrationNetwork struct {
 	IntegrationNetwork
 	App *app.App
 }
 
-var _ Network = (*UnitTestNetwork)(nil)
+var _ Network = (*UnitTestIntegrationNetwork)(nil)
 
 // NewUnitTestNetwork configures and initializes a new Evmos Network instance with
 // the given configuration options. If no configuration options are provided
@@ -26,16 +27,16 @@ var _ Network = (*UnitTestNetwork)(nil)
 //
 // It panics if an error occurs.
 // Note: Only uses for Unit Tests
-func NewUnitTestNetwork(opts ...ConfigOption) *UnitTestNetwork {
+func NewUnitTestNetwork(opts ...exrpcommon.ConfigOption) *UnitTestIntegrationNetwork {
 	network := New(opts...)
-	return &UnitTestNetwork{
+	return &UnitTestIntegrationNetwork{
 		IntegrationNetwork: *network,
 		App:                network.app,
 	}
 }
 
 // GetStateDB returns the state database for the current block.
-func (n *UnitTestNetwork) GetStateDB() *statedb.StateDB {
+func (n *UnitTestIntegrationNetwork) GetStateDB() *statedb.StateDB {
 	headerHash := n.GetContext().HeaderHash()
 	return statedb.New(
 		n.GetContext(),
@@ -45,7 +46,7 @@ func (n *UnitTestNetwork) GetStateDB() *statedb.StateDB {
 }
 
 // FundAccount funds the given account with the given amount of coins.
-func (n *UnitTestNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
+func (n *UnitTestIntegrationNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
 	ctx := n.GetContext()
 
 	if err := n.app.BankKeeper.MintCoins(ctx, inflationtypes.ModuleName, coins); err != nil {
