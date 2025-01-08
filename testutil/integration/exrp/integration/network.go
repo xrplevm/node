@@ -291,12 +291,12 @@ func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxRe
 	header.Time = newBlockTime
 
 	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes)
-
+	
 	// dont include the DecidedLastCommit because we're not committing the changes
 	// here, is just for broadcasting the tx. To persist the changes, use the
 	// NextBlock or NextBlockAfter functions
 	req.DecidedLastCommit = abcitypes.CommitInfo{}
-
+	
 	blockRes, err := n.app.BaseApp.FinalizeBlock(req)
 	if err != nil {
 		return abcitypes.ExecTxResult{}, err
@@ -329,3 +329,4 @@ func (n *IntegrationNetwork) CheckTx(txBytes []byte) (*abcitypes.ResponseCheckTx
 	}
 	return res, nil
 }
+

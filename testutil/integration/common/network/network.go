@@ -1,7 +1,7 @@
 // Copyright Tharsis Labs Ltd.(Evmos)
 // SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
 
-package commonnetwork
+package network
 
 import (
 	"testing"
@@ -11,8 +11,13 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	authz "github.com/cosmos/cosmos-sdk/x/authz"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
 // Network is the interface that wraps the common methods to interact with integration test network.
@@ -31,11 +36,12 @@ type Network interface {
 	NextBlockWithTxs(txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error)
 
 	// Clients
-	// GetAuthClient() authtypes.QueryClient
-	// GetAuthzClient() authz.QueryClient
-	// GetBankClient() banktypes.QueryClient
-	// GetStakingClient() stakingtypes.QueryClient
-	// GetDistrClient() distrtypes.QueryClient
+	GetAuthClient() authtypes.QueryClient
+	GetAuthzClient() authz.QueryClient
+	GetBankClient() banktypes.QueryClient
+	GetStakingClient() stakingtypes.QueryClient
+	GetDistrClient() distrtypes.QueryClient
+	GetFeeMarketClient() feemarkettypes.QueryClient
 
 	BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error)
 	Simulate(txBytes []byte) (*txtypes.SimulateResponse, error)
