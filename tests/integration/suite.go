@@ -14,9 +14,9 @@ import (
 type TestSuite struct {
 	suite.Suite
 
-	network *Network
-	keyring keyring.Keyring
-	factory factory.CoreTxFactory
+	network     *Network
+	keyring     keyring.Keyring
+	factory     factory.CoreTxFactory
 	grpcHandler grpc.Handler
 }
 
