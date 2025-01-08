@@ -2,14 +2,22 @@ package integration
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v5/app"
+	factory "github.com/xrplevm/node/v5/testutil/integration/common/factory"
+	"github.com/xrplevm/node/v5/testutil/integration/common/grpc"
+	"github.com/xrplevm/node/v5/testutil/integration/common/keyring"
 	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
 type TestSuite struct {
 	suite.Suite
 
-	network *Network
+	network     *Network
+	keyring     keyring.Keyring
+	factory     factory.CoreTxFactory
+	grpcHandler grpc.Handler
 }
 
 func (s *TestSuite) Network() *Network {
@@ -17,14 +25,29 @@ func (s *TestSuite) Network() *Network {
 }
 
 func (s *TestSuite) SetupTest() {
-	// Setup the SDK config
 	s.network.SetupSdkConfig()
-
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
-
 	// Check that the network was created successfully
+	kr := keyring.New(3)
+
+	customGenesis := exrpcommon.CustomGenesisState{}
+
+	evmGen := evmtypes.DefaultGenesisState()
+
+	evmGen.Params.EvmDenom = app.BaseDenom
+
+	customGenesis[evmtypes.ModuleName] = evmGen
+
 	s.network = NewIntegrationNetwork(
+		exrpcommon.WithPreFundedAccounts(kr.GetAllAccAddrs()...),
 		exrpcommon.WithAmountOfValidators(5),
+		exrpcommon.WithCustomGenesis(customGenesis),
 	)
 	s.Require().NotNil(s.network)
+
+	grpcHandler := grpc.NewIntegrationHandler(s.network)
+
+	s.factory = factory.New(s.network, grpcHandler)
+	s.keyring = kr
+	s.grpcHandler = grpcHandler
 }
