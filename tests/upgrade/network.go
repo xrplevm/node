@@ -33,42 +33,42 @@ func (n *UpgradeTestNetwork) SetupSdkConfig() {
 	exrpcommon.SetupSdkConfig()
 }
 
-func (n *UpgradeTestNetwork) ERC20Client() erc20types.QueryClient {
+func (n *UpgradeTestNetwork) GetERC20Client() erc20types.QueryClient {
 	return exrpcommon.GetERC20Client(n)
 }
 
-func (n *UpgradeTestNetwork) EvmClient() evmtypes.QueryClient {
+func (n *UpgradeTestNetwork) GetEvmClient() evmtypes.QueryClient {
 	return exrpcommon.GetEvmClient(n)
 }
 
-func (n *UpgradeTestNetwork) GovClient() govtypes.QueryClient {
+func (n *UpgradeTestNetwork) GetGovClient() govtypes.QueryClient {
 	return exrpcommon.GetGovClient(n)
 }
 
-func (n *UpgradeTestNetwork) BankClient() banktypes.QueryClient {
+func (n *UpgradeTestNetwork) GetBankClient() banktypes.QueryClient {
 	return exrpcommon.GetBankClient(n)
 }
 
-func (n *UpgradeTestNetwork) FeeMarketClient() feemarkettypes.QueryClient {
+func (n *UpgradeTestNetwork) GetFeeMarketClient() feemarkettypes.QueryClient {
 	return exrpcommon.GetFeeMarketClient(n)
 }
 
-func (n *UpgradeTestNetwork) AuthClient() authtypes.QueryClient {
+func (n *UpgradeTestNetwork) GetAuthClient() authtypes.QueryClient {
 	return exrpcommon.GetAuthClient(n)
 }
 
-func (n *UpgradeTestNetwork) AuthzClient() authz.QueryClient {
+func (n *UpgradeTestNetwork) GetAuthzClient() authz.QueryClient {
 	return exrpcommon.GetAuthzClient(n)
 }
 
-func (n *UpgradeTestNetwork) StakingClient() stakingtypes.QueryClient {
+func (n *UpgradeTestNetwork) GetStakingClient() stakingtypes.QueryClient {
 	return exrpcommon.GetStakingClient(n)
 }
 
-func (n *UpgradeTestNetwork) DistrClient() distrtypes.QueryClient {
+func (n *UpgradeTestNetwork) GetDistrClient() distrtypes.QueryClient {
 	return exrpcommon.GetDistrClient(n)
 }
 
-func (n *UpgradeTestNetwork) PoaClient() poatypes.QueryClient {
+func (n *UpgradeTestNetwork) GetPoaClient() poatypes.QueryClient {
 	return exrpcommon.GetPoaClient(n)
 }

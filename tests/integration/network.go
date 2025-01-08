@@ -33,42 +33,42 @@ func (n *Network) SetupSdkConfig() {
 	exrpcommon.SetupSdkConfig()
 }
 
-func (n *Network) ERC20Client() erc20types.QueryClient {
+func (n *Network) GetERC20Client() erc20types.QueryClient {
 	return exrpcommon.GetERC20Client(n)
 }
 
-func (n *Network) EvmClient() evmtypes.QueryClient {
+func (n *Network) GetEvmClient() evmtypes.QueryClient {
 	return exrpcommon.GetEvmClient(n)
 }
 
-func (n *Network) GovClient() govtypes.QueryClient {
+func (n *Network) GetGovClient() govtypes.QueryClient {
 	return exrpcommon.GetGovClient(n)
 }
 
-func (n *Network) BankClient() banktypes.QueryClient {
+func (n *Network) GetBankClient() banktypes.QueryClient {
 	return exrpcommon.GetBankClient(n)
 }
 
-func (n *Network) FeeMarketClient() feemarkettypes.QueryClient {
+func (n *Network) GetFeeMarketClient() feemarkettypes.QueryClient {
 	return exrpcommon.GetFeeMarketClient(n)
 }
 
-func (n *Network) AuthClient() authtypes.QueryClient {
+func (n *Network) GetAuthClient() authtypes.QueryClient {
 	return exrpcommon.GetAuthClient(n)
 }
 
-func (n *Network) AuthzClient() authz.QueryClient {
+func (n *Network) GetAuthzClient() authz.QueryClient {
 	return exrpcommon.GetAuthzClient(n)
 }
 
-func (n *Network) StakingClient() stakingtypes.QueryClient {
+func (n *Network) GetStakingClient() stakingtypes.QueryClient {
 	return exrpcommon.GetStakingClient(n)
 }
 
-func (n *Network) DistrClient() distrtypes.QueryClient {
+func (n *Network) GetDistrClient() distrtypes.QueryClient {
 	return exrpcommon.GetDistrClient(n)
 }
 
-func (n *Network) PoaClient() poatypes.QueryClient {
+func (n *Network) GetPoaClient() poatypes.QueryClient {
 	return exrpcommon.GetPoaClient(n)
 }

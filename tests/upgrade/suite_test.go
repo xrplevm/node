@@ -18,7 +18,7 @@ func (s *UpgradeTestSuite) TestUpgrade() {
 	s.Require().NotEmpty(denom)
 	s.Require().Equal(denom, app.BaseDenom)
 
-	balances, err := s.Network().BankClient().AllBalances(s.network.GetContext(), &banktypes.QueryAllBalancesRequest{
+	balances, err := s.Network().GetBankClient().AllBalances(s.network.GetContext(), &banktypes.QueryAllBalancesRequest{
 		Address: "ethm1fl48vsnmsdzcv85q5d2q4z5ajdha8yu3w48d64",
 	})
 
@@ -28,7 +28,7 @@ func (s *UpgradeTestSuite) TestUpgrade() {
 	err = s.network.NextBlock()
 	s.Require().NoError(err)
 
-	res, err := s.Network().StakingClient().Validators(s.network.GetContext(), &stakingtypes.QueryValidatorsRequest{})
+	res, err := s.Network().GetStakingClient().Validators(s.network.GetContext(), &stakingtypes.QueryValidatorsRequest{})
 	s.Require().NoError(err)
 
 	s.T().Log("validators", len(res.Validators))
