@@ -208,7 +208,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 	}
 }
 
-func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusJailed() {
+func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 	// Validators
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
@@ -304,7 +304,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusJailed() {
 	}
 }
 
-func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusTombstoned() {
+func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 	// Validators
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
@@ -326,7 +326,25 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusTombstoned() {
 			name:          "remove existing validator - tombstoned",
 			valAddress:    valAccAddr.String(),
 			beforeRun: func() {
-				err := s.Network().SlashingKeeper().Tombstone(
+				// Jail validator
+				err := s.Network().StakingKeeper().Jail(
+					s.Network().GetContext(),
+					valConsAddr,
+				)
+				require.NoError(s.T(), err)
+
+				resVal, err := s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				// Check if the validator is jailed
+				require.Equal(s.T(), resVal.Validator.Jailed, true)
+
+				err = s.Network().SlashingKeeper().Tombstone(
 					s.Network().GetContext(),
 					valConsAddr,
 				)
