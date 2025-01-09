@@ -24,9 +24,12 @@ func (s *TestSuite) Network() *Network {
 	return s.network
 }
 
-func (s *TestSuite) SetupTest() {
+func (s *TestSuite) SetupSuite() {
 	s.network.SetupSdkConfig()
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
+}
+
+func (s *TestSuite) SetupTest() {
 	// Check that the network was created successfully
 	kr := keyring.New(3)
 
@@ -42,6 +45,7 @@ func (s *TestSuite) SetupTest() {
 		exrpcommon.WithPreFundedAccounts(kr.GetAllAccAddrs()...),
 		exrpcommon.WithAmountOfValidators(5),
 		exrpcommon.WithCustomGenesis(customGenesis),
+		exrpcommon.WithBondDenom("apoa"),
 	)
 	s.Require().NotNil(s.network)
 
