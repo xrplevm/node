@@ -31,6 +31,7 @@ type Network interface {
 	// Getters
 	GetContext() sdktypes.Context
 	GetChainID() string
+	GetBondDenom() string
 	GetDenom() string
 	GetOtherDenoms() []string
 	GetValidators() []stakingtypes.Validator

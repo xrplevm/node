@@ -24,6 +24,7 @@ type Config struct {
 	AmountOfValidators int
 	PreFundedAccounts  []sdktypes.AccAddress
 	Balances           []banktypes.Balance
+	BondDenom          string
 	Denom              string
 	CustomGenesisState CustomGenesisState
 	GenesisBytes       []byte
@@ -80,6 +81,13 @@ func WithPreFundedAccounts(accounts ...sdktypes.AccAddress) ConfigOption {
 func WithBalances(balances ...banktypes.Balance) ConfigOption {
 	return func(cfg *Config) {
 		cfg.Balances = append(cfg.Balances, balances...)
+	}
+}
+
+// WithBondDenom sets the bond denom for the network.
+func WithBondDenom(denom string) ConfigOption {
+	return func(cfg *Config) {
+		cfg.BondDenom = denom
 	}
 }
 

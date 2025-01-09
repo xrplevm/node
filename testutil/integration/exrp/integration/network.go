@@ -259,6 +259,11 @@ func (n *IntegrationNetwork) GetDenom() string {
 	return n.cfg.Denom
 }
 
+// GetBondDenom returns the network's bond denom
+func (n *IntegrationNetwork) GetBondDenom() string {
+	return n.cfg.BondDenom
+}
+
 // GetOtherDenoms returns network's other supported denoms
 func (n *IntegrationNetwork) GetOtherDenoms() []string {
 	return n.cfg.OtherCoinDenom
