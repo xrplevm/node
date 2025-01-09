@@ -6,6 +6,7 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
@@ -32,6 +33,10 @@ func (n *IntegrationNetwork) GovKeeper() *govkeeper.Keeper {
 
 func (n *IntegrationNetwork) StakingKeeper() *stakingkeeper.Keeper {
 	return n.app.StakingKeeper.Keeper
+}
+
+func (n *IntegrationNetwork) SlashingKeeper() slashingkeeper.Keeper {
+	return n.app.SlashingKeeper
 }
 
 func (n *IntegrationNetwork) DistrKeeper() distrkeeper.Keeper {

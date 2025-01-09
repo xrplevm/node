@@ -16,6 +16,8 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
@@ -38,6 +40,7 @@ type NetworkKeepers interface {
 	GovKeeper() *govkeeper.Keeper
 	BankKeeper() bankkeeper.Keeper
 	StakingKeeper() *stakingkeeper.Keeper
+	SlashingKeeper() slashingkeeper.Keeper
 	DistrKeeper() distrkeeper.Keeper
 	AccountKeeper() authkeeper.AccountKeeper
 	AuthzKeeper() authzkeeper.Keeper
@@ -99,6 +102,12 @@ func GetStakingClient(n NetworkKeepers) stakingtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	stakingtypes.RegisterQueryServer(queryHelper, stakingkeeper.Querier{Keeper: n.StakingKeeper()})
 	return stakingtypes.NewQueryClient(queryHelper)
+}
+
+func GetSlashingClient(n NetworkKeepers) slashingtypes.QueryClient {
+	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
+	slashingtypes.RegisterQueryServer(queryHelper, slashingkeeper.Querier{Keeper: n.SlashingKeeper()})
+	return slashingtypes.NewQueryClient(queryHelper)
 }
 
 func GetDistrClient(n NetworkKeepers) distrtypes.QueryClient {
