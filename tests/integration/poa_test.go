@@ -36,8 +36,8 @@ func (s *TestSuite) TestAddValidator_UnexistingValidator() {
 		afterRun      func()
 	}{
 		{
-			name:          "add unexisting validator - random address - no balance",
-			valAddress:    randomAcc.Address.String(),
+			name:       "add unexisting validator - random address - no balance",
+			valAddress: randomAcc.Address.String(),
 			afterRun: func() {
 
 				require.NoError(s.T(), s.Network().NextBlock())
@@ -54,7 +54,6 @@ func (s *TestSuite) TestAddValidator_UnexistingValidator() {
 				require.Equal(s.T(), resVal.Validator.Status, stakingtypes.Bonded)
 			},
 		},
-
 	}
 
 	for _, tc := range tt {
@@ -69,8 +68,8 @@ func (s *TestSuite) TestAddValidator_UnexistingValidator() {
 				s.Network().GetContext(),
 				&poatypes.MsgAddValidator{
 					ValidatorAddress: randomAcc.Address.String(),
-					Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-					Pubkey:    msgPubKey,
+					Authority:        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+					Pubkey:           msgPubKey,
 					Description: stakingtypes.Description{
 						Moniker: "test",
 					},
@@ -211,8 +210,8 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 		afterRun      func()
 	}{
 		{
-			name:          "remove existing validator - status bonded",
-			valAddress:    valAccAddr.String(),
+			name:       "remove existing validator - status bonded",
+			valAddress: valAccAddr.String(),
 			beforeRun: func() {
 				resVal, err := s.Network().GetStakingClient().Validator(
 					s.Network().GetContext(),
@@ -304,8 +303,8 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 		afterRun      func()
 	}{
 		{
-			name:          "remove existing validator - jailed",
-			valAddress:    valAccAddr.String(),
+			name:       "remove existing validator - jailed",
+			valAddress: valAccAddr.String(),
 			beforeRun: func() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
@@ -408,8 +407,8 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 		afterRun      func()
 	}{
 		{
-			name:          "remove existing validator - tombstoned",
-			valAddress:    valAccAddr.String(),
+			name:       "remove existing validator - tombstoned",
+			valAddress: valAccAddr.String(),
 			beforeRun: func() {
 				// Force validator to be tombstoned
 				require.NoError(s.T(), s.Network().NextBlockWithMisBehaviors(
@@ -419,7 +418,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 							Validator: abcitypes.Validator{
 								Address: valAddr.Bytes(),
 							},
-							Height:             s.Network().GetContext().BlockHeight(),
+							Height:           s.Network().GetContext().BlockHeight(),
 							TotalVotingPower: s.Network().GetValidatorSet().TotalVotingPower(),
 						},
 					},
