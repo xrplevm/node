@@ -43,7 +43,7 @@ func (n *UpgradeIntegrationNetwork) finalizeBlockAndCommit(duration time.Duratio
 	header.Time = newBlockTime
 
 	// FinalizeBlock to run endBlock, deliverTx & beginBlock logic
-	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes...)
+	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, nil, nil, txBytes...)
 
 	res, err := n.app.FinalizeBlock(req)
 	if err != nil {
