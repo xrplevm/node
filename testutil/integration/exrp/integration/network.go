@@ -38,6 +38,7 @@ type Network interface {
 	exrpcommon.Network
 
 	GetEIP155ChainID() *big.Int
+	GetValidatorSet() *cmttypes.ValidatorSet
 }
 
 var _ Network = (*IntegrationNetwork)(nil)
@@ -51,6 +52,7 @@ type IntegrationNetwork struct {
 
 	// This is only needed for IBC chain testing setup
 	valSet     *cmttypes.ValidatorSet
+	valFlags   []cmtproto.BlockIDFlag
 	valSigners map[string]cmttypes.PrivValidator
 }
 
@@ -95,6 +97,11 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
 	totalBonded := DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))
 
+	valFlags := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
+	for i := range valSet.Validators {
+		valFlags[i] = cmtproto.BlockIDFlagCommit
+	}
+
 	// Build staking type validators and delegations
 	validators, err := createStakingValidators(valSet.Validators, DefaultBondedAmount, n.cfg.OperatorsAddrs)
 	if err != nil {
@@ -106,7 +113,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	fundedAccountBalances = addBondedModuleAccountToFundedBalances(
 		fundedAccountBalances,
-		sdktypes.NewCoin(n.cfg.Denom, totalBonded),
+		sdktypes.NewCoin(n.cfg.BondDenom, totalBonded),
 	)
 
 	delegations := createDelegations(validators)
@@ -115,7 +122,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
 	stakingParams := StakingCustomGenesisState{
-		denom:       n.cfg.Denom,
+		denom:       n.cfg.BondDenom,
 		validators:  validators,
 		delegations: delegations,
 	}
@@ -197,7 +204,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		},
 	}
 
-	req := exrpcommon.BuildFinalizeBlockReq(header, valSet.Validators)
+	req := exrpcommon.BuildFinalizeBlockReq(header, valSet.Validators, valFlags, nil)
 	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
@@ -222,6 +229,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	n.validators = validators
 	n.valSet = valSet
+	n.valFlags = valFlags
 	n.valSigners = valSigners
 
 	return nil
@@ -246,6 +254,11 @@ func (n *IntegrationNetwork) GetChainID() string {
 // GetEIP155ChainID returns the network EIp-155 chainID number
 func (n *IntegrationNetwork) GetEIP155ChainID() *big.Int {
 	return n.cfg.EIP155ChainID
+}
+
+// GetValidatorSet returns the network's validator set
+func (n *IntegrationNetwork) GetValidatorSet() *cmttypes.ValidatorSet {
+	return n.valSet
 }
 
 // GetChainConfig returns the network's chain config
@@ -295,7 +308,7 @@ func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxRe
 	newBlockTime := header.Time.Add(time.Second)
 	header.Time = newBlockTime
 
-	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes)
+	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, n.valFlags, nil, txBytes)
 
 	// dont include the DecidedLastCommit because we're not committing the changes
 	// here, is just for broadcasting the tx. To persist the changes, use the

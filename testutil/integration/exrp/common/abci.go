@@ -8,10 +8,11 @@ import (
 
 // buildFinalizeBlockReq is a helper function to build
 // properly the FinalizeBlock request
-func BuildFinalizeBlockReq(header cmtproto.Header, validators []*cmttypes.Validator, txs ...[]byte) *abcitypes.RequestFinalizeBlock {
+func BuildFinalizeBlockReq(header cmtproto.Header, validators []*cmttypes.Validator, validatorFlags []cmtproto.BlockIDFlag, misbehaviors []abcitypes.Misbehavior, txs ...[]byte) *abcitypes.RequestFinalizeBlock {
 	// add validator's commit info to allocate corresponding tokens to validators
-	ci := GetCommitInfo(validators)
+	ci := GetCommitInfo(validators, validatorFlags)
 	return &abcitypes.RequestFinalizeBlock{
+		Misbehavior:        misbehaviors,
 		Height:             header.Height,
 		DecidedLastCommit:  ci,
 		Hash:               header.AppHash,
@@ -22,7 +23,7 @@ func BuildFinalizeBlockReq(header cmtproto.Header, validators []*cmttypes.Valida
 	}
 }
 
-func GetCommitInfo(validators []*cmttypes.Validator) abcitypes.CommitInfo {
+func GetCommitInfo(validators []*cmttypes.Validator, validatorFlags []cmtproto.BlockIDFlag) abcitypes.CommitInfo {
 	voteInfos := make([]abcitypes.VoteInfo, len(validators))
 	for i, val := range validators {
 		voteInfos[i] = abcitypes.VoteInfo{
@@ -30,7 +31,7 @@ func GetCommitInfo(validators []*cmttypes.Validator) abcitypes.CommitInfo {
 				Address: val.Address,
 				Power:   val.VotingPower,
 			},
-			BlockIdFlag: cmtproto.BlockIDFlagCommit,
+			BlockIdFlag: validatorFlags[i],
 		}
 	}
 	return abcitypes.CommitInfo{Votes: voteInfos}
