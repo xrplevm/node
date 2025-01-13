@@ -38,7 +38,7 @@ func (s *TestSuite) TestAddValidator_UnexistingValidator() {
 		afterRun      func()
 	}{
 		{
-			name:       "add unexisting validator - random address - no balance",
+			name:       "add unexisting validator - random address", 
 			valAddress: randomAcc.Address.String(),
 			afterRun: func() {
 
@@ -98,7 +98,7 @@ func (s *TestSuite) TestAddValidator_InvalidMsgAddValidator() {
 	randomAcc := randomAccs[0]
 	randomAccPubKey, _ := types1.NewAnyWithValue(randomAcc.ConsKey.PubKey())
 
-	validator := s.Network().GetValidators()[1]
+	validator := s.Network().GetValidators()[0]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
@@ -223,7 +223,8 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_StatusBonded() {
 }
 
 func (s *TestSuite) TestAddValidator_ExistingValidator_Jailed() {
-	validator := s.Network().GetValidators()[1]
+	valIndex := 1
+	validator := s.Network().GetValidators()[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
@@ -243,12 +244,12 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Jailed() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
 				// Exclude validator at index 1 from validator set
-				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[1].Address).String(), valAddr.String())
+				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[valIndex].Address).String(), valAddr.String())
 				vf := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 				for i := range valSet.Validators {
 					vf[i] = cmtproto.BlockIDFlagCommit
 				}
-				vf[1] = cmtproto.BlockIDFlagAbsent
+				vf[valIndex] = cmtproto.BlockIDFlagAbsent
 
 				require.NoError(s.T(), s.Network().NextNBlocksWithValidatorFlags(slashingtypes.DefaultSignedBlocksWindow+10, vf))
 
@@ -318,7 +319,8 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Jailed() {
 }
 
 func (s *TestSuite) TestAddValidator_ExistingValidator_Tombstoned() {
-	validator := s.Network().GetValidators()[1]
+	valIndex := 1
+	validator := s.Network().GetValidators()[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
@@ -433,6 +435,12 @@ func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1)
 	randomAcc := randomAccs[0]
 
+	// Default amount of tokens to fund the account with
+	coins := sdktypes.NewCoin(
+		s.Network().GetDenom(),
+		sdkmath.NewInt(100000000000),
+	)
+
 	tt := []struct {
 		name          string
 		valAddress    string
@@ -463,11 +471,6 @@ func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 			valAddress:    randomAcc.Address.String(),
 			expectedError: poatypes.ErrAddressHasNoTokens,
 			beforeRun: func() {
-				coins := sdktypes.NewCoin(
-					s.Network().GetDenom(),
-					sdkmath.NewInt(100000000000),
-				)
-
 				err := s.factory.FundAccount(
 					s.keyring.GetKey(0),
 					randomAcc.Address,
@@ -628,7 +631,8 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
 
-	validator := validators[1]
+	valIndex := 1
+	validator := validators[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
@@ -647,12 +651,12 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
 				// Exclude validator at index 1 from validator set
-				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[1].Address).String(), valAddr.String())
+				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[valIndex].Address).String(), valAddr.String())
 				vf := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 				for i := range valSet.Validators {
 					vf[i] = cmtproto.BlockIDFlagCommit
 				}
-				vf[1] = cmtproto.BlockIDFlagAbsent
+				vf[valIndex] = cmtproto.BlockIDFlagAbsent
 
 				require.NoError(s.T(), s.Network().NextNBlocksWithValidatorFlags(slashingtypes.DefaultSignedBlocksWindow+10, vf))
 
@@ -731,7 +735,8 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
 
-	validator := validators[1]
+	valIndex := 1
+	validator := validators[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
@@ -848,7 +853,9 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusUnbonded() {
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
 
-	valAddr, err := sdktypes.ValAddressFromBech32(validators[1].OperatorAddress)
+	valIndex := 1
+	validator := validators[valIndex]
+	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
 
@@ -867,12 +874,12 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusUnbonded() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
 				// Exclude validator at index 1 from validator set
-				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[1].Address).String(), valAddr.String())
+				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[valIndex].Address).String(), valAddr.String())
 				vf := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 				for i := range valSet.Validators {
 					vf[i] = cmtproto.BlockIDFlagCommit
 				}
-				vf[1] = cmtproto.BlockIDFlagAbsent
+				vf[valIndex] = cmtproto.BlockIDFlagAbsent
 
 				require.NoError(s.T(), s.Network().NextNBlocksWithValidatorFlags(slashingtypes.DefaultSignedBlocksWindow+10, vf))
 
@@ -937,7 +944,9 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusUnbonding() {
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
 
-	valAddr, err := sdktypes.ValAddressFromBech32(validators[1].OperatorAddress)
+	valIndex := 1
+	validator := validators[valIndex]
+	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
 
@@ -956,12 +965,12 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusUnbonding() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
 				// Exclude validator at index 1 from validator set
-				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[1].Address).String(), valAddr.String())
+				require.Equal(s.T(), sdktypes.ValAddress(valSet.Validators[valIndex].Address).String(), valAddr.String())
 				vf := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 				for i := range valSet.Validators {
 					vf[i] = cmtproto.BlockIDFlagCommit
 				}
-				vf[1] = cmtproto.BlockIDFlagAbsent
+				vf[valIndex] = cmtproto.BlockIDFlagAbsent
 
 				require.NoError(s.T(), s.Network().NextNBlocksWithValidatorFlags(slashingtypes.DefaultSignedBlocksWindow+10, vf))
 
