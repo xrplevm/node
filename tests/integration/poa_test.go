@@ -433,7 +433,6 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 }
 
 func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusUnbonded() {
-
 	// Validators
 	validators := s.Network().GetValidators()
 	require.NotZero(s.T(), len(validators))
