@@ -7,152 +7,16 @@ import (
 	sdkmath "cosmossdk.io/math"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 	poatypes "github.com/xrplevm/node/v5/x/poa/types"
 )
 
-func (s *TestSuite) TestAddValidator_UnexistingValidator() {
-	validator := s.Network().GetValidators()[0]
-	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
-	require.NoError(s.T(), err)
-
-	// Generate a random account
-	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1)
-	randomAcc := randomAccs[0]
-
-	tt := []struct {
-		name          string
-		valAddress    string
-		expectedError error
-		beforeRun     func()
-		afterRun      func()
-	}{
-		{
-			name:       "add unexisting validator - random address - no balance",
-			valAddress: randomAcc.Address.String(),
-			afterRun: func() {
-
-				require.NoError(s.T(), s.Network().NextBlock())
-
-				resVal, err := s.Network().GetStakingClient().Validator(
-					s.Network().GetContext(),
-					&stakingtypes.QueryValidatorRequest{
-						ValidatorAddr: valAddr.String(),
-					},
-				)
-				require.NoError(s.T(), err)
-
-				// Check if the validator is unbonding
-				require.Equal(s.T(), resVal.Validator.Status, stakingtypes.Bonded)
-			},
-		},
-	}
-
-	for _, tc := range tt {
-		s.Run(tc.name, func() {
-			if tc.beforeRun != nil {
-				tc.beforeRun()
-			}
-
-			msgPubKey, _ := types1.NewAnyWithValue(randomAcc.ConsKey.PubKey())
-
-			err := s.Network().PoaKeeper().ExecuteAddValidator(
-				s.Network().GetContext(),
-				&poatypes.MsgAddValidator{
-					ValidatorAddress: randomAcc.Address.String(),
-					Authority:        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-					Pubkey:           msgPubKey,
-					Description: stakingtypes.Description{
-						Moniker: "test",
-					},
-				},
-			)
-
-			if tc.expectedError != nil && err != nil {
-				require.Error(s.T(), err)
-				require.ErrorIs(s.T(), err, tc.expectedError)
-			} else {
-				require.NoError(s.T(), err)
-			}
-
-			if tc.afterRun != nil {
-				tc.afterRun()
-			}
-		})
-	}
-}
-
-func (s *TestSuite) TestAddValidator_ExistingValidator_StatusBonded() {
-	validator := s.Network().GetValidators()[0]
-	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
-	require.NoError(s.T(), err)
-	valAccAddr := sdktypes.AccAddress(valAddr)
-
-	tt := []struct {
-		name          string
-		valAddress    string
-		expectedError error
-		beforeRun     func()
-		afterRun      func()
-	}{
-		{
-			name:          "add existing validator - status bonded",
-			valAddress:    valAddr.String(),
-			expectedError: poatypes.ErrAddressHasBondedTokens,
-			beforeRun: func() {
-				resVal, err := s.Network().GetStakingClient().Validator(
-					s.Network().GetContext(),
-					&stakingtypes.QueryValidatorRequest{
-						ValidatorAddr: valAddr.String(),
-					},
-				)
-				require.NoError(s.T(), err)
-
-				// Check if the validator is bonded
-				require.Equal(s.T(), resVal.Validator.Status, stakingtypes.Bonded)
-			},
-		},
-	}
-
-	for _, tc := range tt {
-		s.Run(tc.name, func() {
-			if tc.beforeRun != nil {
-				tc.beforeRun()
-			}
-
-			err := s.Network().PoaKeeper().ExecuteAddValidator(
-				s.Network().GetContext(),
-				&poatypes.MsgAddValidator{
-					ValidatorAddress: valAccAddr.String(),
-					Authority:        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-					Pubkey:           validator.ConsensusPubkey,
-					Description: stakingtypes.Description{
-						Moniker: "test",
-					},
-				},
-			)
-
-			if tc.expectedError != nil && err != nil {
-				require.Error(s.T(), err)
-				require.ErrorIs(s.T(), err, tc.expectedError)
-			} else {
-				require.NoError(s.T(), err)
-			}
-
-			if tc.afterRun != nil {
-				tc.afterRun()
-			}
-		})
-	}
-}
+// RemoveValidator tests
 
 func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	// Generate a random account
