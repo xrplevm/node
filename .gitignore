@@ -8,5 +8,6 @@ release/
 
 
 .exrpd/
+*.out
 
 bin/

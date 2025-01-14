@@ -149,6 +149,16 @@ test-sim-full-app-fast:
 		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
 
 ###############################################################################
+###                                Coverage                                 ###
+###############################################################################
+
+coverage-poa:
+	@echo "--> Running POA coverage"
+	@go test $(EXCLUDED_POA_PACKAGES) -coverprofile=coverage_poa.out > /dev/null
+	@go tool cover -func=coverage_poa.out 
+
+
+###############################################################################
 ###                                Protobuf                                 ###
 ###############################################################################
 
