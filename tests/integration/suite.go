@@ -1,6 +1,7 @@
 package integration
 
 import (
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/stretchr/testify/suite"
@@ -31,7 +32,7 @@ func (s *TestSuite) SetupSuite() {
 
 func (s *TestSuite) SetupTest() {
 	// Check that the network was created successfully
-	kr := keyring.New(3)
+	kr := keyring.New(5)
 
 	customGenesis := exrpcommon.CustomGenesisState{}
 
@@ -46,6 +47,8 @@ func (s *TestSuite) SetupTest() {
 		exrpcommon.WithAmountOfValidators(5),
 		exrpcommon.WithCustomGenesis(customGenesis),
 		exrpcommon.WithBondDenom("apoa"),
+		exrpcommon.WithMinDepositAmt(sdkmath.NewInt(1)),
+		exrpcommon.WithValidatorOperators(kr.GetAllAccAddrs()),
 	)
 	s.Require().NotNil(s.network)
 

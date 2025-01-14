@@ -3,6 +3,7 @@ package exrpcommon
 import (
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -31,6 +32,8 @@ type Config struct {
 	OtherCoinDenom     []string
 	OperatorsAddrs     []sdktypes.AccAddress
 	CustomBaseAppOpts  []func(*baseapp.BaseApp)
+	MinDepositAmt      sdkmath.Int
+	Quorum             string
 }
 
 type CustomGenesisState map[string]interface{}
@@ -123,5 +126,18 @@ func WithValidatorOperators(keys []sdktypes.AccAddress) ConfigOption {
 func WithCustomBaseAppOpts(opts ...func(*baseapp.BaseApp)) ConfigOption {
 	return func(cfg *Config) {
 		cfg.CustomBaseAppOpts = opts
+	}
+}
+
+// WithMinDepositAmt sets the min deposit amount for the network.
+func WithMinDepositAmt(minDepositAmt sdkmath.Int) ConfigOption {
+	return func(cfg *Config) {
+		cfg.MinDepositAmt = minDepositAmt
+	}
+}
+
+func WithQuorum(quorum string) ConfigOption {
+	return func(cfg *Config) {
+		cfg.Quorum = quorum
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/xrplevm/node/v5/app"
 	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 
@@ -262,6 +263,11 @@ func (n *UpgradeIntegrationNetwork) GetOtherDenoms() []string {
 // GetValidators returns the network's validators
 func (n *UpgradeIntegrationNetwork) GetValidators() []stakingtypes.Validator {
 	return n.validators
+}
+
+// GetMinDepositAmt returns the network's min deposit amount
+func (n *UpgradeIntegrationNetwork) GetMinDepositAmt() sdkmath.Int {
+	return n.cfg.MinDepositAmt
 }
 
 // GetOtherDenoms returns network's other supported denoms
