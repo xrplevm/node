@@ -8,7 +8,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/testutil/mock"
 	"github.com/cosmos/gogoproto/proto"
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
@@ -17,6 +16,7 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/testutil/mock"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -156,7 +156,7 @@ func createBalances(accounts []sdktypes.AccAddress, denoms []string) []banktypes
 
 // createStakingValidator creates a staking validator from the given tm validator and bonded
 func createStakingValidator(val *cmttypes.Validator, bondedAmt sdkmath.Int, operatorAddr *sdktypes.AccAddress) (stakingtypes.Validator, error) {
-	pk, err := cryptocodec.FromTmPubKeyInterface(val.PubKey) //nolint:staticcheck
+	pk, err := cryptocodec.FromCmtPubKeyInterface(val.PubKey)
 	if err != nil {
 		return stakingtypes.Validator{}, err
 	}
@@ -179,7 +179,7 @@ func createStakingValidator(val *cmttypes.Validator, bondedAmt sdkmath.Int, oper
 		Jailed:            false,
 		Status:            stakingtypes.Bonded,
 		Tokens:            bondedAmt,
-		DelegatorShares:   sdkmath.LegacyOneDec(),
+		DelegatorShares:   sdktypes.DefaultPowerReduction.ToLegacyDec(),
 		Description:       stakingtypes.Description{},
 		UnbondingHeight:   int64(0),
 		UnbondingTime:     time.Unix(0, 0).UTC(),
@@ -239,7 +239,7 @@ func createDelegations(validators []stakingtypes.Validator) []stakingtypes.Deleg
 		if err != nil {
 			panic(err)
 		}
-		delegation := stakingtypes.NewDelegation(sdktypes.AccAddress(valAddr).String(), val.OperatorAddress, sdkmath.LegacyOneDec())
+		delegation := stakingtypes.NewDelegation(sdktypes.AccAddress(valAddr).String(), val.OperatorAddress, sdktypes.DefaultPowerReduction.ToLegacyDec())
 		delegations = append(delegations, delegation)
 	}
 	return delegations
@@ -418,14 +418,15 @@ func setAuthGenesisState(app *app.App, genesisState evmostypes.GenesisState, cus
 
 // GovCustomGenesisState defines the gov genesis state
 type GovCustomGenesisState struct {
-	denom string
+	denom         string
+	minDepositAmt sdkmath.Int
 }
 
 // setDefaultGovGenesisState sets the default gov genesis state
 func setDefaultGovGenesisState(app *app.App, genesisState evmostypes.GenesisState, overwriteParams GovCustomGenesisState) evmostypes.GenesisState {
 	govGen := govtypesv1.DefaultGenesisState()
 	updatedParams := govGen.Params
-	minDepositAmt := sdkmath.NewInt(1e18)
+	minDepositAmt := overwriteParams.minDepositAmt
 	updatedParams.MinDeposit = sdktypes.NewCoins(sdktypes.NewCoin(overwriteParams.denom, minDepositAmt))
 	updatedParams.ExpeditedMinDeposit = sdktypes.NewCoins(sdktypes.NewCoin(overwriteParams.denom, minDepositAmt.MulRaw(2)))
 	govGen.Params = updatedParams
