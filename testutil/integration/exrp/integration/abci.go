@@ -8,7 +8,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	cmttypes "github.com/cometbft/cometbft/types"
 )
 
 // NextBlock is a private helper function that runs the EndBlocker logic, commits the changes,
@@ -72,7 +72,7 @@ func (n *IntegrationNetwork) finalizeBlockAndCommit(duration time.Duration, vFla
 	}
 
 	// FinalizeBlock to run endBlock, deliverTx & beginBlock logic
-	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, validatorFlags, misbehaviors, txBytes...)
+	req := BuildFinalizeBlockReq(header, n.valSet.Validators, validatorFlags, misbehaviors, txBytes...)
 
 	res, err := n.app.FinalizeBlock(req)
 	if err != nil {
@@ -95,4 +95,35 @@ func (n *IntegrationNetwork) finalizeBlockAndCommit(duration time.Duration, vFla
 	_, err = n.app.Commit()
 
 	return res, err
+}
+
+// buildFinalizeBlockReq is a helper function to build
+// properly the FinalizeBlock request
+func BuildFinalizeBlockReq(header cmtproto.Header, validators []*cmttypes.Validator, validatorFlags []cmtproto.BlockIDFlag, misbehaviors []abcitypes.Misbehavior, txs ...[]byte) *abcitypes.RequestFinalizeBlock {
+	// add validator's commit info to allocate corresponding tokens to validators
+	ci := GetCommitInfo(validators, validatorFlags)
+	return &abcitypes.RequestFinalizeBlock{
+		Misbehavior:        misbehaviors,
+		Height:             header.Height,
+		DecidedLastCommit:  ci,
+		Hash:               header.AppHash,
+		NextValidatorsHash: header.ValidatorsHash,
+		ProposerAddress:    header.ProposerAddress,
+		Time:               header.Time,
+		Txs:                txs,
+	}
+}
+
+func GetCommitInfo(validators []*cmttypes.Validator, validatorFlags []cmtproto.BlockIDFlag) abcitypes.CommitInfo {
+	voteInfos := make([]abcitypes.VoteInfo, len(validators))
+	for i, val := range validators {
+		voteInfos[i] = abcitypes.VoteInfo{
+			Validator: abcitypes.Validator{
+				Address: val.Address,
+				Power:   val.VotingPower,
+			},
+			BlockIdFlag: validatorFlags[i],
+		}
+	}
+	return abcitypes.CommitInfo{Votes: voteInfos}
 }
