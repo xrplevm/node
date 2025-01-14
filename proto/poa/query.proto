@@ -1,9 +1,9 @@
 syntax = "proto3";
-package packages.blockchain.poa;
+package poa;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
-import "packages/blockchain/poa/params.proto";
+import "poa/params.proto";
 
 option go_package = "github.com/xrplevm/node/v5/x/poa/types";
 
