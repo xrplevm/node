@@ -194,7 +194,7 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 		},
 	}
 
-	req := exrpcommon.BuildFinalizeBlockReq(header, valSet.Validators, nil, nil)
+	req := BuildFinalizeBlockReq(header, valSet.Validators, nil, nil)
 	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func (n *UpgradeIntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.E
 	newBlockTime := header.Time.Add(time.Second)
 	header.Time = newBlockTime
 
-	req := exrpcommon.BuildFinalizeBlockReq(header, n.valSet.Validators, nil, nil, txBytes)
+	req := BuildFinalizeBlockReq(header, n.valSet.Validators, txBytes)
 
 	// dont include the DecidedLastCommit because we're not committing the changes
 	// here, is just for broadcasting the tx. To persist the changes, use the
