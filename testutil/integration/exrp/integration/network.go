@@ -120,7 +120,8 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		delegations: delegations,
 	}
 	govParams := GovCustomGenesisState{
-		denom: n.cfg.Denom,
+		denom:         n.cfg.Denom,
+		minDepositAmt: n.cfg.MinDepositAmt,
 	}
 
 	totalSupply := calculateTotalSupply(fundedAccountBalances)
@@ -246,6 +247,21 @@ func (n *IntegrationNetwork) GetChainID() string {
 // GetEIP155ChainID returns the network EIp-155 chainID number
 func (n *IntegrationNetwork) GetEIP155ChainID() *big.Int {
 	return n.cfg.EIP155ChainID
+}
+
+// GetValidatorSet returns the network's validator set
+func (n *IntegrationNetwork) GetValidatorSet() *cmttypes.ValidatorSet {
+	return n.valSet
+}
+
+// GetValidatorSigners returns the network's validator signers
+func (n *IntegrationNetwork) GetValidatorSigners() map[string]cmttypes.PrivValidator {
+	return n.valSigners
+}
+
+// GetMinDepositAmt returns the network's min deposit amount
+func (n *IntegrationNetwork) GetMinDepositAmt() sdkmath.Int {
+	return n.cfg.MinDepositAmt
 }
 
 // GetChainConfig returns the network's chain config

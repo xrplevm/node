@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
@@ -15,6 +16,7 @@ import (
 	authz "github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
@@ -30,7 +32,7 @@ type Network interface {
 	GetDenom() string
 	GetOtherDenoms() []string
 	GetValidators() []stakingtypes.Validator
-
+	GetMinDepositAmt() sdkmath.Int
 	NextBlock() error
 	NextBlockAfter(duration time.Duration) error
 	NextBlockWithTxs(txBytes ...[]byte) (*abcitypes.ResponseFinalizeBlock, error)
@@ -42,6 +44,7 @@ type Network interface {
 	GetStakingClient() stakingtypes.QueryClient
 	GetDistrClient() distrtypes.QueryClient
 	GetFeeMarketClient() feemarkettypes.QueryClient
+	GetGovClient() govtypes.QueryClient
 
 	BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error)
 	Simulate(txBytes []byte) (*txtypes.SimulateResponse, error)
