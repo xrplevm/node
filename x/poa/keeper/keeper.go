@@ -278,7 +278,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 
 	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, math.LegacyOneDec())
+	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, changedVal.DelegatorShares)
 	if err != nil {
 		return err
 	}
