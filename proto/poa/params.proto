@@ -1,5 +1,5 @@
 syntax = "proto3";
-package packages.blockchain.poa;
+package poa;
 
 import "gogoproto/gogo.proto";
 
