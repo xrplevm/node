@@ -180,9 +180,9 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
-			name: "should fail - delegations are greater than 0 with error on GetValidator call",
+			name:             "should fail - delegations are greater than 0 with error on GetValidator call",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-			expectedError: errors.New("staking validator error"),
+			expectedError:    errors.New("staking validator error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -193,7 +193,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					{
 						ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 						DelegatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-						Shares: sdk.DefaultPowerReduction.ToLegacyDec(),
+						Shares:           sdk.DefaultPowerReduction.ToLegacyDec(),
 					},
 				}, nil)
 			},
@@ -203,10 +203,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
-			name: "should fail - delegations are greater than 0 with delegated tokens",
+			name:             "should fail - delegations are greater than 0 with delegated tokens",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    types.ErrAddressHasDelegatedTokens,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -219,7 +219,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					{
 						ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 						DelegatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-						Shares: sdk.DefaultPowerReduction.ToLegacyDec(),
+						Shares:           sdk.DefaultPowerReduction.ToLegacyDec(),
 					},
 				}, nil)
 			},
@@ -229,7 +229,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - GetUnbondingDelegationsFromValidator returns error",
@@ -345,7 +345,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
-			name: "should pass - validator not found when iterating over delegator delegations",
+			name:             "should pass - validator not found when iterating over delegator delegations",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			pubKey:           msgPubKey,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -358,7 +358,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					{
 						ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 						DelegatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-						Shares: sdk.DefaultPowerReduction.ToLegacyDec(),
+						Shares:           sdk.DefaultPowerReduction.ToLegacyDec(),
 					},
 				}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
@@ -371,7 +371,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			slashingMocks: func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper) {},
+			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 	}
 
