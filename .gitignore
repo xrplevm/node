@@ -9,5 +9,6 @@ release/
 
 .exrpd/
 *.out
+*.html
 
 bin/
