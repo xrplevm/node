@@ -157,6 +157,10 @@ coverage-poa:
 	@go test $(EXCLUDED_POA_PACKAGES) -coverprofile=coverage_poa.out > /dev/null
 	@go tool cover -func=coverage_poa.out 
 
+coverage-integration:
+	@echo "--> Running integration coverage"
+	@go test ./tests/integration -mod=readonly -coverprofile=coverage_integration.out > /dev/null
+	@go tool cover -func=coverage_integration.out 
 
 ###############################################################################
 ###                                Protobuf                                 ###

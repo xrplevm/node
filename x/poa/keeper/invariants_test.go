@@ -12,47 +12,51 @@ import (
 )
 
 func TestStakingPowerInvariant_Valid(t *testing.T) {
-	poaKeeper, ctx := setupPoaKeeper(
-		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{
-				{
-					Tokens: sdk.DefaultPowerReduction,
-				},
-				{
-					Tokens: math.ZeroInt(),
-				},
-			}, nil)
+	tt := []struct {
+		name string
+		broken bool
+		validators func() ([]stakingtypes.Validator, error)
+	}{
+		{
+			name: "should pass - all validators have the same staking power",
+			broken: false,
+			validators: func() ([]stakingtypes.Validator, error) {
+				return []stakingtypes.Validator{
+					{
+						Tokens: sdk.DefaultPowerReduction,
+					},
+				}, nil
+			},
 		},
-		func(sdk.Context, *testutil.MockBankKeeper) {},
-		func(sdk.Context, *testutil.MockSlashingKeeper) {},
-	)
-
-	invariant := StakingPowerInvariant(*poaKeeper)
-	msg, broken := invariant(ctx)
-	require.False(t, broken, msg)
-}
-
-func TestStakingPowerInvariant_Invalid(t *testing.T) {
-	poaKeeper, ctx := setupPoaKeeper(
-		t,
-		func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-			stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{
-				{
-					Tokens: sdk.DefaultPowerReduction,
-				},
-				{
-					Tokens: sdk.DefaultPowerReduction.Add(math.OneInt()),
-				},
-			}, nil)
+		{
+			name: "should fail - one validator has excessive staking power",
+			broken: true,
+			validators: func() ([]stakingtypes.Validator, error) {
+				return []stakingtypes.Validator{
+					{
+						Tokens: sdk.DefaultPowerReduction.Add(math.OneInt()),
+					},
+				}, nil
+			},
 		},
-		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
-		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
-	)
+	}
 
-	invariant := StakingPowerInvariant(*poaKeeper)
-	msg, broken := invariant(ctx)
-	require.True(t, broken, msg)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			poaKeeper, ctx := setupPoaKeeper(
+				t,
+				func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+					stakingKeeper.EXPECT().GetAllValidators(ctx).Return(tc.validators())
+				},
+				func(sdk.Context, *testutil.MockBankKeeper) {},
+				func(sdk.Context, *testutil.MockSlashingKeeper) {},
+			)
+
+			invariant := StakingPowerInvariant(*poaKeeper)
+			_, broken := invariant(ctx)
+			require.Equal(t, broken, tc.broken)
+		})
+	}
 }
 
 func TestSelfDelegationInvariant_Valid(t *testing.T) {
