@@ -13,12 +13,12 @@ import (
 
 func TestStakingPowerInvariant_Valid(t *testing.T) {
 	tt := []struct {
-		name string
-		broken bool
+		name       string
+		broken     bool
 		validators func() ([]stakingtypes.Validator, error)
 	}{
 		{
-			name: "should pass - all validators have the same staking power",
+			name:   "should pass - all validators have the same staking power",
 			broken: false,
 			validators: func() ([]stakingtypes.Validator, error) {
 				return []stakingtypes.Validator{
@@ -29,7 +29,7 @@ func TestStakingPowerInvariant_Valid(t *testing.T) {
 			},
 		},
 		{
-			name: "should fail - one validator has excessive staking power",
+			name:   "should fail - one validator has excessive staking power",
 			broken: true,
 			validators: func() ([]stakingtypes.Validator, error) {
 				return []stakingtypes.Validator{

@@ -31,8 +31,8 @@ func setupPoaDecorator(t *testing.T) (
 
 func TestPoaDecorator_AnteHandle(t *testing.T) {
 	tt := []struct {
-		name string
-		msgs   []sdk.Msg
+		name          string
+		msgs          []sdk.Msg
 		expectedError error
 	}{
 		{

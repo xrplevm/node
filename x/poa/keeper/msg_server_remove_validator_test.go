@@ -14,27 +14,27 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 
 	msgServer := NewMsgServerImpl(*poaKeeper)
 
-	tt := []struct{
-		name string
-		authority string
+	tt := []struct {
+		name             string
+		authority        string
 		validatorAddress string
-		expectedErr error
+		expectedErr      error
 	}{
 		{
-			name: "should fail - invalid authority address",
-			authority: "invalidauthority",
+			name:             "should fail - invalid authority address",
+			authority:        "invalidauthority",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-			expectedErr: govtypes.ErrInvalidSigner,
+			expectedErr:      govtypes.ErrInvalidSigner,
 		},
 		{
-			name: "should fail - invalid validator address",
-			authority: poaKeeper.GetAuthority(),
+			name:             "should fail - invalid validator address",
+			authority:        poaKeeper.GetAuthority(),
 			validatorAddress: "invalidvalidatoraddress",
-			expectedErr: errors.New("decoding bech32 failed"),
+			expectedErr:      errors.New("decoding bech32 failed"),
 		},
 		{
-			name:  "should pass",
-			authority: poaKeeper.GetAuthority(),
+			name:             "should pass",
+			authority:        poaKeeper.GetAuthority(),
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 		},
 	}
@@ -55,5 +55,4 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 			}
 		})
 	}
-
 }
