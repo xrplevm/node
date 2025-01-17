@@ -1,4 +1,4 @@
-name: XRPL-GO Coverage
+name: Coverage
 on:
   push:
     branches: [ main ]
@@ -6,7 +6,7 @@ on:
     branches: [ '**' ]
 jobs:
   build:
-    name: Test Coverage
+    name: Unit test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

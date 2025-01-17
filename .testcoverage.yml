@@ -47,7 +47,6 @@ exclude:
     - app
     - tools
     - tests
-    - "**/test_*.go"
     - "**/*.pb.go"
     - "**/*.pb.gw.go"
     - "x/**/module.go"
