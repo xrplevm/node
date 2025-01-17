@@ -49,8 +49,9 @@ exclude:
     - tests
     - \.pb\.go$
     - \.pb\.gw\.go$
-    - module\.go$
+    - module.go$
     - \/testutil\/
+    - \/client\/
 
 # File name of go-test-coverage breakdown file, which can be used to 
 # analyze coverage difference.
