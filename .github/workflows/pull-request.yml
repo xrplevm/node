@@ -10,6 +10,19 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    unit:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-go@v3
+    
+        - name: Generate coverage report for unit tests
+            run: make coverage-unit
+
+        - name: Check coverage for unit tests
+            uses: vladopajic/go-test-coverage@v2
+            with:
+            config: ./.testcoverage.yml
     integration:
         runs-on: ubuntu-latest
         steps:
