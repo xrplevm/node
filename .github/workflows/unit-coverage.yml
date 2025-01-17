@@ -1,0 +1,22 @@
+name: XRPL-GO Coverage
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '**' ]
+jobs:
+  build:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+      
+      - name: Generate unit test coverage
+        run: make coverage-unit
+
+      - name: Check unit test coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          # Configure action using config file (option 1)
+          config: ./.testcoverage.yml
