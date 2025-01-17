@@ -118,6 +118,7 @@ lint-fix:
 ###                                Testing                                  ###
 ###############################################################################
 EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
+EXCLUDED_UNIT_PACKAGES=$(shell go list ./... | grep -v tests | grep -v testutil | grep -v tools | grep -v app | grep -v docs | grep -v cmd | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
 mocks:
 	@echo "--> Installing mockgen"
@@ -151,6 +152,11 @@ test-sim-full-app-fast:
 ###############################################################################
 ###                                Coverage                                 ###
 ###############################################################################
+
+coverage-unit:
+	@echo "--> Running unit coverage"
+	@go test $(EXCLUDED_UNIT_PACKAGES) -coverprofile=coverage_unit.out > /dev/null
+	@go tool cover -func=coverage_unit.out 
 
 coverage-poa:
 	@echo "--> Running POA coverage"
