@@ -1,8 +1,15 @@
 name: Coverage
-runs-on: ubuntu-latest
-steps:
-  - uses: actions/checkout@v3
-  - uses: actions/setup-go@v3
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
   
   - name: Generate coverage report for unit tests
     run: make coverage-unit
