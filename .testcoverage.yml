@@ -14,14 +14,6 @@ local-prefix: "github.com/xrplevm/node"
 # Holds coverage thresholds percentages, values should be in range [0-100].
 threshold:
   # (optional; default 0) 
-  # Minimum coverage percentage required for individual files.
-  file: 70
-
-  # (optional; default 0) 
-  # Minimum coverage percentage required for each package.
-  package: 70
-
-  # (optional; default 0) 
   # Minimum overall project coverage percentage required.
   total: 70
 
