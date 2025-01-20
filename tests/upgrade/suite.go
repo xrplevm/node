@@ -1,14 +1,18 @@
 package testupgrade
 
 import (
-	"os"
-
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
-	exrpupgrade "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
+	"github.com/xrplevm/node/v5/tests/upgrade/testutil"
+	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
-const defaultStateFile = "upgrade-state.json"
+const (
+	DefaultNodeDBName = ".exrp-upgrade"
+	DefaultNodeDBDir  = "exrp-upgrade"
+)
 
 type UpgradeTestSuite struct {
 	suite.Suite
@@ -21,21 +25,21 @@ func (s *UpgradeTestSuite) Network() *UpgradeTestNetwork {
 }
 
 func (s *UpgradeTestSuite) SetupTest() {
-	// Get the state file from the environment variable, or use the default one
-	stateFile := os.Getenv("UPGRADE_STATE_FILE")
-	if stateFile == "" {
-		stateFile = defaultStateFile
-	}
-	s.Require().NotEmpty(stateFile)
-
 	// Setup the SDK config
 	s.network.SetupSdkConfig()
 
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
 
+	s.Require().NoError(testutil.CopyNodeDB(DefaultNodeDBDir, DefaultNodeDBDir+"-tmp"))
+
+	db, err := dbm.NewGoLevelDB(DefaultNodeDBName, DefaultNodeDBDir+"-tmp", nil)
+	s.Require().NoError(err)
+
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		exrpupgrade.WithGenesisFile(stateFile),
+		exrpcommon.WithCustomBaseAppOpts(func(ba *baseapp.BaseApp) {
+			ba.SetDB(db)
+		}),
 	)
 
 	// Check that the network was created successfully
