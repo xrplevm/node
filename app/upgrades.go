@@ -11,6 +11,7 @@ import (
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
 	v4 "github.com/xrplevm/node/v5/app/upgrades/v4"
 	v5 "github.com/xrplevm/node/v5/app/upgrades/v5"
+	v6 "github.com/xrplevm/node/v5/app/upgrades/v6"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -32,6 +33,13 @@ func (app *App) setupUpgradeHandlers() {
 	app.UpgradeKeeper.SetUpgradeHandler(
 		v5.UpgradeName,
 		v5.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+		),
+	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v6.UpgradeName,
+		v6.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
 		),
@@ -60,7 +68,7 @@ func (app *App) setupUpgradeHandlers() {
 			},
 			Deleted: []string{},
 		}
-	case v5.UpgradeName:
+	case v5.UpgradeName, v6.UpgradeName:
 		// No store upgrades for v5
 		storeUpgrades = &storetypes.StoreUpgrades{}
 	}
