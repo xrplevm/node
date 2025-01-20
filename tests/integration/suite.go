@@ -25,9 +25,12 @@ func (s *TestSuite) Network() *Network {
 	return s.network
 }
 
-func (s *TestSuite) SetupTest() {
+func (s *TestSuite) SetupSuite() {
 	s.network.SetupSdkConfig()
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
+}
+
+func (s *TestSuite) SetupTest() {
 	// Check that the network was created successfully
 	kr := keyring.New(5)
 

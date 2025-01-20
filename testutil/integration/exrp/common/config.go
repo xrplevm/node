@@ -87,17 +87,17 @@ func WithBalances(balances ...banktypes.Balance) ConfigOption {
 	}
 }
 
-// WithDenom sets the denom for the network.
-func WithDenom(denom string) ConfigOption {
-	return func(cfg *Config) {
-		cfg.Denom = denom
-	}
-}
-
 // WithBondDenom sets the bond denom for the network.
 func WithBondDenom(denom string) ConfigOption {
 	return func(cfg *Config) {
 		cfg.BondDenom = denom
+	}
+}
+
+// WithDenom sets the denom for the network.
+func WithDenom(denom string) ConfigOption {
+	return func(cfg *Config) {
+		cfg.Denom = denom
 	}
 }
 

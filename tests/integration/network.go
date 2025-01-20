@@ -6,6 +6,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
@@ -63,6 +64,10 @@ func (n *Network) GetAuthzClient() authz.QueryClient {
 
 func (n *Network) GetStakingClient() stakingtypes.QueryClient {
 	return exrpcommon.GetStakingClient(n)
+}
+
+func (n *Network) GetSlashingClient() slashingtypes.QueryClient {
+	return exrpcommon.GetSlashingClient(n)
 }
 
 func (n *Network) GetDistrClient() distrtypes.QueryClient {
