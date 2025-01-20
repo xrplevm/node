@@ -1,6 +1,7 @@
 package ante
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v5/x/poa/testutil"
@@ -16,7 +18,7 @@ import (
 )
 
 func setupPoaDecorator(t *testing.T) (
-	*PoaDecorator,
+	PoaDecorator,
 	sdk.Context,
 ) {
 	key := storetypes.NewKVStoreKey(types.StoreKey)
@@ -24,20 +26,48 @@ func setupPoaDecorator(t *testing.T) (
 	testCtx := sdktestutil.DefaultContextWithDB(t, key, tsKey)
 	ctx := testCtx.Ctx.WithBlockHeader(tmproto.Header{Time: time.Now()})
 
-	return &PoaDecorator{}, ctx
+	return NewPoaDecorator(), ctx
 }
 
 func TestPoaDecorator_AnteHandle(t *testing.T) {
-	pd, ctx := setupPoaDecorator(t)
-
-	ctrl := gomock.NewController(t)
-	txMock := testutil.NewMockTx(ctrl)
-	txMock.EXPECT().GetMsgs().Return([]sdk.Msg{}).AnyTimes()
-
-	mockNext := func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
-		return ctx, nil
+	tt := []struct {
+		name          string
+		msgs          []sdk.Msg
+		expectedError error
+	}{
+		{
+			name: "should return error - tx not allowed",
+			msgs: []sdk.Msg{
+				&stakingtypes.MsgUndelegate{},
+				&stakingtypes.MsgBeginRedelegate{},
+			},
+			expectedError: errors.New("tx type not allowed"),
+		},
+		{
+			name: "should not return error",
+			msgs: []sdk.Msg{
+				&stakingtypes.MsgDelegate{},
+			},
+		},
 	}
 
-	_, err := pd.AnteHandle(ctx, txMock, false, mockNext)
-	require.NoError(t, err)
+	for _, tc := range tt {
+		pd, ctx := setupPoaDecorator(t)
+
+		ctrl := gomock.NewController(t)
+		txMock := testutil.NewMockTx(ctrl)
+		txMock.EXPECT().GetMsgs().Return(tc.msgs).AnyTimes()
+
+		mockNext := func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
+			return ctx, nil
+		}
+
+		_, err := pd.AnteHandle(ctx, txMock, false, mockNext)
+		if tc.expectedError != nil {
+			require.Error(t, err)
+			require.Equal(t, tc.expectedError, err)
+		} else {
+			require.NoError(t, err)
+		}
+	}
 }
