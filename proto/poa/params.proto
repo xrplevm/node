@@ -1,9 +1,9 @@
 syntax = "proto3";
-package packages.blockchain.poa;
+package poa;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/xrplevm/node/v5/x/poa/types";
+option go_package = "github.com/xrplevm/node/v6/x/poa/types";
 
 // Params defines the parameters for the module.
 message Params { option (gogoproto.goproto_stringer) = false; }
