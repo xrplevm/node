@@ -10,10 +10,10 @@ import (
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	commonnetwork "github.com/xrplevm/node/v5/testutil/integration/common/network"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
-	upgradenetwork "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
-	poatypes "github.com/xrplevm/node/v5/x/poa/types"
+	commonnetwork "github.com/xrplevm/node/v6/testutil/integration/common/network"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
+	upgradenetwork "github.com/xrplevm/node/v6/testutil/integration/exrp/upgrade"
+	poatypes "github.com/xrplevm/node/v6/x/poa/types"
 )
 
 var _ commonnetwork.Network = (*UpgradeTestNetwork)(nil)

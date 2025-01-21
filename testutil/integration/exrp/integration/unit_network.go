@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/evmos/evmos/v20/x/evm/statedb"
 	inflationtypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
-	"github.com/xrplevm/node/v5/app"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v6/app"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 )
 
 // UnitTestIntegrationNetwork is the implementation of the Network interface for unit tests.

@@ -12,7 +12,7 @@ import (
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
 	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
-	poakeeper "github.com/xrplevm/node/v5/x/poa/keeper"
+	poakeeper "github.com/xrplevm/node/v6/x/poa/keeper"
 )
 
 func (n *IntegrationNetwork) BankKeeper() bankkeeper.Keeper {

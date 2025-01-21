@@ -6,7 +6,7 @@ package exrpupgrade
 import (
 	"os"
 
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 )
 
 func DefaultUpgradeConfig() exrpcommon.Config {

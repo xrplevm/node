@@ -4,8 +4,8 @@
 package factory
 
 import (
-	"github.com/xrplevm/node/v5/testutil/integration/common/grpc"
-	"github.com/xrplevm/node/v5/testutil/integration/common/network"
+	"github.com/xrplevm/node/v6/testutil/integration/common/grpc"
+	"github.com/xrplevm/node/v6/testutil/integration/common/network"
 )
 
 const (
