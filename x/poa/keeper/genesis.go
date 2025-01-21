@@ -2,7 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v5/x/poa/types"
+	"github.com/xrplevm/node/v6/x/poa/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.

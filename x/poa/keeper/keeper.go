@@ -17,7 +17,7 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/xrplevm/node/v5/x/poa/types"
+	"github.com/xrplevm/node/v6/x/poa/types"
 )
 
 type (
