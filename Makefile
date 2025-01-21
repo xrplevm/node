@@ -125,6 +125,8 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
+test: test-poa test-sim-benchmark-simulation test-sim-full-app-fast
+
 test-poa:
 	@echo "--> Running POA tests"
 	@go test $(EXCLUDED_POA_PACKAGES) 
