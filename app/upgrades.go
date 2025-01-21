@@ -9,9 +9,9 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
-	v4 "github.com/xrplevm/node/v5/app/upgrades/v4"
-	v5 "github.com/xrplevm/node/v5/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v5/app/upgrades/v6"
+	v4 "github.com/xrplevm/node/v6/app/upgrades/v4"
+	v5 "github.com/xrplevm/node/v6/app/upgrades/v5"
+	v6 "github.com/xrplevm/node/v6/app/upgrades/v6"
 )
 
 func (app *App) setupUpgradeHandlers() {
