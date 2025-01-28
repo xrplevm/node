@@ -1,6 +1,7 @@
 package testupgrade
 
 import (
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -71,4 +72,8 @@ func (n *UpgradeTestNetwork) GetDistrClient() distrtypes.QueryClient {
 
 func (n *UpgradeTestNetwork) GetPoaClient() poatypes.QueryClient {
 	return exrpcommon.GetPoaClient(n)
+}
+
+func (n *UpgradeTestNetwork) GetUpgradeClient() upgradetypes.QueryClient {
+	return exrpcommon.GetUpgradeClient(n)
 }

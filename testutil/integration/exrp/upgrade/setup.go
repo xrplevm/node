@@ -23,7 +23,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		panic(err)
 	}
 	logger := log.NewNopLogger()
-	loadLatest := false 
+	loadLatest := true 
 	skipUpgradeHeights := map[int64]bool{}
 	homePath := testNodeHome
 	invCheckPeriod := uint(5)

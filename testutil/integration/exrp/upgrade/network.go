@@ -69,9 +69,6 @@ func New(opts ...exrpcommon.ConfigOption) *UpgradeIntegrationNetwork {
 		validators: []stakingtypes.Validator{},
 	}
 
-	if cfg.GenesisBytes == nil {
-		panic("GenesisBytes is nil")
-	}
 	err := network.configureAndInitChain()
 	if err != nil {
 		panic(err)
@@ -118,7 +115,7 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	exrpApp := CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
 	upgradePlan := upgradetypes.Plan{
-		Name:   "v1",
+		Name:   n.cfg.UpgradePlanName,
 		Height: exrpApp.LastBlockHeight() + 1,
 	}
 
@@ -131,6 +128,9 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
 	upgradeStore := upgradeStoreService.OpenKVStore(exrpApp.NewContext(true))
 	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
+
+	exrpApp.CommitMultiStore().Commit()
+
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,6 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	if _, err := exrpApp.Commit(); err != nil {
 		return err
 	}
-
 
 	n.app = exrpApp
 
