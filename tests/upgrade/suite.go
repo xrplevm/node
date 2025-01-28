@@ -1,12 +1,9 @@
 package testupgrade
 
 import (
-	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v5/tests/upgrade/testutil"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	exrpupgrade "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
 )
 
 const (
@@ -30,16 +27,10 @@ func (s *UpgradeTestSuite) SetupTest() {
 
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
 
-	s.Require().NoError(testutil.CopyNodeDB(DefaultNodeDBDir, DefaultNodeDBDir+"-tmp"))
-
-	db, err := dbm.NewGoLevelDB(DefaultNodeDBName, DefaultNodeDBDir+"-tmp", nil)
-	s.Require().NoError(err)
 
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		exrpcommon.WithCustomBaseAppOpts(func(ba *baseapp.BaseApp) {
-			ba.SetDB(db)
-		}),
+		exrpupgrade.WithUpgradePlanName("v6.0.0"),
 	)
 
 	// Check that the network was created successfully

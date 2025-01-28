@@ -34,6 +34,7 @@ type Config struct {
 	CustomBaseAppOpts  []func(*baseapp.BaseApp)
 	MinDepositAmt      sdkmath.Int
 	Quorum             string
+	UpgradePlanName    string
 }
 
 type CustomGenesisState map[string]interface{}
