@@ -9,16 +9,11 @@ import (
 	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
 )
 
-const (
-	DefaultNodeDBName = "application"
-	DefaultNodeDBDir  = ".exrpd/data"
-)
-
 // createExrpApp creates an exrp app
-func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp)) *app.App {
+func CreateExrpApp(chainID string, dataDir string, nodeDBName string, customBaseAppOptions ...func(*baseapp.BaseApp)) *app.App {
 	testNodeHome := exrpcommon.MustGetIntegrationTestNodeHome()
 	// Create exrp app
-	db, err := dbm.NewGoLevelDB(DefaultNodeDBName, DefaultNodeDBDir, nil)
+	db, err := dbm.NewGoLevelDB(nodeDBName, dataDir, nil)
 	if err != nil {
 		panic(err)
 	}

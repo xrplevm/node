@@ -6,11 +6,6 @@ import (
 	exrpupgrade "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
 )
 
-const (
-	DefaultNodeDBName = ".exrp-upgrade"
-	DefaultNodeDBDir  = "exrp-upgrade"
-)
-
 type UpgradeTestSuite struct {
 	suite.Suite
 
@@ -27,10 +22,11 @@ func (s *UpgradeTestSuite) SetupTest() {
 
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
 
-
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
 		exrpupgrade.WithUpgradePlanName("v6.0.0"),
+		exrpupgrade.WithDataDir(".exrpd/data"),
+		exrpupgrade.WithNodeDBName("application"),
 	)
 
 	// Check that the network was created successfully

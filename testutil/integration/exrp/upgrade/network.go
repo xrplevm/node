@@ -112,28 +112,9 @@ func getValidatorsAndSignersFromCustomGenesisState(
 // It creates the genesis state and starts the network.
 func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	// Create a new EvmosApp with the following params
-	exrpApp := CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
+	exrpApp := CreateExrpApp(n.cfg.ChainID, n.cfg.DataDir, n.cfg.NodeDBName, n.cfg.CustomBaseAppOpts...)
 
-	upgradePlan := upgradetypes.Plan{
-		Name:   n.cfg.UpgradePlanName,
-		Height: exrpApp.LastBlockHeight() + 1,
-	}
-
-	bz, err := exrpApp.AppCodec().Marshal(&upgradePlan)
-	if err != nil {
-		return err
-	}
-
-	upgradeKey := exrpApp.GetKey(upgradetypes.StoreKey)
-	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
-	upgradeStore := upgradeStoreService.OpenKVStore(exrpApp.NewContext(true))
-	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
-
-	exrpApp.CommitMultiStore().Commit()
-
-	if err != nil {
-		return err
-	}
+	fmt.Println("pre commit last block height", exrpApp.LastBlockHeight())
 
 	validators, err := exrpApp.StakingKeeper.GetBondedValidatorsByPower(exrpApp.NewContext(true))
 	if err != nil {
@@ -144,6 +125,8 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("post commit last block height", exrpApp.LastBlockHeight())
 
 	header := cmtproto.Header{
 		ChainID:            n.cfg.ChainID,
@@ -158,18 +141,50 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 		},
 	}
 
+	fmt.Println("before finalize block")
+
 	req := BuildFinalizeBlockReq(header, valSet.Validators, nil, nil)
 	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
+	fmt.Println("after finalize block")
+
+	// Store upgrade plan on finalizeblock
+	upgradePlan := upgradetypes.Plan{
+		Name:   n.cfg.UpgradePlanName,
+		Height: exrpApp.LastBlockHeight() + 1,
+	}
+
+	bz, err := exrpApp.AppCodec().Marshal(&upgradePlan)
+	if err != nil {
+		return err
+	}
+
+	upgradeKey := exrpApp.GetKey(upgradetypes.StoreKey)
+	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
+	upgradeStore := upgradeStoreService.OpenKVStore(exrpApp.NewContext(false))
+	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
+
+	plan, err := exrpApp.UpgradeKeeper.CurrentPlan(
+		exrpApp.NewContext(true),
+		&upgradetypes.QueryCurrentPlanRequest{},
+	)
+	if err != nil {
+		return err
+	}
+	fmt.Println("plan", plan)
 
 	// TODO - this might not be the best way to initilize the context
 	n.ctx = exrpApp.BaseApp.NewContextLegacy(false, header)
+
+	fmt.Println("before last commit")
 
 	// Commit genesis changes
 	if _, err := exrpApp.Commit(); err != nil {
 		return err
 	}
+
+	fmt.Println("after last commit")
 
 	n.app = exrpApp
 

@@ -42,6 +42,7 @@ func (app *App) setupUpgradeHandlers() {
 		v6.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
+			app.StakingKeeper,
 		),
 	)
 

@@ -30,3 +30,15 @@ func WithUpgradePlanName(name string) exrpcommon.ConfigOption {
 		cfg.UpgradePlanName = name
 	}
 }
+
+func WithDataDir(dataDir string) exrpcommon.ConfigOption {
+	return func(cfg *exrpcommon.Config) {
+		cfg.DataDir = dataDir
+	}
+}
+
+func WithNodeDBName(nodeDBName string) exrpcommon.ConfigOption {
+	return func(cfg *exrpcommon.Config) {
+		cfg.NodeDBName = nodeDBName
+	}
+}

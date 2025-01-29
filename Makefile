@@ -128,6 +128,8 @@ mocks:
 
 test-upgrade:
 	@echo "--> Running upgrade testsuite"
+	@rm -rf ./tests/upgrade/.exrpd
+	@cp -r ./tests/upgrade/.exrpd-backup ./tests/upgrade/.exrpd
 	@go test -mod=readonly -v ./tests/upgrade
 
 test-integration:

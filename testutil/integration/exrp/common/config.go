@@ -35,6 +35,8 @@ type Config struct {
 	MinDepositAmt      sdkmath.Int
 	Quorum             string
 	UpgradePlanName    string
+	DataDir            string
+	NodeDBName         string
 }
 
 type CustomGenesisState map[string]interface{}
