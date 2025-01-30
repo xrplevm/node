@@ -131,9 +131,9 @@ test: test-poa test-integration test-sim-benchmark-simulation test-sim-full-app-
 
 test-latest-upgrade:
 	@echo "--> Running upgrade testsuite"
-	@rm -rf $(LATEST_UPGRADE)/tests/.exrpd
-	@cp -r ./.exrpd $(LATEST_UPGRADE)/tests/.exrpd
-	@go test -mod=readonly -v $(LATEST_UPGRADE)/tests
+	@rm -rf $(LATEST_UPGRADE)/integration/.exrpd
+	@cp -r ./.exrpd $(LATEST_UPGRADE)/integration/.exrpd
+	@go test -mod=readonly -v $(LATEST_UPGRADE)/integration
 
 test-integration:
 	@echo "--> Running integration testsuite"

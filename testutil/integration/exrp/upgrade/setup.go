@@ -5,8 +5,8 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
-	"github.com/xrplevm/node/v5/app"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v6/app"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 )
 
 // createExrpApp creates an exrp app
