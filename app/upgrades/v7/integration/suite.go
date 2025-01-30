@@ -24,7 +24,7 @@ func (s *UpgradeTestSuite) SetupTest() {
 
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		exrpupgrade.WithUpgradePlanName("v6.0.0"),
+		exrpupgrade.WithUpgradePlanName("v7.0.0"),
 		exrpupgrade.WithDataDir(".exrpd/data"),
 		exrpupgrade.WithNodeDBName("application"),
 	)
