@@ -8,7 +8,7 @@ import (
 
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/xrplevm/node/v5/testutil/integration/common/keyring"
+	"github.com/xrplevm/node/v6/testutil/integration/common/keyring"
 )
 
 // FundTxFactory is the interface that wraps the common methods to fund accounts

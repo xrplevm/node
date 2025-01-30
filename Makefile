@@ -127,6 +127,8 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
+test: test-poa test-integration test-sim-benchmark-simulation test-sim-full-app-fast
+
 test-latest-upgrade:
 	@echo "--> Running upgrade testsuite"
 	@rm -rf $(LATEST_UPGRADE)/tests/.exrpd
@@ -159,17 +161,17 @@ test-sim-full-app-fast:
 coverage-unit:
 	@echo "--> Running unit coverage"
 	@go test $(EXCLUDED_UNIT_PACKAGES) -coverprofile=coverage_unit.out > /dev/null
-	@go tool cover -func=coverage_unit.out 
+	@go tool cover -func=coverage_unit.out
 
 coverage-poa:
 	@echo "--> Running POA coverage"
 	@go test $(EXCLUDED_POA_PACKAGES) -coverprofile=coverage_poa.out > /dev/null
-	@go tool cover -func=coverage_poa.out 
+	@go tool cover -func=coverage_poa.out
 
 coverage-integration:
 	@echo "--> Running integration coverage"
 	@go test ./tests/integration -mod=readonly -coverprofile=coverage_integration.out > /dev/null
-	@go tool cover -func=coverage_integration.out 
+	@go tool cover -func=coverage_integration.out
 
 ###############################################################################
 ###                                Protobuf                                 ###

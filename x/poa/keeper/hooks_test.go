@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v5/x/poa/testutil"
+	"github.com/xrplevm/node/v6/x/poa/testutil"
 )
 
 func TestHooks_BeforeDelegationCreated(t *testing.T) {

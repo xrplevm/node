@@ -9,8 +9,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/xrplevm/node/v5/app"
-	exrpcommon "github.com/xrplevm/node/v5/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v6/app"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"

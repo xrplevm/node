@@ -3,7 +3,7 @@ package tests
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
-	exrpupgrade "github.com/xrplevm/node/v5/testutil/integration/exrp/upgrade"
+	exrpupgrade "github.com/xrplevm/node/v6/testutil/integration/exrp/upgrade"
 )
 
 type UpgradeTestSuite struct {
