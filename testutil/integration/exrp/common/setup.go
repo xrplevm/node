@@ -25,11 +25,6 @@ import (
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
-const (
-	DefaultNodeDBName = "application"
-	DefaultNodeDBDir  = ".exrpd/data"
-)
-
 // GenSetupFn is the type for the module genesis setup functions
 type GenSetupFn func(exrpApp *app.App, genesisState app.GenesisState, customGenesis interface{}) (app.GenesisState, error)
 
@@ -105,10 +100,7 @@ func MustGetIntegrationTestNodeHome() string {
 func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp)) *app.App {
 	testNodeHome := MustGetIntegrationTestNodeHome()
 	// Create exrp app
-	db, err := dbm.NewGoLevelDB(DefaultNodeDBName, DefaultNodeDBDir, nil)
-	if err != nil {
-		panic(err)
-	}
+	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
