@@ -76,45 +76,11 @@ func New(opts ...exrpcommon.ConfigOption) *UpgradeIntegrationNetwork {
 	return network
 }
 
-func getValidatorsAndSignersFromCustomGenesisState(
-	stakingState stakingtypes.GenesisState,
-) (
-	*cmttypes.ValidatorSet,
-	map[string]cmttypes.PrivValidator,
-	[]abcitypes.ValidatorUpdate, error,
-) {
-	genesisValidators := stakingState.Validators
-
-	tmValidators := make([]*cmttypes.Validator, 0, len(genesisValidators))
-	validatorsUpdates := make([]abcitypes.ValidatorUpdate, 0, len(genesisValidators))
-	valSigners := make(map[string]cmttypes.PrivValidator, len(genesisValidators))
-
-	// For each validator, we need to get the pubkey and create a new validator
-	for _, val := range genesisValidators {
-		pb, err := val.CmtConsPublicKey()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		pubKey := ed25519.PubKey(pb.GetEd25519())
-
-		validator := cmttypes.NewValidator(pubKey, 10000000)
-		tmValidators = append(tmValidators, validator)
-		validatorsUpdates = append(validatorsUpdates, abcitypes.ValidatorUpdate{
-			PubKey: pb,
-			Power:  val.GetConsensusPower(val.Tokens),
-		})
-	}
-
-	return cmttypes.NewValidatorSet(tmValidators), valSigners, validatorsUpdates, nil
-}
-
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	// Create a new EvmosApp with the following params
 	exrpApp := CreateExrpApp(n.cfg.ChainID, n.cfg.DataDir, n.cfg.NodeDBName, n.cfg.CustomBaseAppOpts...)
-
-	fmt.Println("pre commit last block height", exrpApp.LastBlockHeight())
 
 	validators, err := exrpApp.StakingKeeper.GetBondedValidatorsByPower(exrpApp.NewContext(true))
 	if err != nil {
@@ -125,8 +91,6 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("post commit last block height", exrpApp.LastBlockHeight())
 
 	header := cmtproto.Header{
 		ChainID:            n.cfg.ChainID,
@@ -141,15 +105,12 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 		},
 	}
 
-	fmt.Println("before finalize block")
-
 	req := BuildFinalizeBlockReq(header, valSet.Validators, nil, nil)
 	if _, err := exrpApp.FinalizeBlock(req); err != nil {
 		return err
 	}
-	fmt.Println("after finalize block")
 
-	// Store upgrade plan on finalizeblock
+	// Store upgrade plan on finalizeblock state.
 	upgradePlan := upgradetypes.Plan{
 		Name:   n.cfg.UpgradePlanName,
 		Height: exrpApp.LastBlockHeight() + 1,
@@ -160,31 +121,21 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 		return err
 	}
 
-	upgradeKey := exrpApp.GetKey(upgradetypes.StoreKey)
-	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
-	upgradeStore := upgradeStoreService.OpenKVStore(exrpApp.NewContext(false))
-	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
-
-	plan, err := exrpApp.UpgradeKeeper.CurrentPlan(
-		exrpApp.NewContext(true),
-		&upgradetypes.QueryCurrentPlanRequest{},
-	)
-	if err != nil {
-		return err
-	}
-	fmt.Println("plan", plan)
-
 	// TODO - this might not be the best way to initilize the context
 	n.ctx = exrpApp.BaseApp.NewContextLegacy(false, header)
 
-	fmt.Println("before last commit")
+	upgradeKey := exrpApp.GetKey(upgradetypes.StoreKey)
+	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
+	upgradeStore := upgradeStoreService.OpenKVStore(n.ctx)
+	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
+	if err != nil {
+		return err
+	}
 
 	// Commit genesis changes
 	if _, err := exrpApp.Commit(); err != nil {
 		return err
 	}
-
-	fmt.Println("after last commit")
 
 	n.app = exrpApp
 

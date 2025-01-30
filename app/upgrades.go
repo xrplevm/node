@@ -11,7 +11,7 @@ import (
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
 	v4 "github.com/xrplevm/node/v5/app/upgrades/v4"
 	v5 "github.com/xrplevm/node/v5/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v5/app/upgrades/vtest"
+	v6 "github.com/xrplevm/node/v5/app/upgrades/v6"
 )
 
 func (app *App) setupUpgradeHandlers() {

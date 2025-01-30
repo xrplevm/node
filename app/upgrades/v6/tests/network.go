@@ -1,4 +1,4 @@
-package testupgrade
+package tests
 
 import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"

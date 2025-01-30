@@ -1,4 +1,4 @@
-package testupgrade
+package tests
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"

@@ -4,6 +4,7 @@ BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git log -1 --format='%H')
 BINDIR ?= $(GOPATH)/bin
 APP = ./app
+LATEST_UPGRADE = $(shell ls -d ./app/upgrades/* | sort -r | head -n 1)
 
 # don't override user values
 ifeq (,$(VERSION))
@@ -126,11 +127,11 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test-upgrade:
+test-latest-upgrade:
 	@echo "--> Running upgrade testsuite"
-	@rm -rf ./tests/upgrade/.exrpd
-	@cp -r ./tests/upgrade/.exrpd-backup ./tests/upgrade/.exrpd
-	@go test -mod=readonly -v ./tests/upgrade
+	@rm -rf $(LATEST_UPGRADE)/tests/.exrpd
+	@cp -r ./.exrpd $(LATEST_UPGRADE)/tests/.exrpd
+	@go test -mod=readonly -v $(LATEST_UPGRADE)/tests
 
 test-integration:
 	@echo "--> Running integration testsuite"

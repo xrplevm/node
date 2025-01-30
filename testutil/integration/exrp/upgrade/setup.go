@@ -18,7 +18,7 @@ func CreateExrpApp(chainID string, dataDir string, nodeDBName string, customBase
 		panic(err)
 	}
 	logger := log.NewNopLogger()
-	loadLatest := true 
+	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
 	homePath := testNodeHome
 	invCheckPeriod := uint(5)
