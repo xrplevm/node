@@ -1,9 +1,8 @@
 package integration
 
 import (
-	"time"
-
 	"math/rand"
+	"time"
 
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
@@ -35,12 +34,11 @@ func (s *UpgradeTestSuite) TestUpgrade_Poa_ExecuteRemoveValidator() {
 
 	s.RunUpgrade(upgradeName)
 
-	s.network.PoaKeeper().ExecuteRemoveValidator(
+	err = s.network.PoaKeeper().ExecuteRemoveValidator(
 		s.network.GetContext(),
 		valAccAddr.String(),
 	)
 	s.Require().NoError(err)
-	
 
 	postValidator, err := s.network.GetStakingClient().Validator(
 		s.network.GetContext(),
@@ -54,10 +52,10 @@ func (s *UpgradeTestSuite) TestUpgrade_Poa_ExecuteRemoveValidator() {
 	s.Require().True(postValidator.Validator.DelegatorShares.RoundInt().IsZero(), "validator delegator shares should be zero")
 }
 
-func (s *UpgradeTestSuite)  TestUpgrade_Poa_ExecuteAddValidator() {
+func (s *UpgradeTestSuite) TestUpgrade_Poa_ExecuteAddValidator() {
 	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
 	randomAcc := randomAccs[0]
-		randomValAddr := sdktypes.ValAddress(randomAcc.Address.Bytes())
+	randomValAddr := sdktypes.ValAddress(randomAcc.Address.Bytes())
 
 	authority := sdktypes.AccAddress(address.Module("gov"))
 	msg, err := poatypes.NewMsgAddValidator(
@@ -68,6 +66,7 @@ func (s *UpgradeTestSuite)  TestUpgrade_Poa_ExecuteAddValidator() {
 			Moniker: "test",
 		},
 	)
+	s.Require().NoError(err)
 
 	_, err = s.network.GetStakingClient().Validator(
 		s.network.GetContext(),
@@ -84,7 +83,7 @@ func (s *UpgradeTestSuite)  TestUpgrade_Poa_ExecuteAddValidator() {
 		msg,
 	)
 	s.Require().NoError(err)
-	
+
 	val, err := s.network.GetStakingClient().Validator(
 		s.network.GetContext(),
 		&stakingtypes.QueryValidatorRequest{

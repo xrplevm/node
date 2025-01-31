@@ -1,4 +1,3 @@
-//nolint:dupl
 package integration
 
 import (
@@ -70,7 +69,7 @@ func (s *UpgradeTestSuite) TestUpgrade_ERC20_MintCoins() {
 			Denom:   s.network.GetDenom(),
 		},
 	)
-
+	s.Require().NoError(err)
 	s.RunUpgrade(upgradeName)
 
 	err = s.network.ERC20Keeper().MintCoins(
@@ -147,7 +146,7 @@ func (s *UpgradeTestSuite) TestUpgrade_ERC20_TransferOwnership() {
 	newOwner, err := sdktypes.AccAddressFromBech32("ethm1nqvn2hmte72e3z0xyqmh06hdwd9qu6hgdcavhh")
 	s.Require().NoError(err)
 
-	s.network.ERC20Keeper().TransferOwnership(
+	err = s.network.ERC20Keeper().TransferOwnership(
 		s.network.GetContext(),
 		sender,
 		newOwner,

@@ -19,8 +19,8 @@ const (
 type UpgradeTestSuite struct {
 	suite.Suite
 
-	network *UpgradeTestNetwork
-		keyring     keyring.Keyring
+	network     *UpgradeTestNetwork
+	keyring     keyring.Keyring
 	grpcHandler grpc.Handler
 }
 
@@ -76,6 +76,4 @@ func (s *UpgradeTestSuite) RunUpgrade(name string) {
 	)
 
 	s.Require().NoError(err)
-
-
 }
