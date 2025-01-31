@@ -4,9 +4,7 @@
 package exrpupgrade
 
 import (
-	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
 	"time"
 
@@ -14,18 +12,18 @@ import (
 	"github.com/xrplevm/node/v6/app"
 	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cometbft/cometbft/version"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	"github.com/evmos/evmos/v20/types"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.
@@ -71,9 +69,6 @@ func New(opts ...exrpcommon.ConfigOption) *UpgradeIntegrationNetwork {
 		validators: []stakingtypes.Validator{},
 	}
 
-	if cfg.GenesisBytes == nil {
-		panic("GenesisBytes is nil")
-	}
 	err := network.configureAndInitChain()
 	if err != nil {
 		panic(err)
@@ -81,111 +76,27 @@ func New(opts ...exrpcommon.ConfigOption) *UpgradeIntegrationNetwork {
 	return network
 }
 
-func getValidatorsAndSignersFromCustomGenesisState(
-	stakingState stakingtypes.GenesisState,
-) (
-	*cmttypes.ValidatorSet,
-	map[string]cmttypes.PrivValidator,
-	[]abcitypes.ValidatorUpdate, error,
-) {
-	genesisValidators := stakingState.Validators
-
-	tmValidators := make([]*cmttypes.Validator, 0, len(genesisValidators))
-	validatorsUpdates := make([]abcitypes.ValidatorUpdate, 0, len(genesisValidators))
-	valSigners := make(map[string]cmttypes.PrivValidator, len(genesisValidators))
-
-	// For each validator, we need to get the pubkey and create a new validator
-	for _, val := range genesisValidators {
-		pb, err := val.CmtConsPublicKey()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		pubKey := ed25519.PubKey(pb.GetEd25519())
-
-		validator := cmttypes.NewValidator(pubKey, 10000000)
-		tmValidators = append(tmValidators, validator)
-		validatorsUpdates = append(validatorsUpdates, abcitypes.ValidatorUpdate{
-			PubKey: pb,
-			Power:  val.GetConsensusPower(val.Tokens),
-		})
-	}
-
-	return cmttypes.NewValidatorSet(tmValidators), valSigners, validatorsUpdates, nil
-}
-
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 	// Create a new EvmosApp with the following params
-	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
+	exrpApp := CreateExrpApp(n.cfg.ChainID, n.cfg.DataDir, n.cfg.NodeDBName, n.cfg.CustomBaseAppOpts...)
 
-	var genesisState app.GenesisState
-	err := json.Unmarshal(n.cfg.GenesisBytes, &genesisState)
+	validators, err := exrpApp.StakingKeeper.GetBondedValidatorsByPower(exrpApp.NewContext(true))
 	if err != nil {
-		return fmt.Errorf("error unmarshalling genesis state: %w", err)
+		return err
 	}
 
-	stateBytes, ok := genesisState["app_state"]
-	if !ok {
-		return fmt.Errorf("app_state not found in genesis state")
-	}
-
-	var appState map[string]json.RawMessage
-	err = json.Unmarshal(genesisState["app_state"], &appState)
+	valSet, err := createStakingValidators(validators)
 	if err != nil {
-		return fmt.Errorf("error unmarshalling app state: %w", err)
-	}
-
-	var stakingState stakingtypes.GenesisState
-	err = exrpApp.AppCodec().UnmarshalJSON(appState["staking"], &stakingState)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling staking state: %w", err)
-	}
-
-	valSet, valSigners, _, err := getValidatorsAndSignersFromCustomGenesisState(stakingState)
-	if err != nil {
-		return fmt.Errorf("error getting validators and signers from custom genesis state: %w", err)
-	}
-
-	// Consensus module does not have a genesis state on the app,
-	// but can customize the consensus parameters of the chain on initialization
-
-	var consensusState map[string]json.RawMessage
-	err = json.Unmarshal(genesisState["consensus"], &consensusState)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling consensus state: %w", err)
-	}
-
-	var consensusParams *cmtproto.ConsensusParams
-	err = json.Unmarshal(consensusState["params"], &consensusParams)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling consensus params: %w", err)
-	}
-
-	var initialHeight int64
-	if err := json.Unmarshal(genesisState["initial_height"], &initialHeight); err != nil {
-		return fmt.Errorf("initial_height is not an int64")
-	}
-
-	now := time.Now().UTC()
-	if _, err := exrpApp.InitChain(
-		&abcitypes.RequestInitChain{
-			Time:            now,
-			ChainId:         n.cfg.ChainID,
-			Validators:      []abcitypes.ValidatorUpdate{},
-			ConsensusParams: consensusParams,
-			AppStateBytes:   stateBytes,
-			InitialHeight:   initialHeight,
-		},
-	); err != nil {
 		return err
 	}
 
 	header := cmtproto.Header{
 		ChainID:            n.cfg.ChainID,
-		Height:             initialHeight,
+		Height:             exrpApp.LastBlockHeight() + 1,
 		AppHash:            exrpApp.LastCommitID().Hash,
-		Time:               now,
+		Time:               time.Now().UTC(),
 		ValidatorsHash:     valSet.Hash(),
 		NextValidatorsHash: valSet.Hash(),
 		ProposerAddress:    valSet.Proposer.Address,
@@ -199,27 +110,36 @@ func (n *UpgradeIntegrationNetwork) configureAndInitChain() error {
 		return err
 	}
 
+	// Store upgrade plan on finalizeblock state.
+	upgradePlan := upgradetypes.Plan{
+		Name:   n.cfg.UpgradePlanName,
+		Height: exrpApp.LastBlockHeight() + 1,
+	}
+
+	bz, err := exrpApp.AppCodec().Marshal(&upgradePlan)
+	if err != nil {
+		return err
+	}
+
 	// TODO - this might not be the best way to initilize the context
 	n.ctx = exrpApp.BaseApp.NewContextLegacy(false, header)
+
+	upgradeKey := exrpApp.GetKey(upgradetypes.StoreKey)
+	upgradeStoreService := runtime.NewKVStoreService(upgradeKey)
+	upgradeStore := upgradeStoreService.OpenKVStore(n.ctx)
+	err = upgradeStore.Set(upgradetypes.PlanKey(), bz)
+	if err != nil {
+		return err
+	}
 
 	// Commit genesis changes
 	if _, err := exrpApp.Commit(); err != nil {
 		return err
 	}
 
-	// Set networks global parameters
-	var blockMaxGas uint64 = math.MaxUint64
-	if consensusParams.Block != nil && consensusParams.Block.MaxGas > 0 {
-		blockMaxGas = uint64(consensusParams.Block.MaxGas) //nolint:gosec // G115
-	}
-
 	n.app = exrpApp
-	n.ctx = n.ctx.WithConsensusParams(*consensusParams)
-	n.ctx = n.ctx.WithBlockGasMeter(types.NewInfiniteGasMeterWithLimit(blockMaxGas))
 
-	n.validators = stakingState.Validators
 	n.valSet = valSet
-	n.valSigners = valSigners
 
 	return nil
 }
@@ -329,4 +249,18 @@ func (n *UpgradeIntegrationNetwork) CheckTx(txBytes []byte) (*abcitypes.Response
 		return nil, err
 	}
 	return res, nil
+}
+
+func createStakingValidators(validators []stakingtypes.Validator) (*cmttypes.ValidatorSet, error) {
+	tmValidators := make([]*cmttypes.Validator, 0, len(validators))
+	for _, val := range validators {
+		pb, err := val.CmtConsPublicKey()
+		if err != nil {
+			return nil, err
+		}
+		pubKey := ed25519.PubKey(pb.GetEd25519())
+		validator := cmttypes.NewValidator(pubKey, val.GetConsensusPower(val.Tokens))
+		tmValidators = append(tmValidators, validator)
+	}
+	return cmttypes.NewValidatorSet(tmValidators), nil
 }
