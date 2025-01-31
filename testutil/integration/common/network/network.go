@@ -45,7 +45,6 @@ type Network interface {
 	GetDistrClient() distrtypes.QueryClient
 	GetFeeMarketClient() feemarkettypes.QueryClient
 	GetGovClient() govtypes.QueryClient
-
 	BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxResult, error)
 	Simulate(txBytes []byte) (*txtypes.SimulateResponse, error)
 	CheckTx(txBytes []byte) (*abcitypes.ResponseCheckTx, error)
