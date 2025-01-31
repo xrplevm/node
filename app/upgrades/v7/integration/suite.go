@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	upgradeName = "v7.0.0"
+	upgradeName     = "v7.0.0"
+	testSnapshotDir = ".exrpd"
 )
 
 type UpgradeTestSuite struct {
@@ -39,12 +40,12 @@ func (s *UpgradeTestSuite) SetupTest() {
 	// Check that the network was created successfully
 	kr := keyring.New(5)
 
-	s.Require().NoError(exec.Command("cp", "-r", ".exrpd", ".exrpd-v7").Run())
+	s.Require().NoError(exec.Command("cp", "-r", testSnapshotDir, testSnapshotDir+"-"+upgradeName).Run())
 
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
 		exrpupgrade.WithUpgradePlanName(upgradeName),
-		exrpupgrade.WithDataDir(".exrpd-v7/data"),
+		exrpupgrade.WithDataDir(testSnapshotDir+"-"+upgradeName+"/data"),
 		exrpupgrade.WithNodeDBName("application"),
 		exrpcommon.WithBondDenom("apoa"),
 		exrpcommon.WithDenom("token"),
@@ -57,7 +58,7 @@ func (s *UpgradeTestSuite) SetupTest() {
 }
 
 func (s *UpgradeTestSuite) TearDownTest() {
-	s.Require().NoError(exec.Command("rm", "-rf", ".exrpd-v7").Run())
+	s.Require().NoError(exec.Command("rm", "-rf", testSnapshotDir+"-"+upgradeName).Run())
 }
 
 func (s *UpgradeTestSuite) RunUpgrade(name string) {
