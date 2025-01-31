@@ -6,6 +6,9 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v6/testutil/integration/common/grpc"
+	"github.com/xrplevm/node/v6/testutil/integration/common/keyring"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 	exrpupgrade "github.com/xrplevm/node/v6/testutil/integration/exrp/upgrade"
 )
 
@@ -17,6 +20,8 @@ type UpgradeTestSuite struct {
 	suite.Suite
 
 	network *UpgradeTestNetwork
+		keyring     keyring.Keyring
+	grpcHandler grpc.Handler
 }
 
 func (s *UpgradeTestSuite) Network() *UpgradeTestNetwork {
@@ -31,6 +36,9 @@ func (s *UpgradeTestSuite) SetupSuite() {
 }
 
 func (s *UpgradeTestSuite) SetupTest() {
+	// Check that the network was created successfully
+	kr := keyring.New(5)
+
 	s.Require().NoError(exec.Command("cp", "-r", ".exrpd", ".exrpd-v7").Run())
 
 	// Create the network
@@ -38,7 +46,14 @@ func (s *UpgradeTestSuite) SetupTest() {
 		exrpupgrade.WithUpgradePlanName(upgradeName),
 		exrpupgrade.WithDataDir(".exrpd-v7/data"),
 		exrpupgrade.WithNodeDBName("application"),
+		exrpcommon.WithBondDenom("apoa"),
+		exrpcommon.WithDenom("token"),
 	)
+
+	rpcHandler := grpc.NewIntegrationHandler(s.network)
+
+	s.grpcHandler = rpcHandler
+	s.keyring = kr
 }
 
 func (s *UpgradeTestSuite) TearDownTest() {
@@ -61,4 +76,6 @@ func (s *UpgradeTestSuite) RunUpgrade(name string) {
 	)
 
 	s.Require().NoError(err)
+
+
 }

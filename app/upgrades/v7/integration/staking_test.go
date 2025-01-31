@@ -67,3 +67,39 @@ func (s *UpgradeTestSuite) TestUpgrade_Staking_Delegations() {
 	// Check that not modified delegations are the same
 	s.Require().Equal(prevDelegations, postDelegations)
 }
+
+func (s *UpgradeTestSuite) TestUpgrade_Staking_UnbondingDelegations() {
+	prevValidators, err := s.network.StakingKeeper().GetAllValidators(
+		s.network.GetContext(),
+	)
+	s.Require().NoError(err)
+
+	unbondingDelegations := make(map[string][]stakingtypes.UnbondingDelegation, len(prevValidators))
+	for _, validator := range prevValidators {
+		res, err := s.network.GetStakingClient().ValidatorUnbondingDelegations(
+			s.network.GetContext(),
+			&stakingtypes.QueryValidatorUnbondingDelegationsRequest{
+				ValidatorAddr: validator.OperatorAddress,
+			},
+		)
+		s.Require().NoError(err)
+		unbondingDelegations[validator.OperatorAddress] = res.UnbondingResponses
+	}
+
+	s.RunUpgrade(upgradeName)
+
+	postUnbondingDelegations := make(map[string][]stakingtypes.UnbondingDelegation, len(prevValidators))
+	for _, validator := range prevValidators {
+		res, err := s.network.GetStakingClient().ValidatorUnbondingDelegations(
+			s.network.GetContext(),
+			&stakingtypes.QueryValidatorUnbondingDelegationsRequest{
+				ValidatorAddr: validator.OperatorAddress,
+			},
+		)
+		s.Require().NoError(err)
+		postUnbondingDelegations[validator.OperatorAddress] = res.UnbondingResponses
+	}
+
+	// Check that not modified unbonding delegations are the same
+	s.Require().Equal(unbondingDelegations, postUnbondingDelegations)
+}
