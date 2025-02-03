@@ -4,7 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v5/x/poa/types"
+	"github.com/xrplevm/node/v6/x/poa/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

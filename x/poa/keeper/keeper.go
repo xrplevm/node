@@ -17,7 +17,7 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/xrplevm/node/v5/x/poa/types"
+	"github.com/xrplevm/node/v6/x/poa/types"
 )
 
 type (
@@ -278,7 +278,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 
 	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, math.LegacyOneDec())
+	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, changedVal.DelegatorShares)
 	if err != nil {
 		return err
 	}
