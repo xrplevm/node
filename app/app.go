@@ -458,7 +458,6 @@ func New(
 		app.MsgServiceRouter(),
 		app.BankKeeper,
 		app.StakingKeeper,
-		app.SlashingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
