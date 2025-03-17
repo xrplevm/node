@@ -189,7 +189,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	valAddress, err := sdk.ValAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
 	}
@@ -199,25 +199,12 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 	denom := params.BondDenom
 
+	accAddress := sdk.AccAddress(valAddress)
+
 	// Check if address has some balance in bank and withdraw in case of having
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
-	if balance.IsPositive() {
-		coins := sdk.NewCoins(balance)
-		err = k.bk.SendCoinsFromAccountToModule(ctx, accAddress, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't send coins to the module account
-			return err
-		}
-
-		err = k.bk.BurnCoins(ctx, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't burn coins
-			return err
-		}
-	}
 
 	// If address also has a validator, we need to check additional conditions
-	valAddress := sdk.ValAddress(accAddress)
 	validator, err := k.sk.GetValidator(ctx, valAddress)
 	if err != nil {
 		ctx.Logger().Warn("Error getting validator", "error", err)
@@ -268,11 +255,6 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			return err
 		}
 	case stakingtypes.Unbonding, stakingtypes.Unbonded:
-		coins := sdk.NewCoins(sdk.NewCoin(denom, validator.Tokens))
-		err = k.bk.BurnCoins(ctx, stakingtypes.NotBondedPoolName, coins)
-		if err != nil {
-			return err
-		}
 	default:
 		return types.ErrInvalidValidatorStatus
 	}
