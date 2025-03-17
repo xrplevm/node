@@ -15,6 +15,7 @@ func TestPoA_Hooks(t *testing.T) {
 		t,
 		func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
 		func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 	)
 
 	hooks := keeper.Hooks()

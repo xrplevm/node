@@ -444,7 +444,6 @@ func New(
 		stakingtypes.NewMultiStakingHooks(
 			app.DistrKeeper.Hooks(),
 			app.SlashingKeeper.Hooks(),
-			app.PoaKeeper.Hooks(),
 		),
 	)
 	// register the staking hooks
@@ -459,6 +458,7 @@ func New(
 		app.MsgServiceRouter(),
 		app.BankKeeper,
 		app.StakingKeeper,
+		app.SlashingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 

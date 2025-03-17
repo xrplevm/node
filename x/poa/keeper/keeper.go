@@ -28,6 +28,7 @@ type (
 		router     *baseapp.MsgServiceRouter // Msg server router
 		bk         types.BankKeeper
 		sk         types.StakingKeeper
+		ck         types.SlashingKeeper
 	}
 )
 
@@ -37,6 +38,7 @@ func NewKeeper(
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk types.StakingKeeper,
+	ck types.SlashingKeeper,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -56,6 +58,7 @@ func NewKeeper(
 		router:     router,
 		bk:         bk,
 		sk:         sk,
+		ck:         ck,
 	}
 }
 

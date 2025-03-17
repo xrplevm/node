@@ -44,7 +44,9 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 
-	return setupPoaKeeper(t, stakingExpectations, bankExpectations)
+	slashingExpectations := func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {}
+
+	return setupPoaKeeper(t, stakingExpectations, bankExpectations, slashingExpectations)
 }
 
 // Define here Keeper methods to be unit tested
