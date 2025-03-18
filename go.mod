@@ -1,4 +1,4 @@
-module github.com/xrplevm/node/v6
+module github.com/xrplevm/node/v7
 
 go 1.22.7
 
@@ -35,11 +35,11 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
+	github.com/xrplevm/node/v6 v6.0.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -247,6 +247,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240930140551-af27646dc61f // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	nhooyr.io/websocket v1.8.10 // indirect
@@ -262,11 +263,11 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.50.11-evmos
+	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.50.11-xrplevm.1
 	// use Evmos geth fork
 	github.com/ethereum/go-ethereum => github.com/evmos/go-ethereum v1.10.26-evmos-rc4
 	// use exrp Evmos fork
-	github.com/evmos/evmos/v20 => github.com/xrplevm/evmos/v20 v20.0.0-exrp.4
+	github.com/evmos/evmos/v20 => github.com/xrplevm/evmos/v20 v20.0.0-exrp.5
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 	// replace broken goleveldb
