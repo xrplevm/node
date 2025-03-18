@@ -9,15 +9,12 @@ import (
 
 	// this line is used by starport scaffolding # 1
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/spf13/cobra"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/xrplevm/node/v6/x/poa/client/cli"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/xrplevm/node/v6/x/poa/keeper"
 	"github.com/xrplevm/node/v6/x/poa/types"
 )
@@ -76,11 +73,6 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx)); err != nil {
 		panic(err)
 	}
-}
-
-// GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
-func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd()
 }
 
 // ----------------------------------------------------------------------------
