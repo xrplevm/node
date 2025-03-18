@@ -76,6 +76,6 @@ func TestPoAKeeper_ExecuteAddValidator(t *testing.T) {
 func TestPoAKeeper_ExecuteRemoveValidator(t *testing.T) {
 	keeper, ctx := poaKeeperTestSetup(t)
 
-	err := keeper.ExecuteRemoveValidator(ctx, "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp")
+	err := keeper.ExecuteRemoveValidator(ctx, "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu")
 	require.NoError(t, err)
 }

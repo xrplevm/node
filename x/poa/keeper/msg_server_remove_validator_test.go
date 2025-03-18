@@ -14,7 +14,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 
 	msg := &types.MsgRemoveValidator{
 		Authority:        poaKeeper.GetAuthority(),
-		ValidatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+		ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 	}
 
 	_, err := msgServer.RemoveValidator(ctx, msg)
