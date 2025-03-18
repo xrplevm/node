@@ -89,7 +89,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
-	if len(validators) >= int(params.MaxValidators) {
+	if uint32(len(validators)) >= params.MaxValidators {
 		return types.ErrMaxValidatorsReached
 	}
 
