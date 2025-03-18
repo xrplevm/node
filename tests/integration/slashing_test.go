@@ -1,9 +1,9 @@
 package integration
 
 import (
-	"cosmossdk.io/math"
 	"time"
 
+	"cosmossdk.io/math"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -12,7 +12,7 @@ import (
 	"github.com/xrplevm/node/v6/testutil/integration/exrp/utils"
 )
 
-// AddValidator tests
+// Slashing tests
 
 func (s *TestSuite) TestSlashing_ChangeParams() {
 	tt := []struct {
