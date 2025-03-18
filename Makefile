@@ -102,7 +102,7 @@ build:
 ###                                Linting                                  ###
 ###############################################################################
 golangci_lint_cmd=golangci-lint
-golangci_version=v1.62.0
+golangci_version=v1.64.8
 
 lint:
 	@echo "--> Running linter"
