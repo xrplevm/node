@@ -1350,8 +1350,6 @@ github.com/xrplevm/cosmos-sdk v0.50.11-xrplevm.1 h1:v2OPHvdXldfLYTaHRPDeK00XfsE5
 github.com/xrplevm/cosmos-sdk v0.50.11-xrplevm.1/go.mod h1:gt14Meok2IDCjbDtjwkbUcgVNEpUBDN/4hg9cCUtLgw=
 github.com/xrplevm/evmos/v20 v20.0.0-exrp.5 h1:M1Egd8MNo3zX4qjr7swQNlwWY/EQUw8E+lHJ4JRQGc4=
 github.com/xrplevm/evmos/v20 v20.0.0-exrp.5/go.mod h1:QslHUHSn613wH4l2axRfoyUxBu+OjyqwbNUM3XW8QsM=
-github.com/xrplevm/node/v6 v6.0.0 h1:nCk+I3gkKjSqrLhlwgaK62RcdtpxOpnTpkZV88c1Acg=
-github.com/xrplevm/node/v6 v6.0.0/go.mod h1:IoMcjsxjyHWwZdsT/V2mAirTw8eUXFYni+LEK8n+XPM=
 github.com/ybbus/jsonrpc v2.1.2+incompatible/go.mod h1:XJrh1eMSzdIYFbM08flv0wp5G35eRniyeGut1z+LSiE=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
