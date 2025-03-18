@@ -18,6 +18,9 @@ FROM base AS integration
 RUN make lint
 # Unit tests
 RUN make test-poa
+# Integration tests
+RUN make test-integration
+RUN make test-upgrade
 # Simulation tests
 RUN make test-sim-benchmark-simulation
 RUN make test-sim-full-app-fast

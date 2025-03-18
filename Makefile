@@ -118,6 +118,7 @@ lint-fix:
 ###                                Testing                                  ###
 ###############################################################################
 EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
+EXCLUDED_UNIT_PACKAGES=$(shell go list ./... | grep -v tests | grep -v testutil | grep -v tools | grep -v app | grep -v docs | grep -v cmd | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
 mocks:
 	@echo "--> Installing mockgen"
@@ -125,7 +126,15 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test: test-poa test-sim-benchmark-simulation test-sim-full-app-fast
+test: test-poa test-integration test-upgrade test-sim-benchmark-simulation test-sim-full-app-fast
+
+test-upgrade:
+	@echo "--> Running upgrade testsuite"
+	@go test -mod=readonly -v ./tests/upgrade
+
+test-integration:
+	@echo "--> Running integration testsuite"
+	@go test -mod=readonly -v ./tests/integration
 
 test-poa:
 	@echo "--> Running POA tests"
@@ -141,6 +150,25 @@ test-sim-full-app-fast:
 	@echo "Running custom genesis simulation..."
 	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
 		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
+
+###############################################################################
+###                                Coverage                                 ###
+###############################################################################
+
+coverage-unit:
+	@echo "--> Running unit coverage"
+	@go test $(EXCLUDED_UNIT_PACKAGES) -coverprofile=coverage_unit.out > /dev/null
+	@go tool cover -func=coverage_unit.out
+
+coverage-poa:
+	@echo "--> Running POA coverage"
+	@go test $(EXCLUDED_POA_PACKAGES) -coverprofile=coverage_poa.out > /dev/null
+	@go tool cover -func=coverage_poa.out
+
+coverage-integration:
+	@echo "--> Running integration coverage"
+	@go test ./tests/integration -mod=readonly -coverprofile=coverage_integration.out > /dev/null
+	@go tool cover -func=coverage_integration.out
 
 ###############################################################################
 ###                                Protobuf                                 ###
