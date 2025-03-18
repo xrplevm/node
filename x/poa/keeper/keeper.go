@@ -199,22 +199,11 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 	denom := params.BondDenom
 
-	accAddress := sdk.AccAddress(valAddress)
-
-	// Check if address has some balance in bank and withdraw in case of having
-	balance := k.bk.GetBalance(ctx, accAddress, denom)
-
 	// If address also has a validator, we need to check additional conditions
 	validator, err := k.sk.GetValidator(ctx, valAddress)
 	if err != nil {
 		ctx.Logger().Warn("Error getting validator", "error", err)
-		if balance.IsZero() {
-			// Address has no balance in bank and is not a validator either
-			// NOTE: Since delegations are not enabled in this version, we don't need to check for them
-			return types.ErrAddressHasNoTokens
-		}
-		// Validator does not exist, but we already took its balance from bank, we can safely return
-		return nil
+		return types.ErrAddressIsNotAValidator
 	}
 
 	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
@@ -255,6 +244,11 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			return err
 		}
 	case stakingtypes.Unbonding, stakingtypes.Unbonded:
+		coins := sdk.NewCoins(sdk.NewCoin(denom, validator.Tokens))
+		err = k.bk.BurnCoins(ctx, stakingtypes.NotBondedPoolName, coins)
+		if err != nil {
+			return err
+		}
 	default:
 		return types.ErrInvalidValidatorStatus
 	}
@@ -271,7 +265,6 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			sdk.NewAttribute(types.AttributeValidator, validatorAddress),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
 			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
-			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
 
