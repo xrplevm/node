@@ -83,6 +83,17 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
+
+	// Check if the maximum number of validators has been reached
+	validators, err := k.sk.GetAllValidators(ctx)
+	if err != nil {
+		return err
+	}
+	//nolint:gosec
+	if uint32(len(validators)) >= params.MaxValidators {
+		return types.ErrMaxValidatorsReached
+	}
+
 	denom := params.BondDenom
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
 	if !balance.IsZero() {
