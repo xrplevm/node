@@ -91,7 +91,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				}, nil)
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{{}}, nil)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - validator has bonded tokens",
@@ -461,7 +461,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{}, errors.New("staking keeper get validator error"))
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call GetUnbondingDelegationsFromValidator",
@@ -478,7 +478,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(errors.New("staking keeper hooks error"))
 				stakingKeeper.EXPECT().Hooks().Return(hooks)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call SlashUnbondingDelegation",
@@ -503,7 +503,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					math.NewInt(0), errors.New("staking keeper slash unbonding delegation error"))
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on RemoveValidatorTokens call",
@@ -529,7 +529,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 					stakingtypes.Validator{}, errors.New("staking keeper remove validator tokens error"),
 				)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		//nolint:dupl
 		{
@@ -619,7 +619,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 					}, nil,
 				)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call Unbond",

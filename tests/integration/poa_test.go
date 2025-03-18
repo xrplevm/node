@@ -535,6 +535,7 @@ func (s *TestSuite) TestAddValidator_MaximumValidators() {
 							Moniker: "test",
 						},
 					)
+					require.NoError(s.T(), err)
 					proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
 					require.NoError(s.T(), err)
 					require.Equal(s.T(), govv1.ProposalStatus_PROPOSAL_STATUS_PASSED, proposal.Status)
