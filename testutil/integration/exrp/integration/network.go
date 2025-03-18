@@ -122,9 +122,10 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
 	stakingParams := StakingCustomGenesisState{
-		denom:       n.cfg.BondDenom,
-		validators:  validators,
-		delegations: delegations,
+		denom:         n.cfg.BondDenom,
+		maxValidators: n.cfg.MaxValidators,
+		validators:    validators,
+		delegations:   delegations,
 	}
 	govParams := GovCustomGenesisState{
 		denom:         n.cfg.Denom,

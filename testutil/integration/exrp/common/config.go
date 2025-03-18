@@ -26,6 +26,7 @@ type Config struct {
 	PreFundedAccounts  []sdktypes.AccAddress
 	Balances           []banktypes.Balance
 	BondDenom          string
+	MaxValidators      uint32
 	Denom              string
 	CustomGenesisState CustomGenesisState
 	GenesisBytes       []byte
@@ -91,6 +92,13 @@ func WithBalances(balances ...banktypes.Balance) ConfigOption {
 func WithBondDenom(denom string) ConfigOption {
 	return func(cfg *Config) {
 		cfg.BondDenom = denom
+	}
+}
+
+// WithMaxValidators sets the max validators for the network.
+func WithMaxValidators(maxValidators uint32) ConfigOption {
+	return func(cfg *Config) {
+		cfg.MaxValidators = maxValidators
 	}
 }
 

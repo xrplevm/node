@@ -40,13 +40,15 @@ func TestPoaDecorator_AnteHandle(t *testing.T) {
 			msgs: []sdk.Msg{
 				&stakingtypes.MsgUndelegate{},
 				&stakingtypes.MsgBeginRedelegate{},
+				&stakingtypes.MsgDelegate{},
+				&stakingtypes.MsgCancelUnbondingDelegation{},
 			},
 			expectedError: errors.New("tx type not allowed"),
 		},
 		{
 			name: "should not return error",
 			msgs: []sdk.Msg{
-				&stakingtypes.MsgDelegate{},
+				&stakingtypes.MsgEditValidator{},
 			},
 		},
 	}

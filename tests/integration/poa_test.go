@@ -495,14 +495,109 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Tombstoned() {
 	}
 }
 
+func (s *TestSuite) TestAddValidator_MaximumValidators() {
+	// Generate a random account
+	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
+	randomAcc := randomAccs[0]
+	randomValAddr := sdktypes.ValAddress(randomAcc.Address.Bytes())
+
+	tt := []struct {
+		name          string
+		valAddress    string
+		valPubKey     cryptotypes.PubKey
+		expectedError error
+		beforeRun     func()
+		afterRun      func()
+	}{
+		{
+			name:          "add validator - maximum validators reached",
+			valAddress:    randomAcc.Address.String(),
+			valPubKey:     randomAcc.PubKey,
+			expectedError: poatypes.ErrMaxValidatorsReached,
+			beforeRun: func() {
+				resVal, err := s.Network().GetStakingClient().Params(
+					s.Network().GetContext(),
+					&stakingtypes.QueryParamsRequest{},
+				)
+				s.Require().NoError(err)
+				amountOfValidators := uint32(5)
+				maxValidators := resVal.Params.MaxValidators
+				authority := sdktypes.AccAddress(address.Module("gov")).String()
+
+				for i := uint32(0); i < maxValidators-amountOfValidators; i++ {
+					randomValidator := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
+					randomValidatorAcc := randomValidator[0]
+					msg, err := poatypes.NewMsgAddValidator(
+						authority,
+						randomValidatorAcc.Address.String(),
+						randomValidatorAcc.ConsKey.PubKey(),
+						stakingtypes.Description{
+							Moniker: "test",
+						},
+					)
+					proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
+					require.NoError(s.T(), err)
+					require.Equal(s.T(), govv1.ProposalStatus_PROPOSAL_STATUS_PASSED, proposal.Status)
+				}
+			},
+			afterRun: func() {
+				// Check validator not added
+				_, err := s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: randomValAddr.String(),
+					},
+				)
+				require.Error(s.T(), err)
+			},
+		},
+	}
+
+	//nolint:dupl
+	for _, tc := range tt {
+		s.Run(tc.name, func() {
+			if tc.beforeRun != nil {
+				tc.beforeRun()
+			}
+
+			authority := sdktypes.AccAddress(address.Module("gov"))
+			msg, err := poatypes.NewMsgAddValidator(
+				authority.String(),
+				tc.valAddress,
+				tc.valPubKey,
+				stakingtypes.Description{
+					Moniker: "test",
+				},
+			)
+			require.NoError(s.T(), err)
+
+			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
+			require.NoError(s.T(), err)
+
+			require.Equal(s.T(), govv1.ProposalStatus_PROPOSAL_STATUS_FAILED, proposal.Status)
+			require.Contains(s.T(), proposal.FailedReason, tc.expectedError.Error())
+
+			if tc.expectedError != nil && err != nil {
+				require.Error(s.T(), err)
+				require.ErrorIs(s.T(), err, tc.expectedError)
+			} else {
+				require.NoError(s.T(), err)
+			}
+
+			if tc.afterRun != nil {
+				tc.afterRun()
+			}
+		})
+	}
+}
+
 // RemoveValidator tests
 
 func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	// Generate a random account
 	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
-	randomAcc := randomAccs[0]
 
-	randomValAddr := sdktypes.ValAddress(randomAcc.Address.Bytes())
+	randomValAddr := sdktypes.ValAddress(randomAccs[0].Address.Bytes())
 
 	tt := []struct {
 		name          string
@@ -513,8 +608,8 @@ func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	}{
 		{
 			name:          "remove unexisting validator - random address - with balance",
-			valAddress:    randomAcc.Address.String(),
-			expectedError: poatypes.ErrAddressHasNoTokens,
+			valAddress:    randomValAddr.String(),
+			expectedError: poatypes.ErrAddressIsNotAValidator,
 			beforeRun: func() {
 				_, err := s.Network().GetStakingClient().Validator(
 					s.Network().GetContext(),
@@ -580,7 +675,6 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 	validator := validators[0]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
-	valAccAddr := sdktypes.AccAddress(valAddr)
 
 	tt := []struct {
 		name          string
@@ -591,7 +685,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 	}{
 		{
 			name:       "remove existing validator - status bonded",
-			valAddress: valAccAddr.String(),
+			valAddress: valAddr.String(),
 			beforeRun: func() {
 				resVal, err := s.Network().GetStakingClient().Validator(
 					s.Network().GetContext(),
@@ -663,7 +757,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAccAddr.String(),
+				valAddr.String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
@@ -694,7 +788,6 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 	validator := validators[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
-	valAccAddr := sdktypes.AccAddress(valAddr)
 
 	tt := []struct {
 		name          string
@@ -705,7 +798,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 	}{
 		{
 			name:       "remove existing validator - jailed",
-			valAddress: valAccAddr.String(),
+			valAddress: valAddr.String(),
 			beforeRun: func() {
 				// Force jail validator
 				valSet := s.Network().GetValidatorSet()
@@ -777,7 +870,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAccAddr.String(),
+				valAddr.String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
@@ -814,7 +907,6 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 	validator := validators[valIndex]
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
-	valAccAddr := sdktypes.AccAddress(valAddr)
 
 	tt := []struct {
 		name          string
@@ -825,7 +917,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 	}{
 		{
 			name:       "remove existing validator - tombstoned",
-			valAddress: valAccAddr.String(),
+			valAddress: valAddr.String(),
 			beforeRun: func() {
 				// Force validator to be tombstoned
 				require.NoError(s.T(), s.Network().NextBlockWithMisBehaviors(
@@ -921,7 +1013,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAccAddr.String(),
+				valAddr.String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)

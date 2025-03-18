@@ -23,7 +23,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should fail - invalid authority address",
 			authority:        "invalidauthority",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedErr:      govtypes.ErrInvalidSigner,
 		},
 		{
@@ -35,7 +35,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass",
 			authority:        poaKeeper.GetAuthority(),
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 		},
 	}
 

@@ -47,6 +47,7 @@ func (s *TestSuite) SetupTest() {
 		exrpcommon.WithAmountOfValidators(5),
 		exrpcommon.WithCustomGenesis(customGenesis),
 		exrpcommon.WithBondDenom("apoa"),
+		exrpcommon.WithMaxValidators(7),
 		exrpcommon.WithMinDepositAmt(sdkmath.NewInt(1)),
 		exrpcommon.WithValidatorOperators(kr.GetAllAccAddrs()),
 	)

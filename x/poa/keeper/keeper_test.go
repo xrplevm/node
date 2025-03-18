@@ -62,7 +62,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 		pubKey           *types1.Any
 		stakingMocks     func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper)
 		bankMocks        func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper)
-		slashingMocks    func(ctx sdk.Context, slashingKeeper *testutil.MockSlashingKeeper)
 		expectedError    error
 	}{
 		{
@@ -71,7 +70,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("decoding bech32 failed"),
 			stakingMocks:     func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
 			bankMocks:        func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
-			slashingMocks:    func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on GetParams",
@@ -80,8 +78,20 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{}, errors.New("staking params error"))
 			},
-			bankMocks:     func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		},
+		{
+			name:             "should fail - maximum validators reached",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			expectedError:    types.ErrMaxValidatorsReached,
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom:     "BND",
+					MaxValidators: 1,
+				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{{}}, nil)
+			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - validator has bonded tokens",
@@ -89,8 +99,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    types.ErrAddressHasBankTokens,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -98,7 +110,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: sdk.DefaultPowerReduction,
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on GetValidator",
@@ -106,8 +117,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("staking validator error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{}, errors.New("staking validator error"))
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
@@ -116,7 +129,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns validator with tokens",
@@ -124,8 +136,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    types.ErrAddressHasBondedTokens,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: sdk.DefaultPowerReduction}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
@@ -134,7 +148,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on GetAllDelegatorDelegations",
@@ -142,8 +155,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("staking delegations error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, errors.New("staking delegations error"))
 			},
@@ -153,7 +168,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - delegations are greater than 0 with invalid delegation validator address",
@@ -161,8 +175,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("decoding bech32 failed"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
 					{
@@ -177,7 +193,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - delegations are greater than 0 with error on GetValidator call",
@@ -185,8 +200,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("staking validator error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).Times(1)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, errors.New("staking validator error")).Times(1)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
@@ -203,7 +220,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - delegations are greater than 0 with delegated tokens",
@@ -211,8 +227,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    types.ErrAddressHasDelegatedTokens,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).Times(1)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: sdk.DefaultPowerReduction}, nil).Times(1)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
@@ -229,7 +247,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - GetUnbondingDelegationsFromValidator returns error",
@@ -237,8 +254,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("staking unbonding delegations error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, errors.New("staking unbonding delegations error"))
@@ -249,7 +268,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - unbonding delegations balances are greater than 0",
@@ -257,8 +275,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    types.ErrAddressHasUnbondingTokens,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{
@@ -277,7 +297,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					Amount: math.NewInt(0),
 				})
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - bank keeper MintCoins returns error",
@@ -285,8 +304,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("bank mint coins error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
@@ -298,7 +319,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				})
 				bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank mint coins error"))
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should fail - bank keeper SendCoinsFromModuleToAccount returns error",
@@ -306,8 +326,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			expectedError:    errors.New("bank send coins from module to account error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
@@ -320,7 +342,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("bank send coins from module to account error"))
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should pass - MsgAddValidator",
@@ -328,8 +349,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			pubKey:           msgPubKey,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
@@ -342,7 +365,6 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 		{
 			name:             "should pass - validator not found when iterating over delegator delegations",
@@ -350,8 +372,10 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			pubKey:           msgPubKey,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
+					BondDenom:     "BND",
+					MaxValidators: 2,
 				}, nil)
+				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).Times(1)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, stakingtypes.ErrNoValidatorFound).Times(1)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
@@ -371,13 +395,12 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			slashingMocks: func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {},
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			keeper, ctx := setupPoaKeeper(t, tc.stakingMocks, tc.bankMocks, tc.slashingMocks)
+			keeper, ctx := setupPoaKeeper(t, tc.stakingMocks, tc.bankMocks)
 
 			msg := &types.MsgAddValidator{
 				Authority:        keeper.GetAuthority(),
@@ -421,7 +444,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on GetParams",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("staking params error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{}, errors.New("staking params error"))
@@ -429,78 +452,20 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 		},
 		{
-			name:             "should fail - bank keeper returns error on SendCoinsFromAccountToModule when validator has balance",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-			expectedError:    errors.New("bank send coins from account to module error"),
-			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
-				}, nil)
-			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: sdk.DefaultPowerReduction,
-				})
-				bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("bank send coins from account to module error"))
-			},
-		},
-		{
-			name:             "should fail - bank keeper returns error on BurnCoins when validator has balance",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-			expectedError:    errors.New("bank burn coins error"),
-			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
-				}, nil)
-			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: sdk.DefaultPowerReduction,
-				})
-				bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank burn coins error"))
-			},
-		},
-		{
-			name:             "should fail - staking keeper returns error on GetValidator with balance",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			name:             "should fail - staking keeper returns error on GetValidator",
+			expectedError:    types.ErrAddressIsNotAValidator,
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
 				}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{}, errors.New("staking keeper get validator error"))
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: sdk.DefaultPowerReduction,
-				})
-				bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
-			},
-		},
-		{
-			name:             "should fail - staking keeper returns error on GetValidator with no balance",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
-			expectedError:    types.ErrAddressHasNoTokens,
-			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom: "BND",
-				}, nil)
-				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{}, errors.New("staking keeper get validator error"))
-			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
-			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call GetUnbondingDelegationsFromValidator",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("staking keeper get unbonding delegations from validator error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -513,16 +478,11 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(errors.New("staking keeper hooks error"))
 				stakingKeeper.EXPECT().Hooks().Return(hooks)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
-			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call SlashUnbondingDelegation",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("staking keeper slash unbonding delegation error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -532,7 +492,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
 					[]stakingtypes.UnbondingDelegation{
 						{
-							ValidatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+							ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 						},
 					}, nil)
 
@@ -543,16 +503,11 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					math.NewInt(0), errors.New("staking keeper slash unbonding delegation error"))
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
-			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on RemoveValidatorTokens call",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("staking keeper remove validator tokens error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -574,17 +529,12 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 					stakingtypes.Validator{}, errors.New("staking keeper remove validator tokens error"),
 				)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
-			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		//nolint:dupl
 		{
 			name:             "should fail - bank keeper returns error on call BurnCoins for status bonded",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -609,17 +559,13 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
 				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank keeper burn coins error"))
 			},
 		},
 		//nolint:dupl
 		{
 			name:             "should fail - bank keeper returns error on call BurnCoins for status unbonding/unbonded",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -644,16 +590,12 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
 				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank keeper burn coins error"))
 			},
 		},
 		{
 			name:             "should fail - bank keeper returns error for invalid validator status",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    types.ErrInvalidValidatorStatus,
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -677,16 +619,11 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 					}, nil,
 				)
 			},
-			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
-			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {},
 		},
 		{
 			name:             "should fail - staking keeper returns error on call Unbond",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    errors.New("staking keeper unbond error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -714,10 +651,6 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-					Denom:  "BND",
-					Amount: math.NewInt(0),
-				})
 				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -725,7 +658,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			keeper, ctx := setupPoaKeeper(t, tc.stakingMocks, tc.bankMocks, func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {})
+			keeper, ctx := setupPoaKeeper(t, tc.stakingMocks, tc.bankMocks)
 
 			err := keeper.ExecuteRemoveValidator(ctx, tc.validatorAddress)
 			if tc.expectedError != nil {

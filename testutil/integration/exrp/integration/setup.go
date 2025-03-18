@@ -278,7 +278,8 @@ func getValidatorsSlashingGen(validators []stakingtypes.Validator, sk slashingty
 
 // StakingCustomGenesisState defines the staking genesis state
 type StakingCustomGenesisState struct {
-	denom string
+	denom         string
+	maxValidators uint32
 
 	validators  []stakingtypes.Validator
 	delegations []stakingtypes.Delegation
@@ -289,6 +290,7 @@ func setDefaultStakingGenesisState(app *app.App, genesisState evmostypes.Genesis
 	// Set staking params
 	stakingParams := stakingtypes.DefaultParams()
 	stakingParams.BondDenom = overwriteParams.denom
+	stakingParams.MaxValidators = overwriteParams.maxValidators
 
 	stakingGenesis := stakingtypes.NewGenesisState(
 		stakingParams,
