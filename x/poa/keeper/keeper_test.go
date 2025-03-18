@@ -21,7 +21,8 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		stakingHooks.EXPECT().BeforeValidatorSlashed(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-			BondDenom: "XRP",
+			BondDenom:     "XRP",
+			MaxValidators: 32,
 		}, nil).AnyTimes()
 		stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).AnyTimes()
 		stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil).AnyTimes()
@@ -33,6 +34,7 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		stakingKeeper.EXPECT().BondDenom(ctx).Return("XRP", nil).AnyTimes()
 		stakingKeeper.EXPECT().Unbond(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
 		stakingKeeper.EXPECT().Hooks().Return(stakingHooks).AnyTimes()
+		stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil).AnyTimes()
 	}
 
 	bankExpectations := func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
@@ -45,9 +47,7 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	}
 
-	slashingExpectations := func(_ sdk.Context, _ *testutil.MockSlashingKeeper) {}
-
-	return setupPoaKeeper(t, stakingExpectations, bankExpectations, slashingExpectations)
+	return setupPoaKeeper(t, stakingExpectations, bankExpectations)
 }
 
 // Define here Keeper methods to be unit tested

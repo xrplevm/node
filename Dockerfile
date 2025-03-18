@@ -1,4 +1,4 @@
-FROM golang:1.22.7 AS base
+FROM golang:1.22.11 AS base
 USER root
 RUN apt update && \
     apt-get install -y \
@@ -27,7 +27,7 @@ RUN make test-sim-full-app-fast
 
 RUN touch /test.lock
 
-FROM golang:1.22.2 AS release
+FROM golang:1.22.11 AS release
 WORKDIR /
 COPY --from=integration /test.lock /test.lock
 COPY --from=build /app/bin/exrpd /usr/bin/exrpd

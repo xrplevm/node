@@ -38,7 +38,6 @@ type (
 		router     *baseapp.MsgServiceRouter // Msg server router
 		bk         types.BankKeeper
 		sk         types.StakingKeeper
-		ck         types.SlashingKeeper
 	}
 )
 
@@ -48,7 +47,6 @@ func NewKeeper(
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk types.StakingKeeper,
-	ck types.SlashingKeeper,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -68,7 +66,6 @@ func NewKeeper(
 		router:     router,
 		bk:         bk,
 		sk:         sk,
-		ck:         ck,
 	}
 }
 
@@ -96,6 +93,17 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
+
+	// Check if the maximum number of validators has been reached
+	validators, err := k.sk.GetAllValidators(ctx)
+	if err != nil {
+		return err
+	}
+	//nolint:gosec
+	if uint32(len(validators)) >= params.MaxValidators {
+		return types.ErrMaxValidatorsReached
+	}
+
 	denom := params.BondDenom
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
 	if !balance.IsZero() {
@@ -199,7 +207,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	valAddress, err := sdk.ValAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
 	}
@@ -209,35 +217,11 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 	denom := params.BondDenom
 
-	// Check if address has some balance in bank and withdraw in case of having
-	balance := k.bk.GetBalance(ctx, accAddress, denom)
-	if balance.IsPositive() {
-		coins := sdk.NewCoins(balance)
-		err = k.bk.SendCoinsFromAccountToModule(ctx, accAddress, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't send coins to the module account
-			return err
-		}
-
-		err = k.bk.BurnCoins(ctx, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't burn coins
-			return err
-		}
-	}
-
 	// If address also has a validator, we need to check additional conditions
-	valAddress := sdk.ValAddress(accAddress)
 	validator, err := k.sk.GetValidator(ctx, valAddress)
 	if err != nil {
 		ctx.Logger().Warn("Error getting validator", "error", err)
-		if balance.IsZero() {
-			// Address has no balance in bank and is not a validator either
-			// NOTE: Since delegations are not enabled in this version, we don't need to check for them
-			return types.ErrAddressHasNoTokens
-		}
-		// Validator does not exist, but we already took its balance from bank, we can safely return
-		return nil
+		return types.ErrAddressIsNotAValidator
 	}
 
 	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
@@ -299,7 +283,6 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			sdk.NewAttribute(types.AttributeValidator, validatorAddress),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
 			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
-			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
 
