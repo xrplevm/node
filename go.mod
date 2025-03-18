@@ -2,7 +2,7 @@ module github.com/xrplevm/node/v6
 
 go 1.22.11
 
-toolchain go1.23.4
+toolchain go1.22.12
 
 require (
 	cosmossdk.io/api v0.7.6
