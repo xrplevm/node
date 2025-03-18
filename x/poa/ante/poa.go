@@ -17,7 +17,9 @@ func (cbd PoaDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, ne
 	// loop through all the messages and check if the message type is allowed
 	for _, msg := range tx.GetMsgs() {
 		if sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}) ||
-			sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}) {
+			sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}) ||
+			sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}) ||
+			sdk.MsgTypeURL(msg) == sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}) {
 			return ctx, errors.New("tx type not allowed")
 		}
 	}

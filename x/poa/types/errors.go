@@ -14,4 +14,5 @@ var (
 	ErrAddressHasDelegatedTokens = sdkerrors.Register(ModuleName, 7, "address already has delegated tokens")
 	ErrInvalidValidatorStatus    = sdkerrors.Register(ModuleName, 8, "invalid validator status")
 	ErrAddressIsNotAValidator    = sdkerrors.Register(ModuleName, 9, "address is not a validator")
+	ErrMaxValidatorsReached      = sdkerrors.Register(ModuleName, 10, "maximum number of validators reached")
 )

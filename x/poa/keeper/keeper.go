@@ -28,7 +28,6 @@ type (
 		router     *baseapp.MsgServiceRouter // Msg server router
 		bk         types.BankKeeper
 		sk         types.StakingKeeper
-		ck         types.SlashingKeeper
 	}
 )
 
@@ -38,7 +37,6 @@ func NewKeeper(
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk types.StakingKeeper,
-	ck types.SlashingKeeper,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -58,7 +56,6 @@ func NewKeeper(
 		router:     router,
 		bk:         bk,
 		sk:         sk,
-		ck:         ck,
 	}
 }
 
@@ -86,6 +83,17 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
+
+	// Check if the maximum number of validators has been reached
+	validators, err := k.sk.GetAllValidators(ctx)
+	if err != nil {
+		return err
+	}
+	//nolint:gosec
+	if uint32(len(validators)) >= params.MaxValidators {
+		return types.ErrMaxValidatorsReached
+	}
+
 	denom := params.BondDenom
 	balance := k.bk.GetBalance(ctx, accAddress, denom)
 	if !balance.IsZero() {

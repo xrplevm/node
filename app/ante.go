@@ -33,6 +33,8 @@ func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWant
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
 		},
 	}
 }
