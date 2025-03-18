@@ -21,6 +21,8 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
 	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
 	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
@@ -46,14 +48,14 @@ type NetworkKeepers interface {
 	AuthzKeeper() authzkeeper.Keeper
 	FeeMarketKeeper() feemarketkeeper.Keeper
 	PoaKeeper() poakeeper.Keeper
+	UpgradeKeeper() upgradekeeper.Keeper
 }
 
 func getQueryHelper(ctx sdktypes.Context, encCfg testutil.TestEncodingConfig) *baseapp.QueryServiceTestHelper {
 	interfaceRegistry := encCfg.InterfaceRegistry
 	// This is needed so that state changes are not committed in precompiles
 	// simulations.
-	cacheCtx, _ := ctx.CacheContext()
-	return baseapp.NewQueryServerTestHelper(cacheCtx, interfaceRegistry)
+	return baseapp.NewQueryServerTestHelper(ctx, interfaceRegistry)
 }
 
 func GetERC20Client(n NetworkKeepers) erc20types.QueryClient {
@@ -120,4 +122,10 @@ func GetPoaClient(n NetworkKeepers) poatypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	poatypes.RegisterQueryServer(queryHelper, poakeeper.Querier{Keeper: n.PoaKeeper()})
 	return poatypes.NewQueryClient(queryHelper)
+}
+
+func GetUpgradeClient(n NetworkKeepers) upgradetypes.QueryClient {
+	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
+	upgradetypes.RegisterQueryServer(queryHelper, n.UpgradeKeeper())
+	return upgradetypes.NewQueryClient(queryHelper)
 }

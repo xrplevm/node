@@ -12,6 +12,7 @@ import (
 	v4 "github.com/xrplevm/node/v6/app/upgrades/v4"
 	v5 "github.com/xrplevm/node/v6/app/upgrades/v5"
 	v6 "github.com/xrplevm/node/v6/app/upgrades/v6"
+	v7 "github.com/xrplevm/node/v6/app/upgrades/v7"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -44,6 +45,14 @@ func (app *App) setupUpgradeHandlers() {
 			app.configurator,
 		),
 	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v7.UpgradeName,
+		v7.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+			app.StakingKeeper,
+		),
+	)
 
 	// When a planned update height is reached, the old binary will panic
 	// writing on disk the height and name of the update that triggered it
@@ -68,7 +77,7 @@ func (app *App) setupUpgradeHandlers() {
 			},
 			Deleted: []string{},
 		}
-	case v5.UpgradeName, v6.UpgradeName:
+	case v5.UpgradeName, v6.UpgradeName, v7.UpgradeName:
 		// No store upgrades for v5
 		storeUpgrades = &storetypes.StoreUpgrades{}
 	}

@@ -5,6 +5,9 @@ COMMIT := $(shell git log -1 --format='%H')
 BINDIR ?= $(GOPATH)/bin
 APP = ./app
 
+# Upgrade testsuite values
+LATEST_UPGRADE ?= $(shell ls -d ./app/upgrades/* | sort -r | head -n 1)
+SNAPSHOT_DIR ?= .exrpd
 # don't override user values
 ifeq (,$(VERSION))
   VERSION := $(shell git describe --tags)
@@ -126,11 +129,13 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test: test-poa test-integration test-upgrade test-sim-benchmark-simulation test-sim-full-app-fast
+test: test-poa test-integration test-sim-benchmark-simulation test-sim-full-app-fast
 
 test-upgrade:
-	@echo "--> Running upgrade testsuite"
-	@go test -mod=readonly -v ./tests/upgrade
+	@echo "--> Running upgrade testsuite from snapshot: $(SNAPSHOT_DIR), into $(LATEST_UPGRADE)"
+	@rm -rf $(LATEST_UPGRADE)/integration/.exrpd
+	@cp -r $(SNAPSHOT_DIR) $(LATEST_UPGRADE)/integration/.exrpd
+	@go test -mod=readonly -v $(LATEST_UPGRADE)/integration
 
 test-integration:
 	@echo "--> Running integration testsuite"
