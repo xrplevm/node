@@ -4,8 +4,10 @@ BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git log -1 --format='%H')
 BINDIR ?= $(GOPATH)/bin
 APP = ./app
-LATEST_UPGRADE = $(shell ls -d ./app/upgrades/* | sort -r | head -n 1)
 
+# Upgrade testsuite values
+LATEST_UPGRADE ?= $(shell ls -d ./app/upgrades/* | sort -r | head -n 1)
+SNAPSHOT_DIR ?= .exrpd
 # don't override user values
 ifeq (,$(VERSION))
   VERSION := $(shell git describe --tags)
@@ -129,10 +131,10 @@ mocks:
 
 test: test-poa test-integration test-sim-benchmark-simulation test-sim-full-app-fast
 
-test-latest-upgrade:
-	@echo "--> Running upgrade testsuite"
+test-upgrade:
+	@echo "--> Running upgrade testsuite from snapshot: $(SNAPSHOT_DIR), into $(LATEST_UPGRADE)"
 	@rm -rf $(LATEST_UPGRADE)/integration/.exrpd
-	@cp -r ./.exrpd $(LATEST_UPGRADE)/integration/.exrpd
+	@cp -r $(SNAPSHOT_DIR) $(LATEST_UPGRADE)/integration/.exrpd
 	@go test -mod=readonly -v $(LATEST_UPGRADE)/integration
 
 test-integration:

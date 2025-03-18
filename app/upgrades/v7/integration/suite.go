@@ -1,34 +1,80 @@
-package tests
+package integration
 
 import (
+	"os/exec"
+
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
+	"github.com/xrplevm/node/v6/testutil/integration/common/grpc"
+	"github.com/xrplevm/node/v6/testutil/integration/common/keyring"
+	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
 	exrpupgrade "github.com/xrplevm/node/v6/testutil/integration/exrp/upgrade"
+)
+
+const (
+	upgradeName     = "v7.0.0"
+	testSnapshotDir = ".exrpd"
 )
 
 type UpgradeTestSuite struct {
 	suite.Suite
 
-	network *UpgradeTestNetwork
+	network     *UpgradeTestNetwork
+	keyring     keyring.Keyring
+	grpcHandler grpc.Handler
 }
 
 func (s *UpgradeTestSuite) Network() *UpgradeTestNetwork {
 	return s.network
 }
 
-func (s *UpgradeTestSuite) SetupTest() {
+func (s *UpgradeTestSuite) SetupSuite() {
 	// Setup the SDK config
 	s.network.SetupSdkConfig()
 
 	s.Require().Equal(sdk.GetConfig().GetBech32AccountAddrPrefix(), "ethm")
+}
+
+func (s *UpgradeTestSuite) SetupTest() {
+	// Check that the network was created successfully
+	kr := keyring.New(5)
+
+	s.Require().NoError(exec.Command("cp", "-r", testSnapshotDir, testSnapshotDir+"-"+upgradeName).Run())
 
 	// Create the network
 	s.network = NewUpgradeTestNetwork(
-		exrpupgrade.WithUpgradePlanName("v7.0.0"),
-		exrpupgrade.WithDataDir(".exrpd/data"),
+		exrpupgrade.WithUpgradePlanName(upgradeName),
+		exrpupgrade.WithDataDir(testSnapshotDir+"-"+upgradeName+"/data"),
 		exrpupgrade.WithNodeDBName("application"),
+		exrpcommon.WithBondDenom("apoa"),
+		exrpcommon.WithDenom("token"),
 	)
 
-	// Check that the network was created successfully
-	s.Require().NotNil(s.network)
+	rpcHandler := grpc.NewIntegrationHandler(s.network)
+
+	s.grpcHandler = rpcHandler
+	s.keyring = kr
+}
+
+func (s *UpgradeTestSuite) TearDownTest() {
+	s.Require().NoError(exec.Command("rm", "-rf", testSnapshotDir+"-"+upgradeName).Run())
+}
+
+func (s *UpgradeTestSuite) RunUpgrade(name string) {
+	res, err := s.network.GetUpgradeClient().CurrentPlan(
+		s.network.GetContext(),
+		&upgradetypes.QueryCurrentPlanRequest{},
+	)
+	s.Require().NoError(err)
+	s.Require().Equal(name, res.Plan.Name)
+
+	s.Require().True(s.Network().UpgradeKeeper().HasHandler(name))
+
+	err = s.network.UpgradeKeeper().ApplyUpgrade(
+		s.Network().GetContext(),
+		*res.Plan,
+	)
+
+	s.Require().NoError(err)
 }
