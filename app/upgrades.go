@@ -12,6 +12,7 @@ import (
 	v4 "github.com/xrplevm/node/v7/app/upgrades/v4"
 	v5 "github.com/xrplevm/node/v7/app/upgrades/v5"
 	v6 "github.com/xrplevm/node/v7/app/upgrades/v6"
+	v7 "github.com/xrplevm/node/v7/app/upgrades/v7"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -40,6 +41,13 @@ func (app *App) setupUpgradeHandlers() {
 	app.UpgradeKeeper.SetUpgradeHandler(
 		v6.UpgradeName,
 		v6.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+		),
+	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v7.UpgradeName,
+		v7.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
 		),
