@@ -9,7 +9,7 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v6/testutil/integration/exrp/utils"
+	"github.com/xrplevm/node/v7/testutil/integration/exrp/utils"
 )
 
 // Slashing tests

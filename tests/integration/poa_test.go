@@ -15,8 +15,8 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v6/testutil/integration/exrp/utils"
-	poatypes "github.com/xrplevm/node/v6/x/poa/types"
+	"github.com/xrplevm/node/v7/testutil/integration/exrp/utils"
+	poatypes "github.com/xrplevm/node/v7/x/poa/types"
 )
 
 // AddValidator tests

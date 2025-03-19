@@ -11,7 +11,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	testtx "github.com/evmos/evmos/v20/testutil/tx"
-	exrpcommon "github.com/xrplevm/node/v6/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v7/testutil/integration/exrp/common"
 )
 
 // DefaultIntegrationConfig returns the default configuration for a chain.

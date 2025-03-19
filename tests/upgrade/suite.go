@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
-	exrpupgrade "github.com/xrplevm/node/v6/testutil/integration/exrp/upgrade"
+	exrpupgrade "github.com/xrplevm/node/v7/testutil/integration/exrp/upgrade"
 )
 
 const defaultStateFile = "upgrade-state.json"
