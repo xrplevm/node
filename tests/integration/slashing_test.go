@@ -29,7 +29,7 @@ func (s *TestSuite) TestSlashing_ChangeParams() {
 				math.LegacyZeroDec(),
 				math.LegacyOneDec(),
 			),
-			expectedError: "downtime sign slash fraction must be zero: 1.000000000000000000",
+			expectedError: "slash fraction downtime must be zero: 1.000000000000000000",
 		},
 		{
 			name: "change slashing params - invalid slash fraction downtime",
@@ -40,7 +40,7 @@ func (s *TestSuite) TestSlashing_ChangeParams() {
 				math.LegacyOneDec(),
 				math.LegacyZeroDec(),
 			),
-			expectedError: "double sign slash fraction must be zero: 1.000000000000000000",
+			expectedError: "slash fraction double sign must be zero: 1.000000000000000000",
 		},
 		{
 			name: "change slashing params - success",
