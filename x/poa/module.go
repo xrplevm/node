@@ -15,8 +15,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/xrplevm/node/v6/x/poa/keeper"
-	"github.com/xrplevm/node/v6/x/poa/types"
+	"github.com/xrplevm/node/v7/x/poa/keeper"
+	"github.com/xrplevm/node/v7/x/poa/types"
 )
 
 var (

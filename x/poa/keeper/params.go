@@ -2,7 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v6/x/poa/types"
+	"github.com/xrplevm/node/v7/x/poa/types"
 )
 
 // GetParams get all parameters as types.Params

@@ -1,4 +1,4 @@
-module github.com/xrplevm/node/v6
+module github.com/xrplevm/node/v7
 
 go 1.22.11
 
