@@ -42,7 +42,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"github.com/xrplevm/node/v6/x/poa"
+	"github.com/xrplevm/node/v7/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -120,11 +120,11 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
-	"github.com/xrplevm/node/v6/docs"
-	poakeeper "github.com/xrplevm/node/v6/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v6/x/poa/types"
+	"github.com/xrplevm/node/v7/docs"
+	poakeeper "github.com/xrplevm/node/v7/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v7/x/poa/types"
 
-	// "github.com/xrplevm/node/v6/app/ante"
+	// "github.com/xrplevm/node/v7/app/ante"
 	"github.com/evmos/evmos/v20/app/ante"
 	srvflags "github.com/evmos/evmos/v20/server/flags"
 
@@ -444,7 +444,6 @@ func New(
 		stakingtypes.NewMultiStakingHooks(
 			app.DistrKeeper.Hooks(),
 			app.SlashingKeeper.Hooks(),
-			app.PoaKeeper.Hooks(),
 		),
 	)
 	// register the staking hooks

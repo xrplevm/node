@@ -4,7 +4,7 @@ package poa;
 import "gogoproto/gogo.proto";
 import "poa/params.proto";
 
-option go_package = "github.com/xrplevm/node/v6/x/poa/types";
+option go_package = "github.com/xrplevm/node/v7/x/poa/types";
 
 // GenesisState defines the poa module's genesis state.
 message GenesisState { Params params = 1 [ (gogoproto.nullable) = false ]; }

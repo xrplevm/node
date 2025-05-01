@@ -1,4 +1,4 @@
-FROM golang:1.22.7 AS base
+FROM golang:1.22.11 AS base
 USER root
 RUN apt update && \
     apt-get install -y \
@@ -18,13 +18,16 @@ FROM base AS integration
 RUN make lint
 # Unit tests
 RUN make test-poa
+# Integration tests
+RUN make test-integration
+RUN make test-upgrade
 # Simulation tests
 RUN make test-sim-benchmark-simulation
 RUN make test-sim-full-app-fast
 
 RUN touch /test.lock
 
-FROM golang:1.22.2 AS release
+FROM golang:1.22.11 AS release
 WORKDIR /
 COPY --from=integration /test.lock /test.lock
 COPY --from=build /app/bin/exrpd /usr/bin/exrpd

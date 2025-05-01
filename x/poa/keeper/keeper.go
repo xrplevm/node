@@ -17,8 +17,18 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/xrplevm/node/v6/x/poa/types"
+	"github.com/xrplevm/node/v7/x/poa/types"
 )
+
+var _ types.QueryServer = Querier{}
+
+type Querier struct {
+	Keeper
+}
+
+func NewQuerier(keeper Keeper) Querier {
+	return Querier{Keeper: keeper}
+}
 
 type (
 	Keeper struct {
@@ -197,7 +207,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	valAddress, err := sdk.ValAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
 	}
@@ -207,35 +217,11 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 	denom := params.BondDenom
 
-	// Check if address has some balance in bank and withdraw in case of having
-	balance := k.bk.GetBalance(ctx, accAddress, denom)
-	if balance.IsPositive() {
-		coins := sdk.NewCoins(balance)
-		err = k.bk.SendCoinsFromAccountToModule(ctx, accAddress, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't send coins to the module account
-			return err
-		}
-
-		err = k.bk.BurnCoins(ctx, types.ModuleName, coins)
-		if err != nil {
-			// Fail hard if we can't burn coins
-			return err
-		}
-	}
-
 	// If address also has a validator, we need to check additional conditions
-	valAddress := sdk.ValAddress(accAddress)
 	validator, err := k.sk.GetValidator(ctx, valAddress)
 	if err != nil {
 		ctx.Logger().Warn("Error getting validator", "error", err)
-		if balance.IsZero() {
-			// Address has no balance in bank and is not a validator either
-			// NOTE: Since delegations are not enabled in this version, we don't need to check for them
-			return types.ErrAddressHasNoTokens
-		}
-		// Validator does not exist, but we already took its balance from bank, we can safely return
-		return nil
+		return types.ErrAddressIsNotAValidator
 	}
 
 	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
@@ -297,7 +283,6 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			sdk.NewAttribute(types.AttributeValidator, validatorAddress),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
 			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
-			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
 
