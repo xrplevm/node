@@ -13,8 +13,8 @@ import (
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/golang/mock/gomock"
-	"github.com/xrplevm/node/v7/x/poa/testutil"
-	"github.com/xrplevm/node/v7/x/poa/types"
+	"github.com/xrplevm/node/v8/x/poa/testutil"
+	"github.com/xrplevm/node/v8/x/poa/types"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )

@@ -8,7 +8,7 @@ import (
 	"github.com/evmos/evmos/v20/app/ante"
 	ethante "github.com/evmos/evmos/v20/app/ante/evm"
 	etherminttypes "github.com/evmos/evmos/v20/types"
-	poaante "github.com/xrplevm/node/v7/x/poa/ante"
+	poaante "github.com/xrplevm/node/v8/x/poa/ante"
 )
 
 type AnteHandlerOptions ante.HandlerOptions

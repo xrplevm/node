@@ -11,8 +11,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/xrplevm/node/v7/app"
-	exrpcommon "github.com/xrplevm/node/v7/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v8/app"
+	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
