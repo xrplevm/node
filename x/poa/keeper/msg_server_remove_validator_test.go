@@ -6,7 +6,7 @@ import (
 
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v7/x/poa/types"
+	"github.com/xrplevm/node/v8/x/poa/types"
 )
 
 func TestMsgServer_RemoveValidator(t *testing.T) {
