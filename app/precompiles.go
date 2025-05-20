@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/xrplevm/node/v6/precompiles/erc20factory"
 
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 
@@ -83,6 +84,11 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate gov precompile: %w", err))
 	}
 
+	erc20factoryPrecompile, err := erc20factory.NewPrecompile(authzKeeper, erc20Keeper, bankKeeper)
+	if err != nil {
+		panic(fmt.Errorf("failed to instantiate erc20factory precompile: %w", err))
+	}
+
 	// Stateless precompiles
 	precompiles[bech32Precompile.Address()] = bech32Precompile
 	precompiles[p256Precompile.Address()] = p256Precompile
@@ -93,5 +99,6 @@ func NewAvailableStaticPrecompiles(
 	precompiles[ibcTransferPrecompile.Address()] = ibcTransferPrecompile
 	precompiles[bankPrecompile.Address()] = bankPrecompile
 	precompiles[govPrecompile.Address()] = govPrecompile
+	precompiles[erc20factoryPrecompile.Address()] = erc20factoryPrecompile
 	return precompiles
 }
