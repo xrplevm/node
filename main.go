@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,7 +30,8 @@ func fetchBlockLogs(client *ethclient.Client, blockHash common.Hash, wg *sync.Wa
 		})
 		time.Sleep(2 * time.Second)
 		if err != nil {
-			// log.Printf("Error fetching logs for block %s: %v", blockHash.Hex(), err)
+			log.Printf("Error fetching logs for block %s: %v", blockHash.Hex(), err)
+			continue
 		}
 
 		log.Printf("Worker %d (iteration %d): Found %d logs in block %s", workerID, i+1, len(logs), blockHash.Hex())
@@ -39,37 +44,70 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to the EVM RPC client: %v", err)
 	}
+
 	// Track the previous block height
 	var prevBlockHeight uint64
 
 	// Create a WaitGroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
 
+	// Create HTTP client for JSON-RPC calls
+	httpClient := &http.Client{}
+
 	// Continuously fetch new blocks
 	for {
-		// Get the latest block
-		block, err := client.BlockByNumber(context.Background(), nil)
+		// Prepare JSON-RPC request
+		reqBody := strings.NewReader(`{
+			"jsonrpc": "2.0",
+			"method": "eth_getBlockByNumber",
+			"params": ["latest", false],
+			"id": 1
+		}`)
+
+		// Make JSON-RPC request
+		req, err := http.NewRequest("POST", "http://localhost:8545", reqBody)
+		if err != nil {
+			log.Printf("Failed to create request: %v", err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			log.Printf("Failed to get latest block: %v", err)
 			continue
 		}
+		defer resp.Body.Close()
 
-		// Verify if the block is valid
-		if block == nil {
-			log.Printf("Received nil block")
+		// Parse response
+		var result struct {
+			Result struct {
+				Number string `json:"number"`
+				Hash   string `json:"hash"`
+			} `json:"result"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			log.Printf("Failed to decode response: %v", err)
 			continue
 		}
 
-		currentHeight := block.Number().Uint64()
+		// Convert hex number to uint64
+		currentHeight, err := strconv.ParseUint(strings.TrimPrefix(result.Result.Number, "0x"), 16, 64)
+		if err != nil {
+			log.Printf("Failed to parse block number: %v", err)
+			continue
+		}
 
 		// Only process if block height has changed
 		if currentHeight != prevBlockHeight {
-			fmt.Printf("Block %d: %s\n", currentHeight, block.Hash().Hex())
+			blockHash := common.HexToHash(result.Result.Hash)
+			fmt.Printf("Block %d: %s\n", currentHeight, blockHash.Hex())
 
 			// Launch goroutines to fetch block logs
 			for i := 0; i < numWorkers; i++ {
 				wg.Add(1)
-				go fetchBlockLogs(client, block.Hash(), &wg, i+1)
+				go fetchBlockLogs(client, blockHash, &wg, i+1)
 			}
 
 			// Update previous block height
