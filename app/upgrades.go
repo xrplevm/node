@@ -9,10 +9,11 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v8/types"
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
-	v4 "github.com/xrplevm/node/v7/app/upgrades/v4"
-	v5 "github.com/xrplevm/node/v7/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v7/app/upgrades/v6"
-	v7 "github.com/xrplevm/node/v7/app/upgrades/v7"
+	v4 "github.com/xrplevm/node/v8/app/upgrades/v4"
+	v5 "github.com/xrplevm/node/v8/app/upgrades/v5"
+	v6 "github.com/xrplevm/node/v8/app/upgrades/v6"
+	v7 "github.com/xrplevm/node/v8/app/upgrades/v7"
+	v8 "github.com/xrplevm/node/v8/app/upgrades/v8"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -48,6 +49,13 @@ func (app *App) setupUpgradeHandlers() {
 	app.UpgradeKeeper.SetUpgradeHandler(
 		v7.UpgradeName,
 		v7.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+		),
+	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v8.UpgradeName,
+		v8.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
 		),

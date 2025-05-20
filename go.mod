@@ -1,4 +1,4 @@
-module github.com/xrplevm/node/v7
+module github.com/xrplevm/node/v8
 
 go 1.22.11
 
@@ -266,7 +266,7 @@ replace (
 	// use Evmos geth fork
 	github.com/ethereum/go-ethereum => github.com/evmos/go-ethereum v1.10.26-evmos-rc4
 	// use exrp Evmos fork
-	github.com/evmos/evmos/v20 => github.com/xrplevm/evmos/v20 v20.0.0-exrp.5
+	github.com/evmos/evmos/v20 => github.com/xrplevm/evmos/v20 v20.0.0-exrp.6
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 	// replace broken goleveldb

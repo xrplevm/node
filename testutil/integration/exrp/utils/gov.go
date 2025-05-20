@@ -16,9 +16,9 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	commonfactory "github.com/xrplevm/node/v7/testutil/integration/common/factory"
-	"github.com/xrplevm/node/v7/testutil/integration/common/keyring"
-	"github.com/xrplevm/node/v7/testutil/integration/common/network"
+	commonfactory "github.com/xrplevm/node/v8/testutil/integration/common/factory"
+	"github.com/xrplevm/node/v8/testutil/integration/common/keyring"
+	"github.com/xrplevm/node/v8/testutil/integration/common/network"
 )
 
 // SubmitProposal is a helper function to submit a governance proposal and

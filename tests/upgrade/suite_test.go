@@ -6,7 +6,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v7/app"
+	"github.com/xrplevm/node/v8/app"
 )
 
 func TestUpgradeTestSuite(t *testing.T) {
