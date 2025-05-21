@@ -6,6 +6,9 @@ import {hexlify, Signer} from "ethers";
 
 const INIT_BLOCK = 16428781;
 
+const LOCALNET_RPC_URL = "http://localhost:26657";
+const DEVNET_RPC_URL = "http://cosmos.xrplevm.org:26657"
+
 async function main() {
     for(let block = INIT_BLOCK; block < INIT_BLOCK + 20; block++) {
         const b = Number(block);
@@ -34,7 +37,7 @@ async function compareResWithFuture(height: number, pastRes: any) {
 }
 
 async function requestBlock(height: number) {
-    const res = await fetch(`http://cosmos.xrplevm.org:26657/block_results?height=${height}`);
+    const res = await fetch(`${LOCALNET_RPC_URL}/block_results?height=${height}`);
     if (res.status >= 300) {
         return "block not found";
     }

@@ -1,4 +1,4 @@
-import path = require("path");
+import * as path from "path";
 import {ethers} from "hardhat";
 import * as fs from "fs";
 import {LogSpammer} from "../typechain-types";
@@ -44,7 +44,6 @@ async function noise(address: string, provider: Provider) {
         provider.getBalance(address).then(console.log)
         provider.getBlockNumber().then(console.log)
         provider.getLogs({ address: address }).then(console.log)
-        provider.
         await sleep(1)
     }
 }
@@ -58,9 +57,9 @@ async function main() {
     // const provider = new ethers.JsonRpcProvider("http://65.108.250.207:8545");
     const signer = new ethers.Wallet("", provider);
     const LogSpammerFactory = await ethers.getContractFactory("LogSpammer", signer);
-    const logSpammer: LogSpammer = LogSpammerFactory.attach(logSpammerAddress) as LogSpammer;
+    const logSpammer = LogSpammerFactory.attach(logSpammerAddress) as unknown as LogSpammer;
 
-    noise(logSpammerAddress, provider);
+    // noise(logSpammerAddress, provider);
 
     while(true) {
         try {

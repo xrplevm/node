@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,45 +10,99 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const (
-	numWorkers  = 1
+	numWorkers  = 32
 	logsToFetch = 10
 )
 
-func fetchBlockLogs(client *ethclient.Client, blockHash common.Hash, wg *sync.WaitGroup, workerID int) {
+type FinalizeBlockEvent struct {
+	Type string `json:"type"`
+	Attributes []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+		Index bool   `json:"index"`
+	} `json:"attributes"`
+}
+
+// Custom struct to handle string fields in the response
+type BlockResult struct {
+	Height string `json:"height"`
+	TxsResults []interface{} `json:"txs_results"`
+	FinalizeBlockEvents []FinalizeBlockEvent `json:"finalize_block_events"`
+	ValidatorUpdates interface{} `json:"validator_updates"`
+	ConsensusParamUpdates struct {
+		Block struct {
+			MaxBytes string `json:"max_bytes"`
+			MaxGas   string `json:"max_gas"`
+		} `json:"block"`
+		Evidence struct {
+			MaxAgeNumBlocks string `json:"max_age_num_blocks"`
+			MaxAgeDuration  string `json:"max_age_duration"`
+			MaxBytes        string `json:"max_bytes"`
+		} `json:"evidence"`
+		Validator struct {
+			PubKeyTypes []string `json:"pub_key_types"`
+		} `json:"validator"`
+	} `json:"consensus_param_updates"`
+	AppHash string `json:"app_hash"`
+}
+
+func fetchBlockResults(blockHeight uint64, wg *sync.WaitGroup, workerID int) {
 	defer wg.Done()
-	address, _ := hex.DecodeString("2a5E2421D36Df7Df03868e6E51E5108871BA6E9a")
-	for i := 0; i < logsToFetch; i++ { // Default to 5 iterations
-		logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
-			BlockHash: &blockHash,
-			Addresses: []common.Address{common.Address(address)},
-		})
-		time.Sleep(20 * time.Millisecond)
+
+	var prevResult BlockResult
+	firstIteration := true
+
+	for i := 0; i < logsToFetch; i++ {
+		// Make HTTP request to get block results
+		resp, err := http.Get(fmt.Sprintf("http://cosmos.xrplevm.org:26657/block_results?height=%d", blockHeight))
 		if err != nil {
-			log.Printf("Error fetching logs for block %s: %v", blockHash.Hex(), err)
+			log.Printf("Worker %d: Error fetching block results: %v", workerID, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// Parse response into BlockResult
+		var result struct {
+			Result BlockResult `json:"result"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			log.Printf("Worker %d: Error decoding response: %v", workerID, err)
 			continue
 		}
 
-		if len(logs) == 0 {
-			log.Printf("Worker %d (iteration %d): Found %d logs in block %s", workerID, i+1, len(logs), blockHash.Hex())
-			// os.Exit(1)
+		// Compare with previous result
+		if !firstIteration {
+			// Convert both results to JSON for comparison
+			prevJSON, err := json.Marshal(prevResult)
+			if err != nil {
+				log.Printf("Worker %d: Error marshaling previous result: %v", workerID, err)
+				continue
+			}
+
+			currentJSON, err := json.Marshal(result.Result)
+			if err != nil {
+				log.Printf("Worker %d: Error marshaling current result: %v", workerID, err)
+				continue
+			}
+
+			if string(prevJSON) != string(currentJSON) {
+				log.Printf("Worker %d (iteration %d): Block results changed for height %d | prev: %d | current: %d | diff: %+v", workerID, i+1, blockHeight, len(prevResult.FinalizeBlockEvents), len(result.Result.FinalizeBlockEvents), prevResult)
+			}
 		}
+
+		// Store current result for next iteration
+		prevResult = result.Result
+		firstIteration = false
+
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
 func main() {
-	// Connect to the local EVM RPC client
-	// client, err := ethclient.Dial("https://rpc.devnet.xrplevm.org")
-	client, err := ethclient.Dial("http://78.47.240.16:8545")
-	if err != nil {
-		log.Fatalf("Failed to connect to the EVM RPC client: %v", err)
-	}
-
 	// Track the previous block height
 	var prevBlockHeight uint64
 
@@ -71,8 +123,8 @@ func main() {
 		}`)
 
 		// Make JSON-RPC request
-		// req, err := http.NewRequest("POST", "http://78.47.240.16:8545", reqBody)
 		req, err := http.NewRequest("POST", "http://65.108.250.207:8545", reqBody)
+		// req, err := http.NewRequest("POST", "http://localhost:8545", reqBody)
 		if err != nil {
 			log.Printf("Failed to create request: %v", err)
 			continue
@@ -111,10 +163,10 @@ func main() {
 			blockHash := common.HexToHash(result.Result.Hash)
 			fmt.Printf("Block %d: %s\n", currentHeight, blockHash.Hex())
 
-			// Launch goroutines to fetch block logs
+			// Launch goroutines to fetch block results
 			for i := 0; i < numWorkers; i++ {
 				wg.Add(1)
-				go fetchBlockLogs(client, blockHash, &wg, i+1)
+				go fetchBlockResults(currentHeight, &wg, i+1)
 			}
 
 			// Update previous block height
