@@ -55,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   goreleaser:
     needs: [ release ]
-    uses: ./.github/workflows/goreleaser.yaml
+    uses: ./.github/workflows/goreleaser.yml
     secrets: inherit
     with:
       commit_branch: ${{ github.event.inputs.commit_branch }}
