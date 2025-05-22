@@ -5,6 +5,12 @@ on:
       commit_branch:
         description: The branch or the commit sha to push tag to
         required: true
+  workflow_call:
+    inputs:
+      commit_branch:
+        type: string
+        description: The branch or the commit sha to push tag to
+        required: true
 
 jobs:
   release:
@@ -14,7 +20,7 @@ jobs:
         run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.commit_branch }}
+          ref: ${{ inputs.commit_branch }}
           fetch-depth: 0
           fetch-tags: true
       - uses: docker/setup-qemu-action@v2
