@@ -25,7 +25,7 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/evmos/evmos/v20/types"
+	"github.com/cosmos/evm/types"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.

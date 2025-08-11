@@ -3,7 +3,7 @@ package integration
 import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/suite"
 	"github.com/xrplevm/node/v8/app"
 	factory "github.com/xrplevm/node/v8/testutil/integration/common/factory"

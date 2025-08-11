@@ -14,7 +14,7 @@ import (
 	gethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/xrplevm/node/v8/app"
 
-	"github.com/evmos/evmos/v20/types"
+	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtjson "github.com/cometbft/cometbft/libs/json"

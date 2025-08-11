@@ -9,9 +9,9 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
-	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
-	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
-	feemarketkeeper "github.com/evmos/evmos/v20/x/feemarket/keeper"
+	erc20keeper "github.com/cosmos/evm/x/erc20/keeper"
+	feemarketkeeper "github.com/cosmos/evm/x/feemarket/keeper"
+	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
 )
 
@@ -32,7 +32,7 @@ func (n *UpgradeIntegrationNetwork) GovKeeper() *govkeeper.Keeper {
 }
 
 func (n *UpgradeIntegrationNetwork) StakingKeeper() *stakingkeeper.Keeper {
-	return n.app.StakingKeeper.Keeper
+	return n.app.StakingKeeper
 }
 
 func (n *UpgradeIntegrationNetwork) SlashingKeeper() slashingkeeper.Keeper {

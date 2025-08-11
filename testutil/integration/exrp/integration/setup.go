@@ -28,13 +28,13 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	evmostypes "github.com/evmos/evmos/v20/types"
-	epochstypes "github.com/evmos/evmos/v20/x/epochs/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	infltypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
+	evmostypes "github.com/cosmos/evm/types"
+	epochstypes "github.com/cosmos/evm/x/epochs/types"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	infltypes "github.com/cosmos/evm/x/inflation/v1/types"
 
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 
 	"github.com/xrplevm/node/v8/app"

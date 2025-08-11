@@ -19,10 +19,10 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
 // GenSetupFn is the type for the module genesis setup functions
@@ -105,6 +105,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
 	homePath := testNodeHome
+	evmChainID := uint64(1)
 	invCheckPeriod := uint(5)
 	appOptions := simutils.NewAppOptionsWithFlagHome(homePath)
 	baseAppOptions := append(customBaseAppOptions, baseapp.SetChainID(chainID)) //nolint:gocritic
@@ -116,6 +117,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		loadLatest,
 		skipUpgradeHeights,
 		homePath,
+		evmChainID,
 		invCheckPeriod,
 		appOptions,
 		baseAppOptions...,

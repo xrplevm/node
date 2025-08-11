@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	evmostypes "github.com/evmos/evmos/v20/types"
+	evmostypes "github.com/cosmos/evm/types"
 	"github.com/xrplevm/node/v8/app"
 )
 

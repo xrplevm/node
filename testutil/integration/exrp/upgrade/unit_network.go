@@ -4,9 +4,9 @@ package exrpupgrade
 
 import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	inflationtypes "github.com/cosmos/evm/x/inflation/v1/types"
+	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/evmos/v20/x/evm/statedb"
-	inflationtypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
 	"github.com/xrplevm/node/v8/app"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 )

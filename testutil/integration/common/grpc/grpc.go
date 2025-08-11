@@ -9,7 +9,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	network "github.com/xrplevm/node/v8/testutil/integration/common/network"
 )
 

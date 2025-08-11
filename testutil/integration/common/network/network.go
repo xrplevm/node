@@ -18,8 +18,8 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
 // Network is the interface that wraps the common methods to interact with integration test network.
