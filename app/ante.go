@@ -1,17 +1,41 @@
 package app
 
 import (
+	storetypes "cosmossdk.io/store/types"
+	txsigning "cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/evmos/evmos/v20/app/ante"
-	ethante "github.com/evmos/evmos/v20/app/ante/evm"
-	etherminttypes "github.com/evmos/evmos/v20/types"
+	"github.com/cosmos/evm/ante"
+	ethante "github.com/cosmos/evm/ante/evm"
+	anteinterfaces "github.com/cosmos/evm/ante/interfaces"
+	etherminttypes "github.com/cosmos/evm/types"
+	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	poaante "github.com/xrplevm/node/v8/x/poa/ante"
 )
 
-type AnteHandlerOptions ante.HandlerOptions
+type AnteHandlerOptions struct {
+	Cdc                    codec.BinaryCodec
+	AccountKeeper          anteinterfaces.AccountKeeper
+	BankKeeper             anteinterfaces.BankKeeper
+	IBCKeeper              *ibckeeper.Keeper
+	FeeMarketKeeper        anteinterfaces.FeeMarketKeeper
+	EvmKeeper              anteinterfaces.EVMKeeper
+	FeegrantKeeper         authante.FeegrantKeeper
+	ExtensionOptionChecker authante.ExtensionOptionChecker
+	SignModeHandler        *txsigning.HandlerMap
+	SigGasConsumer         func(meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
+	MaxTxGasWanted         uint64
+	TxFeeChecker           authante.TxFeeChecker
+	StakingKeeper          StakingKeeper
+	DistributionKeeper     DistributionKeeper
+	ExtraDecorator         sdk.AnteDecorator
+	AuthzDisabledMsgTypes  []string
+}
 
 func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWanted uint64) *AnteHandlerOptions {
 	return &AnteHandlerOptions{
@@ -26,7 +50,7 @@ func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWant
 		SignModeHandler:        txConfig.SignModeHandler(),
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
+		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
 		StakingKeeper:          app.StakingKeeper,
 		DistributionKeeper:     app.DistrKeeper,
 		ExtraDecorator:         poaante.NewPoaDecorator(),

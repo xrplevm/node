@@ -10,7 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/evmos/evmos/v20/crypto/ethsecp256k1"
+	"github.com/cosmos/evm/crypto/ethsecp256k1"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -20,16 +20,20 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/evmos/v20/app/ante"
+	evmante "github.com/cosmos/evm/evmd/ante"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v8/app/ante"
 )
 
 func init() {
 	simcli.GetSimulatorFlags()
 }
 
-const SimAppChainID = "simulation_777-1"
+const (
+	SimAppChainID = "simulation_777-1"
+	SimAppEVMChainID = 777
+)
 
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
 func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
@@ -44,15 +48,17 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		false,
 		map[int64]bool{},
 		app.DefaultNodeHome,
+		SimAppEVMChainID,
 		simcli.FlagPeriodValue,
 		appOptions,
+
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig(), 0)
+	handlerOpts := ante.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig(), 0)
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
-	bApp.SetAnteHandler(ante.NewAnteHandler(handlerOpts.Options()))
+	bApp.SetAnteHandler(evmante.NewAnteHandler(handlerOpts.Options()))
 
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
