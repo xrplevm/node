@@ -38,15 +38,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v20/crypto/hd"
+	"github.com/cosmos/evm/crypto/hd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	ethermintclient "github.com/evmos/evmos/v20/client"
-	ethermintserver "github.com/evmos/evmos/v20/server"
-	ethermintservercfg "github.com/evmos/evmos/v20/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v20/server/flags"
+	ethermintclient "github.com/cosmos/evm/client"
+	ethermintserver "github.com/cosmos/evm/server"
+	ethermintservercfg "github.com/cosmos/evm/server/config"
+	ethermintserverflags "github.com/cosmos/evm/server/flags"
 	"github.com/xrplevm/node/v8/app"
 )
 
@@ -64,6 +64,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		tempDir(app.DefaultNodeHome),
+		0,
 		0,
 		emptyAppOptions{},
 	)
@@ -392,6 +393,7 @@ func (a appCreator) appExport(
 		height == -1, // -1: no height provided
 		map[int64]bool{},
 		homePath,
+		0,
 		uint(1),
 		appOpts,
 	)
