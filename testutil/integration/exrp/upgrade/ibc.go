@@ -5,7 +5,7 @@ package exrpupgrade
 import (
 	"testing"
 
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	ibctesting "github.com/cosmos/ibc-go/v10/testing"
 )
 
 // GetIBCChain returns a TestChain instance for the given network.
@@ -17,8 +17,6 @@ func (n *UpgradeIntegrationNetwork) GetIBCChain(t *testing.T, coord *ibctesting.
 		Coordinator:   coord,
 		ChainID:       n.GetChainID(),
 		App:           n.app,
-		CurrentHeader: n.ctx.BlockHeader(),
-		QueryServer:   n.app.GetIBCKeeper(),
 		TxConfig:      n.app.GetTxConfig(),
 		Codec:         n.app.AppCodec(),
 		Vals:          n.valSet,
