@@ -10,7 +10,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/evm/ante"
+	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
+	etherminttypes "github.com/cosmos/evm/types"
+	"github.com/xrplevm/node/v8/app"
+	poaante "github.com/xrplevm/node/v8/x/poa/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -20,10 +25,9 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	evmante "github.com/cosmos/evm/evmd/ante"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v8/app"
-	"github.com/xrplevm/node/v8/app/ante"
 )
 
 func init() {
@@ -54,11 +58,36 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := ante.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig(), 0)
+	handlerOpts := &app.HandlerOptions{
+		HandlerOptions: evmante.HandlerOptions{
+			Cdc:                    bApp.AppCodec(),
+			AccountKeeper:          bApp.AccountKeeper,
+			BankKeeper:             bApp.BankKeeper,
+			ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+			EvmKeeper:              bApp.EvmKeeper,
+			FeegrantKeeper:         bApp.FeeGrantKeeper,
+			// TODO: Update when migrating to v10
+			IBCKeeper:              bApp.IBCKeeper,
+			FeeMarketKeeper:        bApp.FeeMarketKeeper,
+			SignModeHandler:        bApp.GetTxConfig().SignModeHandler(),
+			SigGasConsumer:         ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:         0,
+			TxFeeChecker:           ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
+		},
+		StakingKeeper:          bApp.StakingKeeper,
+		DistributionKeeper:     bApp.DistrKeeper,
+		ExtraDecorator:         poaante.NewPoaDecorator(),
+		AuthzDisabledMsgTypes: []string{
+			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
+		},
+	}
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
-	bApp.SetAnteHandler(evmante.NewAnteHandler(handlerOpts.Options()))
+	bApp.SetAnteHandler(app.NewAnteHandler(*handlerOpts))
 
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err

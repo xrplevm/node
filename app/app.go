@@ -19,9 +19,11 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	sdkstaking "github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/evm/ante"
+	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/encoding"
 	evmante "github.com/cosmos/evm/evmd/ante"
+	etherminttypes "github.com/cosmos/evm/types"
 	cosmosevmutils "github.com/cosmos/evm/utils"
 	"github.com/cosmos/gogoproto/proto"
 	ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v8"
@@ -123,6 +125,7 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	"github.com/xrplevm/node/v8/docs"
+	poaante "github.com/xrplevm/node/v8/x/poa/ante"
 	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
 	poatypes "github.com/xrplevm/node/v8/x/poa/types"
 
@@ -351,6 +354,7 @@ func New(
 	app.AccountKeeper = authkeeper.NewAccountKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
+		// TODO: Update when replacing with forked cosmos/evm version is installed
 		evmostypes.ProtoAccount,
 		maccPerms,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
@@ -688,8 +692,7 @@ func New(
 		app.mm,
 		map[string]module.AppModuleBasic{
 			genutiltypes.ModuleName: genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
-			// TODO: Update when migrating to v10
-			stakingtypes.ModuleName: staking.AppModuleBasic{AppModuleBasic: &sdkstaking.AppModuleBasic{}},
+			stakingtypes.ModuleName: staking.AppModuleBasic{},
 			govtypes.ModuleName: gov.NewAppModuleBasic(
 				[]govclient.ProposalHandler{
 					paramsclient.ProposalHandler,
@@ -845,13 +848,38 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := NewAnteHandlerOptionsFromApp(app, txConfig, maxGasWanted)
+	handlerOpts := &HandlerOptions{
+		HandlerOptions: evmante.HandlerOptions{
+			Cdc:                    app.appCodec,
+			AccountKeeper:          app.AccountKeeper,
+			BankKeeper:             app.BankKeeper,
+			ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+			EvmKeeper:              app.EvmKeeper,
+			FeegrantKeeper:         app.FeeGrantKeeper,
+			// TODO: Update when migrating to v10
+			IBCKeeper:              app.IBCKeeper,
+			FeeMarketKeeper:        app.FeeMarketKeeper,
+			SignModeHandler:        txConfig.SignModeHandler(),
+			SigGasConsumer:         ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:         maxGasWanted,
+			TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+		},
+		StakingKeeper:          app.StakingKeeper,
+		DistributionKeeper:     app.DistrKeeper,
+		ExtraDecorator:         poaante.NewPoaDecorator(),
+		AuthzDisabledMsgTypes: []string{
+			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
+		},
+	}
 
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
 
-	app.SetAnteHandler(evmante.NewAnteHandler(handlerOpts.Options()))
+	app.SetAnteHandler(NewAnteHandler(*handlerOpts))
 }
 
 func (app *App) setPostHandler() {
