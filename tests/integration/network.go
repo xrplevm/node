@@ -11,13 +11,13 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	commonnetwork "github.com/xrplevm/node/v8/testutil/integration/common/network"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 	exrpintegration "github.com/xrplevm/node/v8/testutil/integration/exrp/integration"
 	poatypes "github.com/xrplevm/node/v8/x/poa/types"
 )
 
-var _ commonnetwork.Network = (*Network)(nil)
+// TODO: Update when migrating to v10
+var _ exrpintegration.Network = (*Network)(nil)
 
 type Network struct {
 	exrpintegration.IntegrationNetwork

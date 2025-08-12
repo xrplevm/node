@@ -3,12 +3,12 @@ package integration
 import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/evm/testutil/integration/common/factory"
+	"github.com/cosmos/evm/testutil/integration/os/grpc"
+	"github.com/cosmos/evm/testutil/integration/os/keyring"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/suite"
 	"github.com/xrplevm/node/v8/app"
-	factory "github.com/xrplevm/node/v8/testutil/integration/common/factory"
-	"github.com/xrplevm/node/v8/testutil/integration/common/grpc"
-	"github.com/xrplevm/node/v8/testutil/integration/common/keyring"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 )
 
@@ -53,8 +53,10 @@ func (s *TestSuite) SetupTest() {
 	)
 	s.Require().NotNil(s.network)
 
+	// TODO: Update when migrating to v10
 	grpcHandler := grpc.NewIntegrationHandler(s.network)
 
+	// TODO: Update when migrating to v10
 	s.factory = factory.New(s.network, grpcHandler)
 	s.keyring = kr
 	s.grpcHandler = grpcHandler

@@ -14,6 +14,7 @@ import (
 	gethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/xrplevm/node/v8/app"
 
+	"github.com/cosmos/evm/testutil/integration/common/network"
 	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
@@ -26,6 +27,7 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 )
@@ -35,12 +37,17 @@ import (
 // It was designed to avoid users to access module's keepers directly and force integration tests
 // to be closer to the real user's behavior.
 type Network interface {
-	exrpcommon.Network
+	network.Network
+
+	GetGovClient() govtypes.QueryClient
 
 	GetEIP155ChainID() *big.Int
 	GetValidatorSet() *cmttypes.ValidatorSet
+
+	GetMinDepositAmt() sdkmath.Int
 }
 
+// TODO: Update when migrating to v10
 var _ Network = (*IntegrationNetwork)(nil)
 
 // IntegrationNetwork is the implementation of the Network interface for integration tests.
@@ -275,12 +282,12 @@ func (n *IntegrationNetwork) GetMinDepositAmt() sdkmath.Int {
 
 // GetChainConfig returns the network's chain config
 func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
-	params := n.app.EvmKeeper.GetParams(n.ctx)
-	return params.ChainConfig.EthereumConfig(n.cfg.EIP155ChainID)
+	// TODO: Implement this
+	return nil
 }
 
 // GetDenom returns the network's denom
-func (n *IntegrationNetwork) GetDenom() string {
+func (n *IntegrationNetwork) GetBaseDenom() string {
 	return n.cfg.Denom
 }
 

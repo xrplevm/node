@@ -4,7 +4,7 @@ package exrpupgrade
 
 import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	inflationtypes "github.com/cosmos/evm/x/inflation/v1/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/xrplevm/node/v8/app"
@@ -49,9 +49,9 @@ func (n *UnitTestUpgradeNetwork) GetStateDB() *statedb.StateDB {
 func (n *UnitTestUpgradeNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
 	ctx := n.GetContext()
 
-	if err := n.app.BankKeeper.MintCoins(ctx, inflationtypes.ModuleName, coins); err != nil {
+	if err := n.app.BankKeeper.MintCoins(ctx, banktypes.ModuleName, coins); err != nil {
 		return err
 	}
 
-	return n.app.BankKeeper.SendCoinsFromModuleToAccount(ctx, inflationtypes.ModuleName, addr, coins)
+	return n.app.BankKeeper.SendCoinsFromModuleToAccount(ctx, banktypes.ModuleName, addr, coins)
 }

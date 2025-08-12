@@ -10,13 +10,12 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	commonnetwork "github.com/xrplevm/node/v8/testutil/integration/common/network"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 	upgradenetwork "github.com/xrplevm/node/v8/testutil/integration/exrp/upgrade"
 	poatypes "github.com/xrplevm/node/v8/x/poa/types"
 )
 
-var _ commonnetwork.Network = (*UpgradeTestNetwork)(nil)
+var _ exrpcommon.Network = (*UpgradeTestNetwork)(nil)
 
 type UpgradeTestNetwork struct {
 	upgradenetwork.UpgradeIntegrationNetwork

@@ -29,10 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	evmostypes "github.com/cosmos/evm/types"
-	epochstypes "github.com/cosmos/evm/x/epochs/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
-	infltypes "github.com/cosmos/evm/x/inflation/v1/types"
 
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
@@ -59,12 +57,10 @@ var genesisSetupFunctions = map[string]genSetupFn{
 	evmtypes.ModuleName:       genStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
 	erc20types.ModuleName:     genStateSetter[*erc20types.GenesisState](erc20types.ModuleName),
 	govtypes.ModuleName:       genStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
-	infltypes.ModuleName:      genStateSetter[*infltypes.GenesisState](infltypes.ModuleName),
 	feemarkettypes.ModuleName: genStateSetter[*feemarkettypes.GenesisState](feemarkettypes.ModuleName),
 	distrtypes.ModuleName:     genStateSetter[*distrtypes.GenesisState](distrtypes.ModuleName),
 	banktypes.ModuleName:      setBankGenesisState,
 	authtypes.ModuleName:      setAuthGenesisState,
-	epochstypes.ModuleName:    genStateSetter[*epochstypes.GenesisState](epochstypes.ModuleName),
 	consensustypes.ModuleName: func(_ *app.App, genesisState evmostypes.GenesisState, _ interface{}) (evmostypes.GenesisState, error) {
 		// no-op. Consensus does not have a genesis state on the application
 		// but the params are used on it
@@ -114,6 +110,7 @@ func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAc
 	emptyCodeHash := crypto.Keccak256Hash(nil).String()
 	for _, acc := range accounts {
 		baseAcc := authtypes.NewBaseAccount(acc, nil, 0, 0)
+				// TODO: Update when replacing with forked cosmos/evm version is installed
 		ethAcc := &evmostypes.EthAccount{
 			BaseAccount: baseAcc,
 			CodeHash:    emptyCodeHash,
