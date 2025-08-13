@@ -23,7 +23,6 @@ require (
 	github.com/cosmos/evm v0.3.0
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/cosmos/ibc-apps/modules/rate-limiting/v10 v10.1.0
-	github.com/cosmos/ibc-apps/modules/rate-limiting/v8 v8.0.0
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
 	github.com/cosmos/ibc-go/v10 v10.3.0
 	github.com/ethereum/go-ethereum v1.15.11
@@ -96,7 +95,6 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
 	github.com/cosmos/iavl v1.2.2 // indirect
-	github.com/cosmos/ibc-go/v8 v8.7.0 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.14.0 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.3.0 // indirect
@@ -280,10 +278,12 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.1
+	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// map cosmos/evm to evmos
 	// fix cosmos-sdk store path mismatch
 	github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
+	// TODO: remove this once we have a proper fork of cosmos/evm
+	github.com/cosmos/evm => ../evm
 	// use Evmos geth fork
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.15.11-cosmos-0
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq

@@ -168,6 +168,10 @@ func initRootCmd(
 	a := appCreator{encodingConfig}
 
 	rootCmd.AddCommand(
+		genutilcli.InitCmd(
+			tempApp.BasicModuleManager,
+			app.DefaultNodeHome,
+		),
 		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,

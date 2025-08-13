@@ -9,10 +9,10 @@ import (
 
 type HandlerOptions struct {
 	evmante.HandlerOptions
-	StakingKeeper          StakingKeeper
-	DistributionKeeper     DistributionKeeper
-	ExtraDecorator         sdk.AnteDecorator
-	AuthzDisabledMsgTypes  []string
+	StakingKeeper         StakingKeeper
+	DistributionKeeper    DistributionKeeper
+	ExtraDecorator        sdk.AnteDecorator
+	AuthzDisabledMsgTypes []string
 }
 
 // Validate checks if the keepers are defined

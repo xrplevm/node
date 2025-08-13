@@ -110,7 +110,6 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	evmostypes "github.com/cosmos/evm/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
 	ratelimitkeeper "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/keeper"
@@ -340,7 +339,7 @@ func New(
 		appCodec,
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
 		// TODO: Update when replacing with forked cosmos/evm version is installed
-		evmostypes.ProtoAccount,
+		etherminttypes.ProtoAccount,
 		maccPerms,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 		sdk.Bech32PrefixAccAddr,
@@ -571,7 +570,6 @@ func New(
 			app.DistrKeeper,
 			app.BankKeeper,
 			app.Erc20Keeper,
-			app.AuthzKeeper,
 			app.TransferKeeper,
 			*app.IBCKeeper.ChannelKeeper,
 			app.EvmKeeper,
@@ -851,16 +849,16 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 			EvmKeeper:              app.EvmKeeper,
 			FeegrantKeeper:         app.FeeGrantKeeper,
 			// TODO: Update when migrating to v10
-			IBCKeeper:              app.IBCKeeper,
-			FeeMarketKeeper:        app.FeeMarketKeeper,
-			SignModeHandler:        txConfig.SignModeHandler(),
-			SigGasConsumer:         ante.SigVerificationGasConsumer,
-			MaxTxGasWanted:         maxGasWanted,
-			TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+			IBCKeeper:       app.IBCKeeper,
+			FeeMarketKeeper: app.FeeMarketKeeper,
+			SignModeHandler: txConfig.SignModeHandler(),
+			SigGasConsumer:  ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:  maxGasWanted,
+			TxFeeChecker:    ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
 		},
-		StakingKeeper:          app.StakingKeeper,
-		DistributionKeeper:     app.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
+		StakingKeeper:      app.StakingKeeper,
+		DistributionKeeper: app.DistrKeeper,
+		ExtraDecorator:     poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
@@ -947,7 +945,7 @@ func (app *App) BlockedModuleAccountAddrs() map[string]bool {
 	}
 
 	blockedPrecompilesHex := evmtypes.AvailableStaticPrecompiles
-	for _, addr := range vm.PrecompiledAddressesPrague{
+	for _, addr := range vm.PrecompiledAddressesPrague {
 		blockedPrecompilesHex = append(blockedPrecompilesHex, addr.Hex())
 	}
 
@@ -975,7 +973,7 @@ func (app *App) AppCodec() codec.Codec {
 }
 
 // DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
-func (app *App) DefaultGenesis() evmostypes.GenesisState {
+func (app *App) DefaultGenesis() etherminttypes.GenesisState {
 	return app.BasicModuleManager.DefaultGenesis(app.appCodec)
 }
 
