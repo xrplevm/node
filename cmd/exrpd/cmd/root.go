@@ -11,6 +11,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
@@ -68,6 +69,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		0,
 		0,
 		emptyAppOptions{},
+		app.NoOpEVMOptions,
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
@@ -346,17 +348,7 @@ func (a appCreator) newApp(
 		cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent)),
 	)
 
-	return app.New(
-		logger,
-		db,
-		traceStore,
-		true,
-		skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		// TODO: Review this
-		cast.ToUint64(appOpts.Get(flags.FlagChainID)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
-		appOpts,
+	baseappOptions := []func(*baseapp.BaseApp){
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
@@ -369,6 +361,32 @@ func (a appCreator) newApp(
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		baseapp.SetChainID(chainID),
+	}
+
+	baseappOptions = append(baseappOptions, func(app *baseapp.BaseApp) {
+		mempool := sdkmempool.NoOpMempool{}
+		app.SetMempool(mempool)
+
+		handler := baseapp.NewDefaultProposalHandler(mempool, app)
+		app.SetPrepareProposal(handler.PrepareProposalHandler())
+		app.SetProcessProposal(handler.ProcessProposalHandler())
+	})
+
+	evmChainId := cast.ToUint64(appOpts.Get(flags.FlagChainID))
+
+	return app.New(
+		logger,
+		db,
+		traceStore,
+		true,
+		skipUpgradeHeights,
+		cast.ToString(appOpts.Get(flags.FlagHome)),
+		// TODO: Review this
+		evmChainId,
+		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
+		appOpts,
+		app.EVMAppOptions,
+		baseappOptions...,
 	)
 }
 
@@ -398,6 +416,7 @@ func (a appCreator) appExport(
 		0,
 		uint(1),
 		appOpts,
+		app.EVMAppOptions,
 	)
 
 	if height != -1 {

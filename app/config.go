@@ -8,9 +8,9 @@ import (
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 )
 
-type EVMOptionsFn func(string) error
+type EVMOptionsFn func(uint64) error
 
-func NoOpEVMOptions(_ string) error {
+func NoOpEVMOptions(_ uint64) error {
 	return nil
 }
 
