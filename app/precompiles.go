@@ -68,7 +68,6 @@ func NewAvailableStaticPrecompiles(
 	ibcTransferPrecompile, err := ics20precompile.NewPrecompile(
 		stakingKeeper,
 		transferKeeper,
-		// TODO: Update when migrating to v10
 		&channelKeeper,
 		evmKeeper,
 	)

@@ -21,10 +21,11 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	"github.com/cosmos/evm/ante"
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/encoding"
-	evmante "github.com/cosmos/evm/evmd/ante"
+	"github.com/xrplevm/node/v8/app/ante"
+
+	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
 	cosmosevmutils "github.com/cosmos/evm/utils"
 	erc20v2 "github.com/cosmos/evm/x/erc20/v2"
@@ -274,6 +275,7 @@ func New(
 	evmChainID uint64,
 	invCheckPeriod uint,
 	appOpts servertypes.AppOptions,
+	evmAppOptions EVMOptionsFn,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
 	encodingConfig := encoding.MakeConfig(evmChainID)
@@ -713,6 +715,7 @@ func New(
 	app.mm.SetOrderBeginBlockers(
 		// upgrades should be run first
 		capabilitytypes.ModuleName,
+		erc20types.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
 		distrtypes.ModuleName,
@@ -732,6 +735,7 @@ func New(
 		poatypes.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
+		erc20types.ModuleName,
 		feegrant.ModuleName,
 	)
 
@@ -749,6 +753,7 @@ func New(
 		// NOTE: feemarket need to be initialized before genutil module:
 		// gentx transactions use MinGasPriceDecorator.AnteHandle
 		feemarkettypes.ModuleName,
+		erc20types.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -840,25 +845,22 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := &HandlerOptions{
-		HandlerOptions: evmante.HandlerOptions{
-			Cdc:                    app.appCodec,
-			AccountKeeper:          app.AccountKeeper,
-			BankKeeper:             app.BankKeeper,
-			ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
-			EvmKeeper:              app.EvmKeeper,
-			FeegrantKeeper:         app.FeeGrantKeeper,
-			// TODO: Update when migrating to v10
-			IBCKeeper:       app.IBCKeeper,
-			FeeMarketKeeper: app.FeeMarketKeeper,
-			SignModeHandler: txConfig.SignModeHandler(),
-			SigGasConsumer:  ante.SigVerificationGasConsumer,
-			MaxTxGasWanted:  maxGasWanted,
-			TxFeeChecker:    ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
-		},
-		StakingKeeper:      app.StakingKeeper,
-		DistributionKeeper: app.DistrKeeper,
-		ExtraDecorator:     poaante.NewPoaDecorator(),
+	handlerOpts := &ante.HandlerOptions{
+		Cdc:                    app.appCodec,
+		AccountKeeper:          app.AccountKeeper,
+		BankKeeper:             app.BankKeeper,
+		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+		EvmKeeper:              app.EvmKeeper,
+		FeegrantKeeper:         app.FeeGrantKeeper,
+		IBCKeeper:              app.IBCKeeper,
+		FeeMarketKeeper:        app.FeeMarketKeeper,
+		SignModeHandler:        txConfig.SignModeHandler(),
+		SigGasConsumer:         evmante.SigVerificationGasConsumer,
+		MaxTxGasWanted:         maxGasWanted,
+		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+		StakingKeeper:          app.StakingKeeper,
+		DistributionKeeper:     app.DistrKeeper,
+		ExtraDecorator:         poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
@@ -871,7 +873,12 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		panic(err)
 	}
 
-	app.SetAnteHandler(NewAnteHandler(*handlerOpts))
+	handler, err := ante.NewAnteHandler(*handlerOpts)
+	if err != nil {
+		panic(err)
+	}
+
+	app.SetAnteHandler(handler)
 }
 
 func (app *App) setPostHandler() {
@@ -974,7 +981,16 @@ func (app *App) AppCodec() codec.Codec {
 
 // DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
 func (app *App) DefaultGenesis() etherminttypes.GenesisState {
-	return app.BasicModuleManager.DefaultGenesis(app.appCodec)
+	genesis := app.BasicModuleManager.DefaultGenesis(app.appCodec)
+
+	evmGenState := evmtypes.DefaultGenesisState()
+	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
+	genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenState)
+
+	erc20GenState := erc20types.DefaultGenesisState()
+	genesis[erc20types.ModuleName] = app.AppCodec().MustMarshalJSON(erc20GenState)
+
+	return genesis
 }
 
 // InterfaceRegistry returns an InterfaceRegistry
