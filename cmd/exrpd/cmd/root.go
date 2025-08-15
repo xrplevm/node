@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -372,7 +373,9 @@ func (a appCreator) newApp(
 		app.SetProcessProposal(handler.ProcessProposalHandler())
 	})
 
-	evmChainId := cast.ToUint64(appOpts.Get(flags.FlagChainID))
+	fmt.Println(appOpts.Get(flags.FlagChainID))
+
+	_ = cast.ToUint64(appOpts.Get(flags.FlagChainID))
 
 	return app.New(
 		logger,
@@ -382,7 +385,7 @@ func (a appCreator) newApp(
 		skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		// TODO: Review this
-		evmChainId,
+		1440002,
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		appOpts,
 		app.EVMAppOptions,

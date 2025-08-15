@@ -105,7 +105,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
 	homePath := testNodeHome
-	evmChainID := uint64(1)
+	evmChainID := uint64(1440002)
 	invCheckPeriod := uint(5)
 	appOptions := simutils.NewAppOptionsWithFlagHome(homePath)
 	baseAppOptions := append(customBaseAppOptions, baseapp.SetChainID(chainID)) //nolint:gocritic
@@ -120,6 +120,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		evmChainID,
 		invCheckPeriod,
 		appOptions,
+		app.EVMAppOptions,
 		baseAppOptions...,
 	)
 
@@ -127,7 +128,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	evmConfigurator := evmtypes.NewEVMConfigurator()
 	// Reset configuration for test environments to allow multiple app instances
 	evmConfigurator.ResetTestConfig()
-	
+
 	// Configure EVM coin info with the proper denom
 	coinInfo := evmtypes.EvmCoinInfo{
 		Denom:         app.BaseDenom,
