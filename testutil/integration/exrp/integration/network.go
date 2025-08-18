@@ -14,7 +14,7 @@ import (
 	gethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/xrplevm/node/v8/app"
 
-	"github.com/cosmos/evm/testutil/integration/common/network"
+	"github.com/cosmos/evm/testutil/integration/base/network"
 	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"

@@ -10,6 +10,8 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+	"github.com/ethereum/go-ethereum/common"
 
 	ratelimitv2 "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/v2"
 
@@ -52,6 +54,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	evmmempool "github.com/cosmos/evm/mempool"
 	"github.com/xrplevm/node/v8/x/poa"
 
 	"cosmossdk.io/log"
@@ -218,6 +221,7 @@ type App struct {
 	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
 	txConfig          client.TxConfig
+	clientCtx         client.Context
 
 	invCheckPeriod uint
 
@@ -249,6 +253,7 @@ type App struct {
 	EvmKeeper       *evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
 	Erc20Keeper     erc20keeper.Keeper
+	EVMMempool      *evmmempool.ExperimentalEVMMempool
 
 	// exrp keepers
 	PoaKeeper poakeeper.Keeper
@@ -261,6 +266,9 @@ type App struct {
 	sm *module.SimulationManager
 
 	configurator module.Configurator
+
+	// Add pending transaction listeners
+	pendingTxListeners []evmante.PendingTxListener
 }
 
 // New returns a reference to an initialized blockchain app
@@ -820,6 +828,46 @@ func New(
 	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.setAnteHandler(app.txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
+
+	if evmtypes.GetChainConfig() != nil {
+		mempoolConfig := &evmmempool.EVMMempoolConfig{
+			AnteHandler:   app.GetAnteHandler(),
+			BlockGasLimit: 100_000_000,
+		}
+
+		evmMempool := evmmempool.NewExperimentalEVMMempool(
+			app.CreateQueryContext,
+			logger,
+			app.EvmKeeper,
+			app.FeeMarketKeeper,
+			app.txConfig,
+			app.clientCtx,
+			mempoolConfig,
+		)
+		app.EVMMempool = evmMempool
+
+		// Set the global mempool for RPC access
+		if err := evmmempool.SetGlobalEVMMempool(evmMempool); err != nil {
+			panic(err)
+		}
+
+		// Replace BaseApp mempool
+		app.SetMempool(evmMempool)
+
+		// Set custom CheckTx handler for nonce gap support
+		checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
+		app.SetCheckTxHandler(checkTxHandler)
+
+		// Set custom PrepareProposal handler
+		abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
+		abciProposalHandler.SetSignerExtractionAdapter(
+			evmmempool.NewEthSignerExtractionAdapter(
+				sdkmempool.NewDefaultSignerExtractionAdapter(),
+			),
+		)
+		app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
+	}
+
 	app.setPostHandler()
 	app.SetEndBlocker(app.EndBlocker)
 	app.setupUpgradeHandlers()
@@ -1085,6 +1133,14 @@ func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
 	return app.StakingKeeper
 }
 
+func (app *App) GetMempool() sdkmempool.ExtMempool {
+	return app.EVMMempool
+}
+
+func (app *App) GetAnteHandler() sdk.AnteHandler {
+	return app.BaseApp.AnteHandler()
+}
+
 // GetIBCKeeper implements the TestingApp interface.
 func (app *App) GetIBCKeeper() *ibckeeper.Keeper {
 	return app.IBCKeeper
@@ -1098,6 +1154,10 @@ func (app *App) GetTxConfig() client.TxConfig {
 // TxConfig returns App's TxConfig.
 func (app *App) TxConfig() client.TxConfig {
 	return app.txConfig
+}
+
+func (app *App) SetClientCtx(clientCtx client.Context) {
+	app.clientCtx = clientCtx
 }
 
 // AutoCliOpts returns the autocli options for the app.
@@ -1129,6 +1189,11 @@ func (app *App) Configurator() module.Configurator {
 // ModuleManager returns the app ModuleManager
 func (app *App) ModuleManager() *module.Manager {
 	return app.mm
+}
+
+// RegisterPendingTxListener registers a pending tx listener
+func (app *App) RegisterPendingTxListener(listener func(common.Hash)) {
+	app.pendingTxListeners = append(app.pendingTxListeners, listener)
 }
 
 // initParamsKeeper init params keeper and its subspaces

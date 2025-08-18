@@ -11,6 +11,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 
 	evmkeyring "github.com/cosmos/evm/crypto/keyring"
+	evmserver "github.com/cosmos/evm/server"
 
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -48,7 +49,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	evmserver "github.com/cosmos/evm/client"
+	evmclient "github.com/cosmos/evm/client"
 	ethermintserver "github.com/cosmos/evm/server"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
 	"github.com/xrplevm/node/v8/app"
@@ -172,6 +173,15 @@ func initRootCmd(
 ) {
 	a := appCreator{encodingConfig}
 
+	sdkAppCreatorWrapper := func(
+		l log.Logger,
+		d dbm.DB,
+		w io.Writer,
+		ao servertypes.AppOptions,
+	) servertypes.Application {
+		return a.newApp(l, d, w, ao)
+	}
+
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(
 			tempApp.BasicModuleManager,
@@ -193,9 +203,9 @@ func initRootCmd(
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debug.Cmd(),
-		pruning.Cmd(a.newApp, app.DefaultNodeHome),
+		pruning.Cmd(sdkAppCreatorWrapper, app.DefaultNodeHome),
 		confixcmd.ConfigCommand(),
-		snapshot.Cmd(a.newApp),
+		snapshot.Cmd(sdkAppCreatorWrapper),
 	)
 
 	// add server commands
@@ -211,7 +221,7 @@ func initRootCmd(
 		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		evmserver.KeyCommands(app.DefaultNodeHome, true),
+		evmclient.KeyCommands(app.DefaultNodeHome, true),
 	)
 
 	_, err := srvflags.AddTxFlags(rootCmd)
@@ -307,7 +317,7 @@ func (a appCreator) newApp(
 	db dbm.DB,
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
-) servertypes.Application {
+) evmserver.Application {
 	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
