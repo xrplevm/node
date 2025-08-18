@@ -14,17 +14,23 @@ func NoOpEVMOptions(_ uint64) error {
 	return nil
 }
 
-var sealed = false
-
-// ChainsCoinInfo maps EVM chain IDs to coin configuration
-// IMPORTANT: Uses uint64 EVM chain IDs as keys, not Cosmos chain ID strings
-var ChainsCoinInfo = map[uint64]evmtypes.EvmCoinInfo{
-	1440002: { // Your numeric EVM chain ID (e.g., 9000)
+var (
+	sealed             = false
+	DefaultEvmCoinInfo = evmtypes.EvmCoinInfo{
 		Denom:         BaseDenom,
 		DisplayDenom:  DisplayDenom,
 		ExtendedDenom: BaseDenom,
 		Decimals:      evmtypes.EighteenDecimals,
-	},
+	}
+	DefaultLocalnetChainID   uint64 = 1440002
+	DefaultSimulationChainID uint64 = 777
+)
+
+// ChainsCoinInfo maps EVM chain IDs to coin configuration
+// IMPORTANT: Uses uint64 EVM chain IDs as keys, not Cosmos chain ID strings
+var ChainsCoinInfo = map[uint64]evmtypes.EvmCoinInfo{
+	DefaultLocalnetChainID:   DefaultEvmCoinInfo,
+	DefaultSimulationChainID: DefaultEvmCoinInfo,
 }
 
 // EVMAppOptions sets up global configuration
