@@ -116,12 +116,12 @@ build-rocksdb:
 ###                                Linting                                  ###
 ###############################################################################
 golangci_lint_cmd=golangci-lint
-golangci_version=v2.2.2
+golangci_version=v1.62.0
 
 lint:
 	@echo "--> Running linter"
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(golangci_version)
-	@$(golangci_lint_cmd) run --timeout=15m
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
+	@$(golangci_lint_cmd) run --timeout=10m
 
 lint-fix:
 	@echo "--> Running linter"
