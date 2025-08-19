@@ -102,7 +102,6 @@ var (
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *IntegrationNetwork) configureAndInitChain() error {
-
 	// The bonded amount should be updated to reflect the actual base denom
 	baseDecimals := n.cfg.ChainCoins.BaseDecimals()
 	n.baseDecimal = baseDecimals
@@ -110,7 +109,6 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	// Create validator set with the amount of validators specified in the config
 	// with the default power of 1.
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
-	totalBonded := DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))
 
 	valFlags := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 	for i := range valSet.Validators {
@@ -128,7 +126,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	fundedAccountBalances = addBondedModuleAccountToFundedBalances(
 		fundedAccountBalances,
-		sdktypes.NewCoin(n.cfg.BondDenom, totalBonded),
+		sdktypes.NewCoin(n.cfg.BondDenom, DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))),
 	)
 
 	delegations := createDelegations(validators)

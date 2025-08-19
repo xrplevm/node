@@ -9,7 +9,6 @@ import (
 var defaultChain = testconstants.LocalnetChainID
 
 type ChainCoins struct {
-
 	// decimals of the base denom? Maybe not..
 	baseCoin *network.CoinInfo
 	evmCoin  *network.CoinInfo

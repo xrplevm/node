@@ -110,7 +110,7 @@ func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAc
 	emptyCodeHash := crypto.Keccak256Hash(nil).String()
 	for _, acc := range accounts {
 		baseAcc := authtypes.NewBaseAccount(acc, nil, 0, 0)
-				// TODO: Update when replacing with forked cosmos/evm version is installed
+		// TODO: Update when replacing with forked cosmos/evm version is installed
 		ethAcc := &evmostypes.EthAccount{
 			BaseAccount: baseAcc,
 			CodeHash:    emptyCodeHash,

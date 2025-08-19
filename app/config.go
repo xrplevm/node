@@ -3,8 +3,6 @@ package app
 import (
 	"fmt"
 
-	"cosmossdk.io/math"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 )
 
@@ -46,7 +44,7 @@ func EVMAppOptions(chainID uint64) error {
 	}
 
 	//// Set denom info for the chain
-	//if err := setBaseDenom(coinInfo); err != nil {
+	// if err := setBaseDenom(coinInfo); err != nil {
 	//	return err
 	//}
 
@@ -62,12 +60,4 @@ func EVMAppOptions(chainID uint64) error {
 
 	sealed = true
 	return nil
-}
-
-// setBaseDenom registers display and base denoms
-func setBaseDenom(ci evmtypes.EvmCoinInfo) error {
-	if err := sdk.RegisterDenom(ci.DisplayDenom, math.LegacyOneDec()); err != nil {
-		return err
-	}
-	return sdk.RegisterDenom(ci.Denom, math.LegacyNewDecWithPrec(1, int64(ci.Decimals)))
 }

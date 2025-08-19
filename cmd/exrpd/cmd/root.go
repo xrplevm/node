@@ -50,7 +50,6 @@ import (
 	"github.com/spf13/pflag"
 
 	evmclient "github.com/cosmos/evm/client"
-	ethermintserver "github.com/cosmos/evm/server"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
 	"github.com/xrplevm/node/v8/app"
 )
@@ -209,9 +208,9 @@ func initRootCmd(
 	)
 
 	// add server commands
-	ethermintserver.AddCommands(
+	evmserver.AddCommands(
 		rootCmd,
-		ethermintserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
+		evmserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
 		a.appExport,
 		addModuleInitFlags,
 	)
