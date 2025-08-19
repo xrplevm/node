@@ -34,6 +34,7 @@ type Config struct {
 	CustomBaseAppOpts  []func(*baseapp.BaseApp)
 	MinDepositAmt      sdkmath.Int
 	Quorum             string
+	ChainCoins         ChainCoins
 }
 
 type CustomGenesisState map[string]interface{}
@@ -45,6 +46,7 @@ func DefaultConfig() Config {
 		EIP155ChainID: big.NewInt(1440002),
 		Balances:      nil,
 		Denom:         app.BaseDenom,
+		ChainCoins:    DefaultChainCoins(),
 	}
 }
 

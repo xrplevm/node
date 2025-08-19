@@ -3,9 +3,9 @@ package integration
 import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/evm/testutil/integration/common/factory"
-	"github.com/cosmos/evm/testutil/integration/os/grpc"
-	"github.com/cosmos/evm/testutil/integration/os/keyring"
+	"github.com/cosmos/evm/testutil/integration/evm/factory"
+	"github.com/cosmos/evm/testutil/integration/evm/grpc"
+	"github.com/cosmos/evm/testutil/keyring"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/suite"
 	"github.com/xrplevm/node/v8/app"
@@ -17,7 +17,7 @@ type TestSuite struct {
 
 	network     *Network
 	keyring     keyring.Keyring
-	factory     factory.CoreTxFactory
+	factory     factory.TxFactory
 	grpcHandler grpc.Handler
 }
 

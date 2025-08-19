@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 
 	gethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/xrplevm/node/v8/app"
@@ -29,6 +30,7 @@ import (
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
 )
 
@@ -52,10 +54,11 @@ var _ Network = (*IntegrationNetwork)(nil)
 
 // IntegrationNetwork is the implementation of the Network interface for integration tests.
 type IntegrationNetwork struct {
-	cfg        exrpcommon.Config
-	ctx        sdktypes.Context
-	validators []stakingtypes.Validator
-	app        *app.App
+	cfg         exrpcommon.Config
+	ctx         sdktypes.Context
+	validators  []stakingtypes.Validator
+	app         *app.App
+	baseDecimal evmtypes.Decimals
 
 	// This is only needed for IBC chain testing setup
 	valSet     *cmttypes.ValidatorSet
@@ -99,6 +102,11 @@ var (
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *IntegrationNetwork) configureAndInitChain() error {
+
+	// The bonded amount should be updated to reflect the actual base denom
+	baseDecimals := n.cfg.ChainCoins.BaseDecimals()
+	n.baseDecimal = baseDecimals
+
 	// Create validator set with the amount of validators specified in the config
 	// with the default power of 1.
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
@@ -289,6 +297,10 @@ func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
 // GetDenom returns the network's denom
 func (n *IntegrationNetwork) GetBaseDenom() string {
 	return n.cfg.Denom
+}
+
+func (n *IntegrationNetwork) GetBaseDecimal() evmtypes.Decimals {
+	return n.baseDecimal
 }
 
 // GetBondDenom returns the network's bond denom
