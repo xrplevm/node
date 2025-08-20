@@ -25,7 +25,7 @@ import (
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/encoding"
-	"github.com/xrplevm/node/v8/app/ante"
+	"github.com/xrplevm/node/v9/app/ante"
 
 	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
@@ -55,7 +55,7 @@ import (
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	evmmempool "github.com/cosmos/evm/mempool"
-	"github.com/xrplevm/node/v8/x/poa"
+	"github.com/xrplevm/node/v9/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -128,10 +128,10 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
-	"github.com/xrplevm/node/v8/docs"
-	poaante "github.com/xrplevm/node/v8/x/poa/ante"
-	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/docs"
+	poaante "github.com/xrplevm/node/v9/x/poa/ante"
+	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 
 	srvflags "github.com/cosmos/evm/server/flags"
 

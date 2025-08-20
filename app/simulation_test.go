@@ -14,9 +14,9 @@ import (
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
 	etherminttypes "github.com/cosmos/evm/types"
-	"github.com/xrplevm/node/v8/app"
-	xrplevmante "github.com/xrplevm/node/v8/app/ante"
-	poaante "github.com/xrplevm/node/v8/x/poa/ante"
+	"github.com/xrplevm/node/v9/app"
+	xrplevmante "github.com/xrplevm/node/v9/app/ante"
+	poaante "github.com/xrplevm/node/v9/x/poa/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"

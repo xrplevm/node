@@ -11,9 +11,9 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
-	exrpintegration "github.com/xrplevm/node/v8/testutil/integration/exrp/integration"
-	poatypes "github.com/xrplevm/node/v8/x/poa/types"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
+	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
+	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 )
 
 // TODO: Update when migrating to v10
