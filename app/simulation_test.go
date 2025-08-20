@@ -22,7 +22,7 @@ import (
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/evmos/evmos/v20/app/ante"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 )
 
 func init() {

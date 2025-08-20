@@ -9,7 +9,7 @@ import (
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/x/poa/types"
 )
 
 const (

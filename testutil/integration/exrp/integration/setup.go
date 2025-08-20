@@ -35,9 +35,9 @@ import (
 	infltypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
 
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 )
 
 // genSetupFn is the type for the module genesis setup functions
