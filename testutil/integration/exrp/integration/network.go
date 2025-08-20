@@ -12,7 +12,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	gethparams "github.com/ethereum/go-ethereum/params"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 
 	"github.com/cosmos/evm/testutil/integration/common/network"
 	"github.com/cosmos/evm/types"
@@ -29,7 +29,7 @@ import (
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.
