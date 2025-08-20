@@ -5,11 +5,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v8/app"
-	factory "github.com/xrplevm/node/v8/testutil/integration/common/factory"
-	"github.com/xrplevm/node/v8/testutil/integration/common/grpc"
-	"github.com/xrplevm/node/v8/testutil/integration/common/keyring"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v9/app"
+	factory "github.com/xrplevm/node/v9/testutil/integration/common/factory"
+	"github.com/xrplevm/node/v9/testutil/integration/common/grpc"
+	"github.com/xrplevm/node/v9/testutil/integration/common/keyring"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 type TestSuite struct {

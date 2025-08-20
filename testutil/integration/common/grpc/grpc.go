@@ -10,7 +10,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	network "github.com/xrplevm/node/v8/testutil/integration/common/network"
+	network "github.com/xrplevm/node/v9/testutil/integration/common/network"
 )
 
 // Handler is an interface that defines the common methods that are used to query
