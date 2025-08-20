@@ -14,8 +14,8 @@ import (
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
 	etherminttypes "github.com/cosmos/evm/types"
-	"github.com/xrplevm/node/v8/app"
-	poaante "github.com/xrplevm/node/v8/x/poa/ante"
+	"github.com/xrplevm/node/v9/app"
+	poaante "github.com/xrplevm/node/v9/x/poa/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -35,7 +35,7 @@ func init() {
 }
 
 const (
-	SimAppChainID = "simulation_777-1"
+	SimAppChainID    = "simulation_777-1"
 	SimAppEVMChainID = 777
 )
 
@@ -67,16 +67,16 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 			EvmKeeper:              bApp.EvmKeeper,
 			FeegrantKeeper:         bApp.FeeGrantKeeper,
 			// TODO: Update when migrating to v10
-			IBCKeeper:              bApp.IBCKeeper,
-			FeeMarketKeeper:        bApp.FeeMarketKeeper,
-			SignModeHandler:        bApp.GetTxConfig().SignModeHandler(),
-			SigGasConsumer:         ante.SigVerificationGasConsumer,
-			MaxTxGasWanted:         0,
-			TxFeeChecker:           ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
+			IBCKeeper:       bApp.IBCKeeper,
+			FeeMarketKeeper: bApp.FeeMarketKeeper,
+			SignModeHandler: bApp.GetTxConfig().SignModeHandler(),
+			SigGasConsumer:  ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:  0,
+			TxFeeChecker:    ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
 		},
-		StakingKeeper:          bApp.StakingKeeper,
-		DistributionKeeper:     bApp.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
+		StakingKeeper:      bApp.StakingKeeper,
+		DistributionKeeper: bApp.DistrKeeper,
+		ExtraDecorator:     poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),

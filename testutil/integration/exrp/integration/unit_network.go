@@ -7,8 +7,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/xrplevm/node/v8/app"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v9/app"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 // UnitTestIntegrationNetwork is the implementation of the Network interface for unit tests.
