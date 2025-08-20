@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "poa/params.proto";
 
-option go_package = "github.com/xrplevm/node/v8/x/poa/types";
+option go_package = "github.com/xrplevm/node/v9/x/poa/types";
 
 // Query defines the gRPC querier service.
 service Query {
