@@ -7,7 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	evmostypes "github.com/evmos/evmos/v20/types"
 	"github.com/xrplevm/node/v9/app"
 )
 
@@ -53,18 +52,6 @@ func DefaultConfig() Config {
 // The purpose of this is to force to be declarative when the default configuration
 // requires to be changed.
 type ConfigOption func(*Config)
-
-// WithChainID sets a custom chainID for the network. It panics if the chainID is invalid.
-func WithChainID(chainID string) ConfigOption {
-	chainIDNum, err := evmostypes.ParseChainID(chainID)
-	if err != nil {
-		panic(err)
-	}
-	return func(cfg *Config) {
-		cfg.ChainID = chainID
-		cfg.EIP155ChainID = chainIDNum
-	}
-}
 
 // WithAmountOfValidators sets the amount of validators for the network.
 func WithAmountOfValidators(amount int) ConfigOption {

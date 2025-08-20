@@ -10,7 +10,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	testtx "github.com/evmos/evmos/v20/testutil/tx"
+	testtx "github.com/cosmos/evm/testutil/tx"
 	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 

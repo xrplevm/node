@@ -15,6 +15,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 
+	srvflags "github.com/cosmos/evm/server/flags"
+
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/snapshots"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
@@ -38,15 +40,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v20/crypto/hd"
+	"github.com/cosmos/evm/crypto/hd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	ethermintclient "github.com/evmos/evmos/v20/client"
-	ethermintserver "github.com/evmos/evmos/v20/server"
-	ethermintservercfg "github.com/evmos/evmos/v20/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v20/server/flags"
+	evmserver "github.com/cosmos/evm/client"
+	ethermintserver "github.com/cosmos/evm/server"
+	ethermintservercfg "github.com/cosmos/evm/server/config"
 	"github.com/xrplevm/node/v9/app"
 )
 
@@ -64,6 +65,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		tempDir(app.DefaultNodeHome),
+		0,
 		0,
 		emptyAppOptions{},
 	)
@@ -125,7 +127,8 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 				return err
 			}
 
-			customAppTemplate, customAppConfig := initAppConfig()
+			// TODO: retrieve evmChainID from genesis file
+			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 0)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
@@ -165,9 +168,6 @@ func initRootCmd(
 	a := appCreator{encodingConfig}
 
 	rootCmd.AddCommand(
-		ethermintclient.ValidateChainID(
-			genutilcli.InitCmd(tempApp.BasicModuleManager, app.DefaultNodeHome),
-		),
 		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
@@ -183,7 +183,6 @@ func initRootCmd(
 		genutilcli.ValidateGenesisCmd(tempApp.BasicModuleManager),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
-		ethermintclient.NewTestnetCmd(tempApp.BasicModuleManager, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 		pruning.Cmd(a.newApp, app.DefaultNodeHome),
 		confixcmd.ConfigCommand(),
@@ -203,10 +202,10 @@ func initRootCmd(
 		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		ethermintclient.KeyCommands(app.DefaultNodeHome),
+		evmserver.KeyCommands(app.DefaultNodeHome, true),
 	)
 
-	_, err := ethermintserverflags.AddTxFlags(rootCmd)
+	_, err := srvflags.AddTxFlags(rootCmd)
 	if err != nil {
 		panic(err)
 	}
@@ -261,10 +260,8 @@ func txCommand() *cobra.Command {
 		authcmd.GetSimulateCmd(),
 	)
 
-	// DefaultGasAdjustment value to use as default in gas-adjustment flag
-	flags.DefaultGasAdjustment = ethermintservercfg.DefaultGasAdjustment
-
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+	cmd.PersistentFlags().Float64(flags.FlagGasAdjustment, ethermintservercfg.DefaultGasAdjustment, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
 
 	return cmd
 }
@@ -352,6 +349,8 @@ func (a appCreator) newApp(
 		true,
 		skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
+		// TODO: Review this
+		cast.ToUint64(appOpts.Get(flags.FlagChainID)),
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		appOpts,
 		baseapp.SetPruning(pruningOpts),
@@ -392,6 +391,7 @@ func (a appCreator) appExport(
 		height == -1, // -1: no height provided
 		map[int64]bool{},
 		homePath,
+		0,
 		uint(1),
 		appOpts,
 	)
@@ -403,14 +403,6 @@ func (a appCreator) appExport(
 	}
 
 	return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
-}
-
-// initAppConfig helps to override default appConfig template and configs.
-// return "", nil if no custom configuration is required for the application.
-func initAppConfig() (string, interface{}) {
-	// The following code snippet is just for reference.
-	customAppTemplate, customAppConfig := ethermintservercfg.AppConfig(app.BaseDenom)
-	return customAppTemplate, customAppConfig
 }
 
 func tempDir(defaultHome string) string {

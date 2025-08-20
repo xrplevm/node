@@ -15,10 +15,10 @@ import (
 	consensusparamskeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	erc20keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmkeeper "github.com/evmos/evmos/v20/x/evm/keeper"
-	"github.com/evmos/evmos/v20/x/evm/types"
+	erc20keeper "github.com/cosmos/evm/x/erc20/keeper"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
+	"github.com/cosmos/evm/x/vm/types"
 )
 
 const (
@@ -137,6 +137,7 @@ func AssignXrpOwnerAddress(ctx sdk.Context, ek erc20keeper.Keeper, address sdk.A
 	if !found {
 		return errors.New("token pair not found")
 	}
+	// TODO: Should autofix when replacing with forked cosmos/evm version is installed
 	ek.SetTokenPairOwnerAddress(ctx, tokenPair, address.String())
 	return nil
 }

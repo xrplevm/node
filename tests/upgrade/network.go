@@ -7,16 +7,15 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	commonnetwork "github.com/xrplevm/node/v9/testutil/integration/common/network"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 	upgradenetwork "github.com/xrplevm/node/v9/testutil/integration/exrp/upgrade"
 	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 )
 
-var _ commonnetwork.Network = (*UpgradeTestNetwork)(nil)
+var _ exrpcommon.Network = (*UpgradeTestNetwork)(nil)
 
 type UpgradeTestNetwork struct {
 	upgradenetwork.UpgradeIntegrationNetwork

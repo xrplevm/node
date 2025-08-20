@@ -7,7 +7,6 @@ import (
 	"cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ethermint "github.com/evmos/evmos/v20/types"
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
@@ -49,7 +48,7 @@ func registerDenoms() {
 		panic(err)
 	}
 
-	if err := sdk.RegisterDenom(app.BaseDenom, math.LegacyNewDecWithPrec(1, ethermint.BaseDenomUnit)); err != nil {
+	if err := sdk.RegisterDenom(app.BaseDenom, math.LegacyNewDecWithPrec(1, app.BaseDenomUnit)); err != nil {
 		panic(err)
 	}
 }

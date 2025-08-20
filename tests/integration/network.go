@@ -8,16 +8,16 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	commonnetwork "github.com/xrplevm/node/v9/testutil/integration/common/network"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
 	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 )
 
-var _ commonnetwork.Network = (*Network)(nil)
+// TODO: Update when migrating to v10
+var _ exrpintegration.Network = (*Network)(nil)
 
 type Network struct {
 	exrpintegration.IntegrationNetwork

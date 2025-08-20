@@ -10,7 +10,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/evmos/evmos/v20/crypto/ethsecp256k1"
+	"github.com/cosmos/evm/ante"
+	ethante "github.com/cosmos/evm/ante/evm"
+	"github.com/cosmos/evm/crypto/ethsecp256k1"
+	etherminttypes "github.com/cosmos/evm/types"
+	"github.com/xrplevm/node/v9/app"
+	poaante "github.com/xrplevm/node/v9/x/poa/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -20,16 +25,19 @@ import (
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
-	"github.com/evmos/evmos/v20/app/ante"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	evmante "github.com/cosmos/evm/evmd/ante"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v9/app"
 )
 
 func init() {
 	simcli.GetSimulatorFlags()
 }
 
-const SimAppChainID = "simulation_777-1"
+const (
+	SimAppChainID    = "simulation_777-1"
+	SimAppEVMChainID = 777
+)
 
 // NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
 func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
@@ -44,15 +52,42 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		false,
 		map[int64]bool{},
 		app.DefaultNodeHome,
+		SimAppEVMChainID,
 		simcli.FlagPeriodValue,
 		appOptions,
+
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := app.NewAnteHandlerOptionsFromApp(bApp, bApp.GetTxConfig(), 0)
+	handlerOpts := &app.HandlerOptions{
+		HandlerOptions: evmante.HandlerOptions{
+			Cdc:                    bApp.AppCodec(),
+			AccountKeeper:          bApp.AccountKeeper,
+			BankKeeper:             bApp.BankKeeper,
+			ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+			EvmKeeper:              bApp.EvmKeeper,
+			FeegrantKeeper:         bApp.FeeGrantKeeper,
+			// TODO: Update when migrating to v10
+			IBCKeeper:       bApp.IBCKeeper,
+			FeeMarketKeeper: bApp.FeeMarketKeeper,
+			SignModeHandler: bApp.GetTxConfig().SignModeHandler(),
+			SigGasConsumer:  ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:  0,
+			TxFeeChecker:    ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
+		},
+		StakingKeeper:      bApp.StakingKeeper,
+		DistributionKeeper: bApp.DistrKeeper,
+		ExtraDecorator:     poaante.NewPoaDecorator(),
+		AuthzDisabledMsgTypes: []string{
+			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
+		},
+	}
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
-	bApp.SetAnteHandler(ante.NewAnteHandler(handlerOpts.Options()))
+	bApp.SetAnteHandler(app.NewAnteHandler(*handlerOpts))
 
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err

@@ -3,24 +3,26 @@ package app
 import (
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distributionkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	bankprecompile "github.com/cosmos/evm/precompiles/bank"
+	"github.com/cosmos/evm/precompiles/bech32"
+	distprecompile "github.com/cosmos/evm/precompiles/distribution"
+	govprecompile "github.com/cosmos/evm/precompiles/gov"
+	ics20precompile "github.com/cosmos/evm/precompiles/ics20"
+	"github.com/cosmos/evm/precompiles/p256"
+	stakingprecompile "github.com/cosmos/evm/precompiles/staking"
+	erc20Keeper "github.com/cosmos/evm/x/erc20/keeper"
+	transferkeeper "github.com/cosmos/evm/x/ibc/transfer/keeper"
+	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	channelkeeper "github.com/cosmos/ibc-go/v8/modules/core/04-channel/keeper"
 	"github.com/ethereum/go-ethereum/common"
-	bankprecompile "github.com/evmos/evmos/v20/precompiles/bank"
-	"github.com/evmos/evmos/v20/precompiles/bech32"
-	distprecompile "github.com/evmos/evmos/v20/precompiles/distribution"
-	govprecompile "github.com/evmos/evmos/v20/precompiles/gov"
-	ics20precompile "github.com/evmos/evmos/v20/precompiles/ics20"
-	"github.com/evmos/evmos/v20/precompiles/p256"
-	stakingprecompile "github.com/evmos/evmos/v20/precompiles/staking"
-	erc20Keeper "github.com/evmos/evmos/v20/x/erc20/keeper"
-	"github.com/evmos/evmos/v20/x/evm/core/vm"
-	transferkeeper "github.com/evmos/evmos/v20/x/ibc/transfer/keeper"
-	stakingkeeper "github.com/evmos/evmos/v20/x/staking/keeper"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"golang.org/x/exp/maps"
 )
 
@@ -36,7 +38,9 @@ func NewAvailableStaticPrecompiles(
 	authzKeeper authzkeeper.Keeper,
 	transferKeeper transferkeeper.Keeper,
 	channelKeeper channelkeeper.Keeper,
+	evmKeeper *evmkeeper.Keeper,
 	govKeeper govkeeper.Keeper,
+	codec codec.Codec,
 ) map[common.Address]vm.PrecompiledContract {
 	// Clone the mapping from the latest EVM fork.
 	precompiles := maps.Clone(vm.PrecompiledContractsBerlin)
@@ -49,7 +53,7 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate bech32 precompile: %w", err))
 	}
 
-	stakingPrecompile, err := stakingprecompile.NewPrecompile(stakingKeeper, authzKeeper)
+	stakingPrecompile, err := stakingprecompile.NewPrecompile(stakingKeeper)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate staking precompile: %w", err))
 	}
@@ -57,7 +61,7 @@ func NewAvailableStaticPrecompiles(
 	distributionPrecompile, err := distprecompile.NewPrecompile(
 		distributionKeeper,
 		stakingKeeper,
-		authzKeeper,
+		evmKeeper,
 	)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate distribution precompile: %w", err))
@@ -66,8 +70,9 @@ func NewAvailableStaticPrecompiles(
 	ibcTransferPrecompile, err := ics20precompile.NewPrecompile(
 		stakingKeeper,
 		transferKeeper,
+		// TODO: Update when migrating to v10
 		channelKeeper,
-		authzKeeper,
+		evmKeeper,
 	)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate ICS20 precompile: %w", err))
@@ -78,7 +83,7 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate bank precompile: %w", err))
 	}
 
-	govPrecompile, err := govprecompile.NewPrecompile(govKeeper, authzKeeper)
+	govPrecompile, err := govprecompile.NewPrecompile(govKeeper, codec)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate gov precompile: %w", err))
 	}

@@ -1,58 +1,31 @@
 package app
 
 import (
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/evmos/evmos/v20/app/ante"
-	ethante "github.com/evmos/evmos/v20/app/ante/evm"
-	etherminttypes "github.com/evmos/evmos/v20/types"
-	poaante "github.com/xrplevm/node/v9/x/poa/ante"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
+	evmante "github.com/cosmos/evm/evmd/ante"
 )
 
-type AnteHandlerOptions ante.HandlerOptions
+type HandlerOptions struct {
+	evmante.HandlerOptions
+	StakingKeeper          StakingKeeper
+	DistributionKeeper     DistributionKeeper
+	ExtraDecorator         sdk.AnteDecorator
+	AuthzDisabledMsgTypes  []string
+}
 
-func NewAnteHandlerOptionsFromApp(app *App, txConfig client.TxConfig, maxGasWanted uint64) *AnteHandlerOptions {
-	return &AnteHandlerOptions{
-		Cdc:                    app.appCodec,
-		AccountKeeper:          app.AccountKeeper,
-		BankKeeper:             app.BankKeeper,
-		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
-		EvmKeeper:              app.EvmKeeper,
-		FeegrantKeeper:         app.FeeGrantKeeper,
-		IBCKeeper:              app.IBCKeeper,
-		FeeMarketKeeper:        app.FeeMarketKeeper,
-		SignModeHandler:        txConfig.SignModeHandler(),
-		SigGasConsumer:         ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:         maxGasWanted,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.EvmKeeper),
-		StakingKeeper:          app.StakingKeeper,
-		DistributionKeeper:     app.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
-		AuthzDisabledMsgTypes: []string{
-			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
-		},
+// Validate checks if the keepers are defined
+func (options *HandlerOptions) Validate() error {
+	if options.StakingKeeper == nil {
+		return errorsmod.Wrap(errortypes.ErrLogic, "staking keeper is required for AnteHandler")
 	}
+	if options.DistributionKeeper == nil {
+		return errorsmod.Wrap(errortypes.ErrLogic, "distribution keeper is required for AnteHandler")
+	}
+	return options.HandlerOptions.Validate()
 }
 
-func (aa *AnteHandlerOptions) Validate() error {
-	return (*ante.HandlerOptions)(aa).Validate()
-}
-
-func (aa *AnteHandlerOptions) Options() ante.HandlerOptions {
-	return ante.HandlerOptions(*aa)
-}
-
-func (aa *AnteHandlerOptions) WithCodec(cdc codec.BinaryCodec) *AnteHandlerOptions {
-	aa.Cdc = cdc
-	return aa
-}
-
-func (aa *AnteHandlerOptions) WithMaxTxGasWanted(maxTxGasWanted uint64) *AnteHandlerOptions {
-	aa.MaxTxGasWanted = maxTxGasWanted
-	return aa
+func NewAnteHandler(options HandlerOptions) sdk.AnteHandler {
+	return evmante.NewAnteHandler(options.HandlerOptions)
 }

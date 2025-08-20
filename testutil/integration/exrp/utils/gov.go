@@ -16,18 +16,18 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	commonfactory "github.com/xrplevm/node/v9/testutil/integration/common/factory"
-	"github.com/xrplevm/node/v9/testutil/integration/common/keyring"
-	"github.com/xrplevm/node/v9/testutil/integration/common/network"
+	"github.com/cosmos/evm/testutil/integration/common/factory"
+	"github.com/cosmos/evm/testutil/integration/os/keyring"
+	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
 )
 
 // SubmitProposal is a helper function to submit a governance proposal and
 // return the proposal ID.
-func SubmitProposal(tf commonfactory.BaseTxFactory, network network.Network, proposerPriv cryptotypes.PrivKey, title string, msgs ...sdk.Msg) (uint64, error) {
+func SubmitProposal(tf factory.BaseTxFactory, network exrpintegration.Network, proposerPriv cryptotypes.PrivKey, title string, msgs ...sdk.Msg) (uint64, error) {
 	proposerAccAddr := sdk.AccAddress(proposerPriv.PubKey().Address()).String()
 	proposal, err := govv1.NewMsgSubmitProposal(
 		msgs,
-		sdk.NewCoins(sdk.NewCoin(network.GetDenom(), network.GetMinDepositAmt())),
+		sdk.NewCoins(sdk.NewCoin(network.GetBaseDenom(), network.GetMinDepositAmt())),
 		proposerAccAddr,
 		"",
 		title,
@@ -38,7 +38,7 @@ func SubmitProposal(tf commonfactory.BaseTxFactory, network network.Network, pro
 		return 0, err
 	}
 
-	txArgs := commonfactory.CosmosTxArgs{
+	txArgs := factory.CosmosTxArgs{
 		Msgs: []sdk.Msg{proposal},
 	}
 
@@ -47,19 +47,19 @@ func SubmitProposal(tf commonfactory.BaseTxFactory, network network.Network, pro
 
 // SubmitLegacyProposal is a helper function to submit a governance proposal and
 // return the proposal ID.
-func SubmitLegacyProposal(tf commonfactory.BaseTxFactory, network network.Network, proposerPriv cryptotypes.PrivKey, proposal govv1beta1.Content) (uint64, error) {
+func SubmitLegacyProposal(tf factory.BaseTxFactory, network exrpintegration.Network, proposerPriv cryptotypes.PrivKey, proposal govv1beta1.Content) (uint64, error) {
 	proposerAccAddr := sdk.AccAddress(proposerPriv.PubKey().Address())
 
 	msgSubmitProposal, err := govv1beta1.NewMsgSubmitProposal(
 		proposal,
-		sdk.NewCoins(sdk.NewCoin(network.GetDenom(), math.NewInt(1e18))),
+		sdk.NewCoins(sdk.NewCoin(network.GetBaseDenom(), math.NewInt(1e18))),
 		proposerAccAddr,
 	)
 	if err != nil {
 		return 0, err
 	}
 
-	txArgs := commonfactory.CosmosTxArgs{
+	txArgs := factory.CosmosTxArgs{
 		Msgs: []sdk.Msg{msgSubmitProposal},
 	}
 
@@ -68,7 +68,7 @@ func SubmitLegacyProposal(tf commonfactory.BaseTxFactory, network network.Networ
 
 // VoteOnProposal is a helper function to vote on a governance proposal given the private key of the voter and
 // the option to vote.
-func VoteOnProposal(tf commonfactory.BaseTxFactory, voterPriv cryptotypes.PrivKey, proposalID uint64, option govv1.VoteOption) (abcitypes.ExecTxResult, error) {
+func VoteOnProposal(tf factory.BaseTxFactory, voterPriv cryptotypes.PrivKey, proposalID uint64, option govv1.VoteOption) (abcitypes.ExecTxResult, error) {
 	voterAccAddr := sdk.AccAddress(voterPriv.PubKey().Address())
 
 	msgVote := govv1.NewMsgVote(
@@ -78,7 +78,7 @@ func VoteOnProposal(tf commonfactory.BaseTxFactory, voterPriv cryptotypes.PrivKe
 		"",
 	)
 
-	res, err := tf.CommitCosmosTx(voterPriv, commonfactory.CosmosTxArgs{
+	res, err := tf.CommitCosmosTx(voterPriv, factory.CosmosTxArgs{
 		Msgs: []sdk.Msg{msgVote},
 	})
 
@@ -87,7 +87,7 @@ func VoteOnProposal(tf commonfactory.BaseTxFactory, voterPriv cryptotypes.PrivKe
 
 // ApproveProposal is a helper function to vote 'yes'
 // for it and wait till it passes.
-func ApproveProposal(tf commonfactory.BaseTxFactory, network network.Network, proposerPriv cryptotypes.PrivKey, proposalID uint64) error {
+func ApproveProposal(tf factory.BaseTxFactory, network exrpintegration.Network, proposerPriv cryptotypes.PrivKey, proposalID uint64) error {
 	// Vote on proposal
 	if _, err := VoteOnProposal(tf, proposerPriv, proposalID, govv1.OptionYes); err != nil {
 		return errorsmod.Wrap(err, "failed to vote on proposal")
@@ -100,7 +100,7 @@ func ApproveProposal(tf commonfactory.BaseTxFactory, network network.Network, pr
 	return checkProposalStatus(network, proposalID, govv1.StatusPassed)
 }
 
-func SubmitAndAwaitProposalResolution(tf commonfactory.BaseTxFactory, network network.Network, keys []keyring.Key, title string, msgs ...sdk.Msg) (*govv1.Proposal, error) {
+func SubmitAndAwaitProposalResolution(tf factory.BaseTxFactory, network exrpintegration.Network, keys []keyring.Key, title string, msgs ...sdk.Msg) (*govv1.Proposal, error) {
 	proposalID, err := SubmitProposal(tf, network, keys[0].Priv, title, msgs...)
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func SubmitAndAwaitProposalResolution(tf commonfactory.BaseTxFactory, network ne
 	return retrieveResolvedProposal(network, proposalID)
 }
 
-func retrieveResolvedProposal(network network.Network, proposalID uint64) (*govv1.Proposal, error) {
+func retrieveResolvedProposal(network exrpintegration.Network, proposalID uint64) (*govv1.Proposal, error) {
 	gq := network.GetGovClient()
 	proposalRes, err := gq.Proposal(network.GetContext(), &govv1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
@@ -169,7 +169,7 @@ func getProposalIDFromEvents(events []abcitypes.Event) (uint64, error) {
 	return proposalID, nil
 }
 
-func submitProposal(tf commonfactory.BaseTxFactory, network network.Network, proposerPriv cryptotypes.PrivKey, txArgs commonfactory.CosmosTxArgs) (uint64, error) {
+func submitProposal(tf factory.BaseTxFactory, network exrpintegration.Network, proposerPriv cryptotypes.PrivKey, txArgs factory.CosmosTxArgs) (uint64, error) {
 	res, err := tf.CommitCosmosTx(proposerPriv, txArgs)
 	if err != nil {
 		return 0, err
@@ -194,7 +194,7 @@ func submitProposal(tf commonfactory.BaseTxFactory, network network.Network, pro
 
 // waitVotingPeriod is a helper function that waits for the current voting period
 // defined in the gov module params to pass
-func waitVotingPeriod(n network.Network) error {
+func waitVotingPeriod(n exrpintegration.Network) error {
 	gq := n.GetGovClient()
 	params, err := gq.Params(n.GetContext(), &govv1.QueryParamsRequest{ParamsType: "voting"})
 	if err != nil {
@@ -210,7 +210,7 @@ func waitVotingPeriod(n network.Network) error {
 }
 
 // checkProposalStatus is a helper function to check for a specific proposal status
-func checkProposalStatus(n network.Network, proposalID uint64, expStatus govv1.ProposalStatus) error {
+func checkProposalStatus(n exrpintegration.Network, proposalID uint64, expStatus govv1.ProposalStatus) error {
 	gq := n.GetGovClient()
 	proposalRes, err := gq.Proposal(n.GetContext(), &govv1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
