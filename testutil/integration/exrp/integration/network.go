@@ -10,11 +10,12 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 
 	gethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/xrplevm/node/v9/app"
 
-	"github.com/cosmos/evm/testutil/integration/common/network"
+	"github.com/cosmos/evm/testutil/integration/base/network"
 	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
@@ -52,10 +53,11 @@ var _ Network = (*IntegrationNetwork)(nil)
 
 // IntegrationNetwork is the implementation of the Network interface for integration tests.
 type IntegrationNetwork struct {
-	cfg        exrpcommon.Config
-	ctx        sdktypes.Context
-	validators []stakingtypes.Validator
-	app        *app.App
+	cfg         exrpcommon.Config
+	ctx         sdktypes.Context
+	validators  []stakingtypes.Validator
+	app         *app.App
+	baseDecimal evmtypes.Decimals
 
 	// This is only needed for IBC chain testing setup
 	valSet     *cmttypes.ValidatorSet
@@ -99,10 +101,13 @@ var (
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *IntegrationNetwork) configureAndInitChain() error {
+	// The bonded amount should be updated to reflect the actual base denom
+	baseDecimals := n.cfg.ChainCoins.BaseDecimals()
+	n.baseDecimal = baseDecimals
+
 	// Create validator set with the amount of validators specified in the config
 	// with the default power of 1.
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
-	totalBonded := DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))
 
 	valFlags := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 	for i := range valSet.Validators {
@@ -120,7 +125,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	fundedAccountBalances = addBondedModuleAccountToFundedBalances(
 		fundedAccountBalances,
-		sdktypes.NewCoin(n.cfg.BondDenom, totalBonded),
+		sdktypes.NewCoin(n.cfg.BondDenom, DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))),
 	)
 
 	delegations := createDelegations(validators)
@@ -289,6 +294,10 @@ func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
 // GetDenom returns the network's denom
 func (n *IntegrationNetwork) GetBaseDenom() string {
 	return n.cfg.Denom
+}
+
+func (n *IntegrationNetwork) GetBaseDecimal() evmtypes.Decimals {
+	return n.baseDecimal
 }
 
 // GetBondDenom returns the network's bond denom

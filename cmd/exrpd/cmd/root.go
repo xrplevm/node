@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,8 +10,12 @@ import (
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
 
+	evmkeyring "github.com/cosmos/evm/crypto/keyring"
+	evmserver "github.com/cosmos/evm/server"
+
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
@@ -40,13 +45,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/cosmos/evm/crypto/hd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	evmserver "github.com/cosmos/evm/client"
-	ethermintserver "github.com/cosmos/evm/server"
+	evmclient "github.com/cosmos/evm/client"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
 	"github.com/xrplevm/node/v9/app"
 )
@@ -68,6 +71,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		0,
 		0,
 		emptyAppOptions{},
+		app.NoOpEVMOptions,
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
@@ -82,9 +86,10 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
-		WithBroadcastMode(flags.BroadcastSync).
+		WithBroadcastMode(flags.FlagBroadcastMode).
 		WithHomeDir(app.DefaultNodeHome).
-		WithKeyringOptions(hd.EthSecp256k1Option()).
+		WithKeyringOptions(evmkeyring.Option()).
+		WithLedgerHasProtobuf(true).
 		WithViper("exrp")
 
 	rootCmd := &cobra.Command{
@@ -167,7 +172,20 @@ func initRootCmd(
 ) {
 	a := appCreator{encodingConfig}
 
+	sdkAppCreatorWrapper := func(
+		l log.Logger,
+		d dbm.DB,
+		w io.Writer,
+		ao servertypes.AppOptions,
+	) servertypes.Application {
+		return a.newApp(l, d, w, ao)
+	}
+
 	rootCmd.AddCommand(
+		genutilcli.InitCmd(
+			tempApp.BasicModuleManager,
+			app.DefaultNodeHome,
+		),
 		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
@@ -184,15 +202,15 @@ func initRootCmd(
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debug.Cmd(),
-		pruning.Cmd(a.newApp, app.DefaultNodeHome),
+		pruning.Cmd(sdkAppCreatorWrapper, app.DefaultNodeHome),
 		confixcmd.ConfigCommand(),
-		snapshot.Cmd(a.newApp),
+		snapshot.Cmd(sdkAppCreatorWrapper),
 	)
 
 	// add server commands
-	ethermintserver.AddCommands(
+	evmserver.AddCommands(
 		rootCmd,
-		ethermintserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
+		evmserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
 		a.appExport,
 		addModuleInitFlags,
 	)
@@ -202,7 +220,7 @@ func initRootCmd(
 		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		evmserver.KeyCommands(app.DefaultNodeHome, true),
+		evmclient.KeyCommands(app.DefaultNodeHome, true),
 	)
 
 	_, err := srvflags.AddTxFlags(rootCmd)
@@ -298,7 +316,7 @@ func (a appCreator) newApp(
 	db dbm.DB,
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
-) servertypes.Application {
+) evmserver.Application {
 	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
@@ -342,17 +360,7 @@ func (a appCreator) newApp(
 		cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent)),
 	)
 
-	return app.New(
-		logger,
-		db,
-		traceStore,
-		true,
-		skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		// TODO: Review this
-		cast.ToUint64(appOpts.Get(flags.FlagChainID)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
-		appOpts,
+	baseappOptions := []func(*baseapp.BaseApp){
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
@@ -365,6 +373,34 @@ func (a appCreator) newApp(
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		baseapp.SetChainID(chainID),
+	}
+
+	baseappOptions = append(baseappOptions, func(app *baseapp.BaseApp) {
+		mempool := sdkmempool.NoOpMempool{}
+		app.SetMempool(mempool)
+
+		handler := baseapp.NewDefaultProposalHandler(mempool, app)
+		app.SetPrepareProposal(handler.PrepareProposalHandler())
+		app.SetProcessProposal(handler.ProcessProposalHandler())
+	})
+
+	fmt.Println(appOpts.Get(flags.FlagChainID))
+
+	_ = cast.ToUint64(appOpts.Get(flags.FlagChainID))
+
+	return app.New(
+		logger,
+		db,
+		traceStore,
+		true,
+		skipUpgradeHeights,
+		cast.ToString(appOpts.Get(flags.FlagHome)),
+		// TODO: Review this
+		1440002,
+		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
+		appOpts,
+		app.EVMAppOptions,
+		baseappOptions...,
 	)
 }
 
@@ -394,6 +430,7 @@ func (a appCreator) appExport(
 		0,
 		uint(1),
 		appOpts,
+		app.EVMAppOptions,
 	)
 
 	if height != -1 {

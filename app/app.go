@@ -10,6 +10,8 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+	"github.com/ethereum/go-ethereum/common"
 
 	ratelimitv2 "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/v2"
 
@@ -21,10 +23,11 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	"github.com/cosmos/evm/ante"
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/encoding"
-	evmante "github.com/cosmos/evm/evmd/ante"
+	"github.com/xrplevm/node/v9/app/ante"
+
+	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
 	cosmosevmutils "github.com/cosmos/evm/utils"
 	erc20v2 "github.com/cosmos/evm/x/erc20/v2"
@@ -51,6 +54,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	evmmempool "github.com/cosmos/evm/mempool"
 	"github.com/xrplevm/node/v9/x/poa"
 
 	"cosmossdk.io/log"
@@ -78,7 +82,6 @@ import (
 	testdata_pulsar "github.com/cosmos/cosmos-sdk/testutil/testdata/testpb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
@@ -110,7 +113,6 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	evmostypes "github.com/cosmos/evm/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
 	ratelimitkeeper "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/keeper"
@@ -219,6 +221,7 @@ type App struct {
 	appCodec          codec.Codec
 	interfaceRegistry types.InterfaceRegistry
 	txConfig          client.TxConfig
+	clientCtx         client.Context
 
 	invCheckPeriod uint
 
@@ -250,6 +253,7 @@ type App struct {
 	EvmKeeper       *evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
 	Erc20Keeper     erc20keeper.Keeper
+	EVMMempool      *evmmempool.ExperimentalEVMMempool
 
 	// exrp keepers
 	PoaKeeper poakeeper.Keeper
@@ -262,6 +266,9 @@ type App struct {
 	sm *module.SimulationManager
 
 	configurator module.Configurator
+
+	// Add pending transaction listeners
+	pendingTxListeners []evmante.PendingTxListener
 }
 
 // New returns a reference to an initialized blockchain app
@@ -275,6 +282,7 @@ func New(
 	evmChainID uint64,
 	invCheckPeriod uint,
 	appOpts servertypes.AppOptions,
+	evmAppOptions EVMOptionsFn,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
 	encodingConfig := encoding.MakeConfig(evmChainID)
@@ -292,6 +300,10 @@ func New(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
+
+	if err := evmAppOptions(evmChainID); err != nil {
+		panic(err)
+	}
 
 	keys := storetypes.NewKVStoreKeys(
 		authtypes.StoreKey, authz.ModuleName, banktypes.StoreKey, stakingtypes.StoreKey,
@@ -340,7 +352,7 @@ func New(
 		appCodec,
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
 		// TODO: Update when replacing with forked cosmos/evm version is installed
-		evmostypes.ProtoAccount,
+		etherminttypes.ProtoAccount,
 		maccPerms,
 		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 		sdk.Bech32PrefixAccAddr,
@@ -364,9 +376,8 @@ func New(
 	)
 
 	// optional: enable sign mode textual by overwriting the default tx config (after setting the bank keeper)
-	enabledSignModes := append(authtx.DefaultSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL) //nolint:gocritic
 	txConfigOpts := authtx.ConfigOptions{
-		EnabledSignModes:           enabledSignModes,
+		EnabledSignModes:           authtx.DefaultSignModes,
 		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper),
 	}
 	txConfig, err := authtx.NewTxConfigWithOptions(
@@ -571,7 +582,6 @@ func New(
 			app.DistrKeeper,
 			app.BankKeeper,
 			app.Erc20Keeper,
-			app.AuthzKeeper,
 			app.TransferKeeper,
 			*app.IBCKeeper.ChannelKeeper,
 			app.EvmKeeper,
@@ -715,6 +725,7 @@ func New(
 	app.mm.SetOrderBeginBlockers(
 		// upgrades should be run first
 		capabilitytypes.ModuleName,
+		erc20types.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
 		distrtypes.ModuleName,
@@ -734,6 +745,7 @@ func New(
 		poatypes.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
+		erc20types.ModuleName,
 		feegrant.ModuleName,
 	)
 
@@ -751,6 +763,7 @@ func New(
 		// NOTE: feemarket need to be initialized before genutil module:
 		// gentx transactions use MinGasPriceDecorator.AnteHandle
 		feemarkettypes.ModuleName,
+		erc20types.ModuleName,
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		ibctransfertypes.ModuleName,
@@ -814,6 +827,46 @@ func New(
 	app.SetBeginBlocker(app.BeginBlocker)
 
 	app.setAnteHandler(app.txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
+
+	if evmtypes.GetChainConfig() != nil {
+		mempoolConfig := &evmmempool.EVMMempoolConfig{
+			AnteHandler:   app.GetAnteHandler(),
+			BlockGasLimit: 100_000_000,
+		}
+
+		evmMempool := evmmempool.NewExperimentalEVMMempool(
+			app.CreateQueryContext,
+			logger,
+			app.EvmKeeper,
+			app.FeeMarketKeeper,
+			app.txConfig,
+			app.clientCtx,
+			mempoolConfig,
+		)
+		app.EVMMempool = evmMempool
+
+		// Set the global mempool for RPC access
+		if err := evmmempool.SetGlobalEVMMempool(evmMempool); err != nil {
+			panic(err)
+		}
+
+		// Replace BaseApp mempool
+		app.SetMempool(evmMempool)
+
+		// Set custom CheckTx handler for nonce gap support
+		checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
+		app.SetCheckTxHandler(checkTxHandler)
+
+		// Set custom PrepareProposal handler
+		abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
+		abciProposalHandler.SetSignerExtractionAdapter(
+			evmmempool.NewEthSignerExtractionAdapter(
+				sdkmempool.NewDefaultSignerExtractionAdapter(),
+			),
+		)
+		app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
+	}
+
 	app.setPostHandler()
 	app.SetEndBlocker(app.EndBlocker)
 	app.setupUpgradeHandlers()
@@ -842,25 +895,22 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := &HandlerOptions{
-		HandlerOptions: evmante.HandlerOptions{
-			Cdc:                    app.appCodec,
-			AccountKeeper:          app.AccountKeeper,
-			BankKeeper:             app.BankKeeper,
-			ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
-			EvmKeeper:              app.EvmKeeper,
-			FeegrantKeeper:         app.FeeGrantKeeper,
-			// TODO: Update when migrating to v10
-			IBCKeeper:       app.IBCKeeper,
-			FeeMarketKeeper: app.FeeMarketKeeper,
-			SignModeHandler: txConfig.SignModeHandler(),
-			SigGasConsumer:  ante.SigVerificationGasConsumer,
-			MaxTxGasWanted:  maxGasWanted,
-			TxFeeChecker:    ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
-		},
-		StakingKeeper:      app.StakingKeeper,
-		DistributionKeeper: app.DistrKeeper,
-		ExtraDecorator:     poaante.NewPoaDecorator(),
+	handlerOpts := &ante.HandlerOptions{
+		Cdc:                    app.appCodec,
+		AccountKeeper:          app.AccountKeeper,
+		BankKeeper:             app.BankKeeper,
+		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+		EvmKeeper:              app.EvmKeeper,
+		FeegrantKeeper:         app.FeeGrantKeeper,
+		IBCKeeper:              app.IBCKeeper,
+		FeeMarketKeeper:        app.FeeMarketKeeper,
+		SignModeHandler:        txConfig.SignModeHandler(),
+		SigGasConsumer:         evmante.SigVerificationGasConsumer,
+		MaxTxGasWanted:         maxGasWanted,
+		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+		StakingKeeper:          app.StakingKeeper,
+		DistributionKeeper:     app.DistrKeeper,
+		ExtraDecorator:         poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
@@ -873,7 +923,12 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		panic(err)
 	}
 
-	app.SetAnteHandler(NewAnteHandler(*handlerOpts))
+	handler, err := ante.NewAnteHandler(*handlerOpts)
+	if err != nil {
+		panic(err)
+	}
+
+	app.SetAnteHandler(handler)
 }
 
 func (app *App) setPostHandler() {
@@ -975,8 +1030,17 @@ func (app *App) AppCodec() codec.Codec {
 }
 
 // DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
-func (app *App) DefaultGenesis() evmostypes.GenesisState {
-	return app.BasicModuleManager.DefaultGenesis(app.appCodec)
+func (app *App) DefaultGenesis() etherminttypes.GenesisState {
+	genesis := app.BasicModuleManager.DefaultGenesis(app.appCodec)
+
+	evmGenState := evmtypes.DefaultGenesisState()
+	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
+	genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenState)
+
+	erc20GenState := erc20types.DefaultGenesisState()
+	genesis[erc20types.ModuleName] = app.AppCodec().MustMarshalJSON(erc20GenState)
+
+	return genesis
 }
 
 // InterfaceRegistry returns an InterfaceRegistry
@@ -1068,6 +1132,14 @@ func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
 	return app.StakingKeeper
 }
 
+func (app *App) GetMempool() sdkmempool.ExtMempool {
+	return app.EVMMempool
+}
+
+func (app *App) GetAnteHandler() sdk.AnteHandler {
+	return app.BaseApp.AnteHandler()
+}
+
 // GetIBCKeeper implements the TestingApp interface.
 func (app *App) GetIBCKeeper() *ibckeeper.Keeper {
 	return app.IBCKeeper
@@ -1081,6 +1153,10 @@ func (app *App) GetTxConfig() client.TxConfig {
 // TxConfig returns App's TxConfig.
 func (app *App) TxConfig() client.TxConfig {
 	return app.txConfig
+}
+
+func (app *App) SetClientCtx(clientCtx client.Context) {
+	app.clientCtx = clientCtx
 }
 
 // AutoCliOpts returns the autocli options for the app.
@@ -1112,6 +1188,11 @@ func (app *App) Configurator() module.Configurator {
 // ModuleManager returns the app ModuleManager
 func (app *App) ModuleManager() *module.Manager {
 	return app.mm
+}
+
+// RegisterPendingTxListener registers a pending tx listener
+func (app *App) RegisterPendingTxListener(listener func(common.Hash)) {
+	app.pendingTxListeners = append(app.pendingTxListeners, listener)
 }
 
 // initParamsKeeper init params keeper and its subspaces

@@ -144,11 +144,11 @@ test: test-poa test-integration test-upgrade test-sim-benchmark-simulation test-
 
 test-upgrade:
 	@echo "--> Running upgrade testsuite"
-	@go test -mod=readonly -v ./tests/upgrade
+	@go test -mod=readonly -tags=test -v ./tests/upgrade
 
 test-integration:
 	@echo "--> Running integration testsuite"
-	@go test -mod=readonly -v ./tests/integration
+	@go test -mod=readonly -tags=test -v ./tests/integration
 
 test-poa:
 	@echo "--> Running POA tests"

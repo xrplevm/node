@@ -16,8 +16,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	"github.com/cosmos/evm/testutil/integration/common/factory"
-	"github.com/cosmos/evm/testutil/integration/os/keyring"
+	"github.com/cosmos/evm/testutil/integration/base/factory"
+	"github.com/cosmos/evm/testutil/keyring"
 	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
 )
 

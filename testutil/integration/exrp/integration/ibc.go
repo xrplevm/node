@@ -13,14 +13,14 @@ import (
 // The keyring should be used instead.
 func (n *IntegrationNetwork) GetIBCChain(t *testing.T, coord *ibctesting.Coordinator) *ibctesting.TestChain {
 	return &ibctesting.TestChain{
-		TB:            t,
-		Coordinator:   coord,
-		ChainID:       n.GetChainID(),
-		App:           n.app,
-		TxConfig:      n.app.GetTxConfig(),
-		Codec:         n.app.AppCodec(),
-		Vals:          n.valSet,
-		NextVals:      n.valSet,
-		Signers:       n.valSigners,
+		TB:          t,
+		Coordinator: coord,
+		ChainID:     n.GetChainID(),
+		App:         n.app,
+		TxConfig:    n.app.GetTxConfig(),
+		Codec:       n.app.AppCodec(),
+		Vals:        n.valSet,
+		NextVals:    n.valSet,
+		Signers:     n.valSigners,
 	}
 }

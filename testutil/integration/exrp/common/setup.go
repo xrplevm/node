@@ -105,12 +105,12 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	loadLatest := true
 	skipUpgradeHeights := map[int64]bool{}
 	homePath := testNodeHome
-	evmChainID := uint64(1)
+	evmChainID := uint64(1440002)
 	invCheckPeriod := uint(5)
 	appOptions := simutils.NewAppOptionsWithFlagHome(homePath)
 	baseAppOptions := append(customBaseAppOptions, baseapp.SetChainID(chainID)) //nolint:gocritic
 
-	return app.New(
+	exrpApp := app.New(
 		logger,
 		db,
 		nil,
@@ -120,6 +120,26 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		evmChainID,
 		invCheckPeriod,
 		appOptions,
+		app.EVMAppOptions,
 		baseAppOptions...,
 	)
+
+	// Initialize EVM chain configuration for integration tests
+	evmConfigurator := evmtypes.NewEVMConfigurator()
+	// Reset configuration for test environments to allow multiple app instances
+	evmConfigurator.ResetTestConfig()
+
+	// Configure EVM coin info with the proper denom
+	coinInfo := evmtypes.EvmCoinInfo{
+		Denom:         app.BaseDenom,
+		ExtendedDenom: app.BaseDenom,
+		DisplayDenom:  app.DisplayDenom,
+		Decimals:      evmtypes.EighteenDecimals,
+	}
+	err := evmConfigurator.WithEVMCoinInfo(coinInfo).Configure()
+	if err != nil {
+		panic(fmt.Sprintf("failed to configure EVM: %v", err))
+	}
+
+	return exrpApp
 }
