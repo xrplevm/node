@@ -18,7 +18,7 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"github.com/cosmos/evm/testutil/integration/common/factory"
 	"github.com/cosmos/evm/testutil/integration/os/keyring"
-	exrpintegration "github.com/xrplevm/node/v8/testutil/integration/exrp/integration"
+	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
 )
 
 // SubmitProposal is a helper function to submit a governance proposal and

@@ -48,7 +48,7 @@ import (
 	evmserver "github.com/cosmos/evm/client"
 	ethermintserver "github.com/cosmos/evm/server"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 )
 
 type emptyAppOptions struct{}

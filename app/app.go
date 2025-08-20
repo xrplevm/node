@@ -51,7 +51,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	"github.com/xrplevm/node/v8/x/poa"
+	"github.com/xrplevm/node/v9/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -126,10 +126,10 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
-	"github.com/xrplevm/node/v8/docs"
-	poaante "github.com/xrplevm/node/v8/x/poa/ante"
-	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/docs"
+	poaante "github.com/xrplevm/node/v9/x/poa/ante"
+	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 
 	srvflags "github.com/cosmos/evm/server/flags"
 
@@ -851,16 +851,16 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 			EvmKeeper:              app.EvmKeeper,
 			FeegrantKeeper:         app.FeeGrantKeeper,
 			// TODO: Update when migrating to v10
-			IBCKeeper:              app.IBCKeeper,
-			FeeMarketKeeper:        app.FeeMarketKeeper,
-			SignModeHandler:        txConfig.SignModeHandler(),
-			SigGasConsumer:         ante.SigVerificationGasConsumer,
-			MaxTxGasWanted:         maxGasWanted,
-			TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+			IBCKeeper:       app.IBCKeeper,
+			FeeMarketKeeper: app.FeeMarketKeeper,
+			SignModeHandler: txConfig.SignModeHandler(),
+			SigGasConsumer:  ante.SigVerificationGasConsumer,
+			MaxTxGasWanted:  maxGasWanted,
+			TxFeeChecker:    ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
 		},
-		StakingKeeper:          app.StakingKeeper,
-		DistributionKeeper:     app.DistrKeeper,
-		ExtraDecorator:         poaante.NewPoaDecorator(),
+		StakingKeeper:      app.StakingKeeper,
+		DistributionKeeper: app.DistrKeeper,
+		ExtraDecorator:     poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
@@ -947,7 +947,7 @@ func (app *App) BlockedModuleAccountAddrs() map[string]bool {
 	}
 
 	blockedPrecompilesHex := evmtypes.AvailableStaticPrecompiles
-	for _, addr := range vm.PrecompiledAddressesPrague{
+	for _, addr := range vm.PrecompiledAddressesPrague {
 		blockedPrecompilesHex = append(blockedPrecompilesHex, addr.Hex())
 	}
 

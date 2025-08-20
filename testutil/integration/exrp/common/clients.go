@@ -27,8 +27,8 @@ import (
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v8/x/poa/types"
+	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 )
 
 type NetworkKeepers interface {
