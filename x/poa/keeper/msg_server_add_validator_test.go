@@ -9,8 +9,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v8/x/poa/testutil"
-	"github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/x/poa/testutil"
+	"github.com/xrplevm/node/v9/x/poa/types"
 )
 
 func TestMsgServer_AddValidator(t *testing.T) {

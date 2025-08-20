@@ -5,10 +5,11 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	v5 "github.com/xrplevm/node/v8/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v8/app/upgrades/v6"
-	v7 "github.com/xrplevm/node/v8/app/upgrades/v7"
-	v8 "github.com/xrplevm/node/v8/app/upgrades/v8"
+
+	v5 "github.com/xrplevm/node/v9/app/upgrades/v5"
+	v6 "github.com/xrplevm/node/v9/app/upgrades/v6"
+	v7 "github.com/xrplevm/node/v9/app/upgrades/v7"
+	v8 "github.com/xrplevm/node/v9/app/upgrades/v8"
 )
 
 func (app *App) setupUpgradeHandlers() {

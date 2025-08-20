@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/x/poa/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
