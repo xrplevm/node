@@ -24,7 +24,6 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	ethante "github.com/cosmos/evm/ante/evm"
-	"github.com/cosmos/evm/encoding"
 	"github.com/xrplevm/node/v9/app/ante"
 
 	evmante "github.com/cosmos/evm/ante"
@@ -285,7 +284,7 @@ func New(
 	evmAppOptions EVMOptionsFn,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
-	encodingConfig := encoding.MakeConfig(evmChainID)
+	encodingConfig := MakeEncodingConfig(evmChainID)
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
@@ -905,7 +904,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		IBCKeeper:              app.IBCKeeper,
 		FeeMarketKeeper:        app.FeeMarketKeeper,
 		SignModeHandler:        txConfig.SignModeHandler(),
-		SigGasConsumer:         evmante.SigVerificationGasConsumer,
+		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
 		StakingKeeper:          app.StakingKeeper,
