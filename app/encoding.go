@@ -51,8 +51,8 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	})
 
 	interfaceRegistry.RegisterImplementations((*authtypes.AccountI)(nil),
-		&evmtypes.EthAccount{},
-		&legacytypes.EthAccount{},
+		&evmtypes.EthAccount{},    // cosmos-evm
+		&legacytypes.EthAccount{}, // evmos (legacy)
 	)
 	interfaceRegistry.RegisterImplementations((*types2.PubKey)(nil),
 		&evmethsecp256k1.PubKey{}, // cosmos-evm
