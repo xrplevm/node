@@ -29,17 +29,23 @@ func CreateUpgradeHandler(
 		logger := ctx.Logger().With("upgrade", UpgradeName)
 		logger.Info("Running v9 upgrade handler...")
 
+		ctx.Logger().Info("migrating erc20 module...")
 		migrateErc20Module(
 			ctx,
 			storeKeys,
 			erc20Keeper,
 		)
-		migrateEvmModule(
+		ctx.Logger().Info("erc20 module is ready")
+		ctx.Logger().Info("migrating evm module...")
+		if err := migrateEvmModule(
 			ctx,
 			storeKeys,
 			appCodec,
 			evmKeeper,
-		)
+		); err != nil {
+			return nil, err
+		}
+		ctx.Logger().Info("evm module is ready")
 
 		logger.Info("Finished v9 upgrade handler")
 
@@ -50,7 +56,7 @@ func CreateUpgradeHandler(
 func migrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, codec codec.Codec, evmKeeper EvmKeeper) error {
 	store := ctx.KVStore(keys[evmtypes.StoreKey])
 
-	legacyBz := store.Get(legacyevmtypes.KeyPrefixParams)
+	legacyBz := store.Get(evmtypes.KeyPrefixParams)
 	if legacyBz == nil {
 		return errors.New("legacyBz cannot be nil")
 	}
