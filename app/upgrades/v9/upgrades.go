@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
@@ -35,7 +36,7 @@ func CreateUpgradeHandler(
 			storeKeys,
 			erc20Keeper,
 		)
-		ctx.Logger().Info("erc20 module is ready")
+		ctx.Logger().Info("erc20 module migrated successfully")
 		ctx.Logger().Info("migrating evm module...")
 		if err := migrateEvmModule(
 			ctx,
@@ -45,7 +46,7 @@ func CreateUpgradeHandler(
 		); err != nil {
 			return nil, err
 		}
-		ctx.Logger().Info("evm module is ready")
+		ctx.Logger().Info("evm module migrated successfully")
 
 		logger.Info("Finished v9 upgrade handler")
 
@@ -64,10 +65,11 @@ func migrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 
 	codec.MustUnmarshal(legacyBz, &legacyEvmParams)
 
-	eips := make([]int64, 0, len(legacyEvmParams.ExtraEIPs))
+	eips := make([]int64, len(legacyEvmParams.ExtraEIPs))
 
 	for i, extraEIP := range legacyEvmParams.ExtraEIPs {
-		intEIP, err := strconv.ParseInt(extraEIP, 10, 64)
+		sanitized := strings.Trim(extraEIP, "ethereum_")
+		intEIP, err := strconv.ParseInt(sanitized, 10, 64)
 		if err != nil {
 			return err
 		}
