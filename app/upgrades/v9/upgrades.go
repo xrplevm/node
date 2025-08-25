@@ -11,10 +11,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/ethereum/go-ethereum/common"
 	legacyevmtypes "github.com/xrplevm/node/v9/legacy/evm/types"
+	legacytypes "github.com/xrplevm/node/v9/legacy/types"
 )
 
 func CreateUpgradeHandler(
@@ -22,6 +24,7 @@ func CreateUpgradeHandler(
 	configurator module.Configurator,
 	storeKeys map[string]*storetypes.KVStoreKey,
 	appCodec codec.Codec,
+	accountKeeper authkeeper.AccountKeeper,
 	evmKeeper EvmKeeper,
 	erc20Keeper ERC20Keeper,
 ) upgradetypes.UpgradeHandler {
@@ -30,15 +33,18 @@ func CreateUpgradeHandler(
 		logger := ctx.Logger().With("upgrade", UpgradeName)
 		logger.Info("Running v9 upgrade handler...")
 
+		ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
+		MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
+
 		ctx.Logger().Info("migrating erc20 module...")
-		migrateErc20Module(
+		MigrateErc20Module(
 			ctx,
 			storeKeys,
 			erc20Keeper,
 		)
 		ctx.Logger().Info("erc20 module migrated successfully")
 		ctx.Logger().Info("migrating evm module...")
-		if err := migrateEvmModule(
+		if err := MigrateEvmModule(
 			ctx,
 			storeKeys,
 			appCodec,
@@ -54,7 +60,7 @@ func CreateUpgradeHandler(
 	}
 }
 
-func migrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, codec codec.Codec, evmKeeper EvmKeeper) error {
+func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, codec codec.Codec, evmKeeper EvmKeeper) error {
 	store := ctx.KVStore(keys[evmtypes.StoreKey])
 
 	legacyBz := store.Get(evmtypes.KeyPrefixParams)
@@ -99,7 +105,7 @@ func migrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 	return evmKeeper.SetParams(ctx, params)
 }
 
-func migrateErc20Module(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, keeper ERC20Keeper) {
+func MigrateErc20Module(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, keeper ERC20Keeper) {
 	// In your upgrade handler
 	store := ctx.KVStore(keys[erc20types.StoreKey])
 	const addressLength = 42 // "0x" + 40 hex characters
@@ -121,4 +127,27 @@ func migrateErc20Module(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey,
 		}
 		store.Delete([]byte("NativePrecompiles"))
 	}
+}
+
+// MigrateEthAccountsToBaseAccounts is used to store the code hash of the associated
+// smart contracts in the dedicated store in the EVM module and convert the former
+// EthAccounts to standard Cosmos SDK accounts.
+func MigrateEthAccountsToBaseAccounts(ctx sdk.Context, ak authkeeper.AccountKeeper, ek EvmKeeper) {
+	ak.IterateAccounts(ctx, func(account sdk.AccountI) (stop bool) {
+		ethAcc, ok := account.(*legacytypes.EthAccount)
+		if !ok {
+			return false
+		}
+
+		// NOTE: we only need to add store entries for smart contracts
+		codeHashBytes := common.HexToHash(ethAcc.CodeHash).Bytes()
+		if !evmtypes.IsEmptyCodeHash(codeHashBytes) {
+			ek.SetCodeHash(ctx, ethAcc.EthAddress().Bytes(), codeHashBytes)
+		}
+
+		// Set the base account in the account keeper instead of the EthAccount
+		ak.SetAccount(ctx, ethAcc.BaseAccount)
+
+		return false
+	})
 }

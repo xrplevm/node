@@ -49,6 +49,7 @@ func (app *App) setupUpgradeHandlers() {
 			app.configurator,
 			app.keys,
 			app.appCodec,
+			app.AccountKeeper,
 			app.EvmKeeper,
 			app.Erc20Keeper,
 		),

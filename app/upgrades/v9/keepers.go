@@ -14,4 +14,5 @@ type ERC20Keeper interface {
 type EvmKeeper interface {
 	GetParams(ctx sdk.Context) evmtypes.Params
 	SetParams(ctx sdk.Context, params evmtypes.Params) error
+	SetCodeHash(ctx sdk.Context, addrBytes, hashBytes []byte)
 }
