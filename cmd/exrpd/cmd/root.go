@@ -9,8 +9,8 @@ import (
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
-
 	evmkeyring "github.com/cosmos/evm/crypto/keyring"
+
 	evmserver "github.com/cosmos/evm/server"
 
 	"github.com/cosmos/cosmos-sdk/client/pruning"
