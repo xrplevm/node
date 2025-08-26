@@ -133,7 +133,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			}
 
 			// TODO: retrieve evmChainID from genesis file
-			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 0)
+			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440002)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
@@ -427,7 +427,7 @@ func (a appCreator) appExport(
 		height == -1, // -1: no height provided
 		map[int64]bool{},
 		homePath,
-		0,
+		1440002,
 		uint(1),
 		appOpts,
 		app.EVMAppOptions,

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
@@ -16,7 +14,6 @@ import (
 
 func main() {
 	initSDKConfig()
-	registerDenoms()
 	rootCmd, _ := cmd.NewRootCmd()
 	if err := svrcmd.Execute(rootCmd, "", app.DefaultNodeHome); err != nil {
 		fmt.Fprintln(rootCmd.OutOrStderr(), err)
@@ -41,14 +38,4 @@ func initSDKConfig() {
 	config.SetPurpose(sdk.Purpose) // Shared
 	// config.SetFullFundraiserPath(ethermint.BIP44HDPath) // nolint: staticcheck
 	config.Seal()
-}
-
-func registerDenoms() {
-	if err := sdk.RegisterDenom(app.DisplayDenom, math.LegacyOneDec()); err != nil {
-		panic(err)
-	}
-
-	if err := sdk.RegisterDenom(app.BaseDenom, math.LegacyNewDecWithPrec(1, app.BaseDenomUnit)); err != nil {
-		panic(err)
-	}
 }
