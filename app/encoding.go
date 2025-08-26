@@ -3,10 +3,16 @@ package app
 import (
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
+	types2 "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	evmethsecp256k1 "github.com/cosmos/evm/crypto/ethsecp256k1"
+	evmtypes "github.com/cosmos/evm/types"
+	"github.com/xrplevm/node/v9/legacy/crypto/ethsecp256k1"
+	legacytypes "github.com/xrplevm/node/v9/legacy/types"
 
 	amino "github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -43,22 +49,22 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 		SigningOptions: signingOptions,
 	})
 
-	//interfaceRegistry.RegisterImplementations((*sdk.AccountI)(nil),
-	//	&evmtypes.EthAccount{},    // cosmos-evm
-	//	&legacytypes.EthAccount{}, // evmos (legacy)
-	//)
-	//interfaceRegistry.RegisterImplementations((*authtypes.AccountI)(nil),
-	//	&evmtypes.EthAccount{},    // cosmos-evm
-	//	&legacytypes.EthAccount{}, // evmos (legacy)
-	//)
-	//interfaceRegistry.RegisterImplementations((*types2.PubKey)(nil),
-	//	&evmethsecp256k1.PubKey{}, // cosmos-evm
-	//	&ethsecp256k1.PubKey{},    // evmos (legacy)
-	//)
-	//interfaceRegistry.RegisterImplementations((*types2.PrivKey)(nil),
-	//	&evmethsecp256k1.PrivKey{}, // cosmos-evm
-	//	&ethsecp256k1.PrivKey{},    // evmos (legacy)
-	//)
+	interfaceRegistry.RegisterImplementations((*sdk.AccountI)(nil),
+		&evmtypes.EthAccount{},    // cosmos-evm
+		&legacytypes.EthAccount{}, // evmos (legacy)
+	)
+	interfaceRegistry.RegisterImplementations((*authtypes.AccountI)(nil),
+		&evmtypes.EthAccount{},    // cosmos-evm
+		&legacytypes.EthAccount{}, // evmos (legacy)
+	)
+	interfaceRegistry.RegisterImplementations((*types2.PubKey)(nil),
+		&evmethsecp256k1.PubKey{}, // cosmos-evm
+		&ethsecp256k1.PubKey{},    // evmos (legacy)
+	)
+	interfaceRegistry.RegisterImplementations((*types2.PrivKey)(nil),
+		&evmethsecp256k1.PrivKey{}, // cosmos-evm
+		&ethsecp256k1.PrivKey{},    // evmos (legacy)
+	)
 
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	enccodec.RegisterLegacyAminoCodec(cdc)
