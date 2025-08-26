@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	DisplayDenom = "xrp"
+	DisplayDenom = "token"
 	// BaseDenom defines to the default denomination used in EVM
-	BaseDenom = "axrp"
+	BaseDenom = "token"
 	// BaseDenomUnit defines the unit of the base denomination
 	BaseDenomUnit = 18
 )
