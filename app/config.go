@@ -33,6 +33,7 @@ var ChainsCoinInfo = map[uint64]evmtypes.EvmCoinInfo{
 
 // EVMAppOptions sets up global configuration
 func EVMAppOptions(chainID uint64) error {
+	fmt.Println("chainID:", chainID)
 	if sealed {
 		return nil
 	}

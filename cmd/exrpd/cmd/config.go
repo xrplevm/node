@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	cosmosevmserverconfig "github.com/cosmos/evm/server/config"
 
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
@@ -36,6 +38,8 @@ func InitAppConfig(denom string, evmChainID uint64) (string, interface{}) {
 
 	evmCfg := cosmosevmserverconfig.DefaultEVMConfig()
 	evmCfg.EVMChainID = evmChainID
+
+	fmt.Println("InitAppConfig evmchainid: ", evmChainID)
 
 	customAppConfig := CustomAppConfig{
 		Config:  *srvCfg,

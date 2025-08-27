@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	types2 "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -30,6 +32,7 @@ import (
 // }
 
 func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
+	fmt.Println("MakeEncodingConfig chainID", evmChainID)
 	cdc := amino.NewLegacyAmino()
 	signingOptions := signing.Options{
 		AddressCodec: address.Bech32Codec{

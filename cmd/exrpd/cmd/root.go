@@ -68,7 +68,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		tempDir(app.DefaultNodeHome),
-		0,
+		1440002,
 		0,
 		emptyAppOptions{},
 		app.NoOpEVMOptions,
