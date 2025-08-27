@@ -164,8 +164,11 @@ const (
 	DisplayDenom = "token"
 	// BaseDenom defines to the default denomination used in EVM
 	BaseDenom = "token"
-	// BaseDenomUnit defines the unit of the base denomination
-	BaseDenomUnit = 18
+
+	// XrpDenom defines the xrp denomination used in EVM
+	XrpDenom = "axrp"
+	// XrpDisplayDenom defines the denomination dispkated to users in client applications.
+	XrpDisplayDenom = "xrp"
 )
 
 var (

@@ -13,27 +13,43 @@ func NoOpEVMOptions(_ uint64) error {
 }
 
 var (
-	sealed             = false
+	// sealed specifies if the EVMConfigurator has been sealed or not.
+	sealed = false
+
 	DefaultEvmCoinInfo = evmtypes.EvmCoinInfo{
 		Denom:         BaseDenom,
 		DisplayDenom:  DisplayDenom,
 		ExtendedDenom: BaseDenom,
 		Decimals:      evmtypes.EighteenDecimals,
 	}
-	DefaultLocalnetChainID   uint64 = 1440002
-	DefaultSimulationChainID uint64 = 777
+
+	XrpEvmCoinInfo = evmtypes.EvmCoinInfo{
+		Denom:         XrpDenom,
+		DisplayDenom:  XrpDisplayDenom,
+		ExtendedDenom: XrpDenom,
+		Decimals:      evmtypes.EighteenDecimals,
+	}
+
+	LocalnetEVMChainID uint64 = 1440002
+	MainnetEVMChainID  uint64 = 1440000
+	TestnetEVMChainID  uint64 = 1449000
+	DevnetEVMChainID   uint64 = 1440002
+
+	SimulationEVMChainID uint64 = 777
 )
 
 // ChainsCoinInfo maps EVM chain IDs to coin configuration
 // IMPORTANT: Uses uint64 EVM chain IDs as keys, not Cosmos chain ID strings
 var ChainsCoinInfo = map[uint64]evmtypes.EvmCoinInfo{
-	DefaultLocalnetChainID:   DefaultEvmCoinInfo,
-	DefaultSimulationChainID: DefaultEvmCoinInfo,
+	MainnetEVMChainID:    XrpEvmCoinInfo,
+	TestnetEVMChainID:    XrpEvmCoinInfo,
+	DevnetEVMChainID:     XrpEvmCoinInfo,
+	LocalnetEVMChainID:   DefaultEvmCoinInfo,
+	SimulationEVMChainID: DefaultEvmCoinInfo,
 }
 
 // EVMAppOptions sets up global configuration
 func EVMAppOptions(chainID uint64) error {
-	fmt.Println("chainID:", chainID)
 	if sealed {
 		return nil
 	}
