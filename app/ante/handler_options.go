@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	evmante "github.com/cosmos/evm/ante"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	txsigning "cosmossdk.io/x/tx/signing"
@@ -33,6 +34,7 @@ type HandlerOptions struct {
 	DistributionKeeper     DistributionKeeper
 	ExtraDecorator         sdk.AnteDecorator
 	AuthzDisabledMsgTypes  []string
+	PendingTxListener      evmante.PendingTxListener
 }
 
 // Validate checks if the keepers are defined

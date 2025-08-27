@@ -10,7 +10,8 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
-	//sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	ratelimitv2 "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/v2"
@@ -291,6 +292,7 @@ func New(
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
+	txConfig := encodingConfig.TxConfig
 
 	bApp := baseapp.NewBaseApp(
 		Name,
@@ -302,6 +304,7 @@ func New(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
+	bApp.SetTxEncoder(txConfig.TxEncoder())
 
 	if err := evmAppOptions(evmChainID); err != nil {
 		panic(err)
@@ -826,50 +829,50 @@ func New(
 	app.SetInitChainer(app.InitChainer)
 	app.SetPreBlocker(app.PreBlocker)
 	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetEndBlocker(app.EndBlocker)
 
 	app.setAnteHandler(app.txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
-	//
-	//if evmtypes.GetChainConfig() != nil {
-	//	mempoolConfig := &evmmempool.EVMMempoolConfig{
-	//		AnteHandler:   app.GetAnteHandler(),
-	//		BlockGasLimit: 100_000_000,
-	//	}
-	//
-	//	evmMempool := evmmempool.NewExperimentalEVMMempool(
-	//		app.CreateQueryContext,
-	//		logger,
-	//		app.EvmKeeper,
-	//		app.FeeMarketKeeper,
-	//		app.txConfig,
-	//		app.clientCtx,
-	//		mempoolConfig,
-	//	)
-	//	app.EVMMempool = evmMempool
-	//
-	//	// Set the global mempool for RPC access
-	//	if err := evmmempool.SetGlobalEVMMempool(evmMempool); err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	// Replace BaseApp mempool
-	//	app.SetMempool(evmMempool)
-	//
-	//	// Set custom CheckTx handler for nonce gap support
-	//	checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
-	//	app.SetCheckTxHandler(checkTxHandler)
-	//
-	//	// Set custom PrepareProposal handler
-	//	abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
-	//	abciProposalHandler.SetSignerExtractionAdapter(
-	//		evmmempool.NewEthSignerExtractionAdapter(
-	//			sdkmempool.NewDefaultSignerExtractionAdapter(),
-	//		),
-	//	)
-	//	app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
-	//}
+
+	if evmtypes.GetChainConfig() != nil {
+		mempoolConfig := &evmmempool.EVMMempoolConfig{
+			AnteHandler:   app.GetAnteHandler(),
+			BlockGasLimit: 100_000_000,
+		}
+
+		evmMempool := evmmempool.NewExperimentalEVMMempool(
+			app.CreateQueryContext,
+			logger,
+			app.EvmKeeper,
+			app.FeeMarketKeeper,
+			app.txConfig,
+			app.clientCtx,
+			mempoolConfig,
+		)
+		app.EVMMempool = evmMempool
+
+		// Set the global mempool for RPC access
+		if err := evmmempool.SetGlobalEVMMempool(evmMempool); err != nil {
+			panic(err)
+		}
+
+		// Replace BaseApp mempool
+		app.SetMempool(evmMempool)
+
+		// Set custom CheckTx handler for nonce gap support
+		checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
+		app.SetCheckTxHandler(checkTxHandler)
+
+		// Set custom PrepareProposal handler
+		abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
+		abciProposalHandler.SetSignerExtractionAdapter(
+			evmmempool.NewEthSignerExtractionAdapter(
+				sdkmempool.NewDefaultSignerExtractionAdapter(),
+			),
+		)
+		app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
+	}
 
 	app.setPostHandler()
-	app.SetEndBlocker(app.EndBlocker)
 	app.setupUpgradeHandlers()
 
 	// At startup, after all modules have been registered, check that all prot
@@ -918,6 +921,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
 		},
+		PendingTxListener: app.onPendingTx,
 	}
 
 	if err := handlerOpts.Validate(); err != nil {
@@ -1227,4 +1231,10 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 // SimulationManager implements the SimulationApp interface
 func (app *App) SimulationManager() *module.SimulationManager {
 	return app.sm
+}
+
+func (app *App) onPendingTx(hash common.Hash) {
+	for _, listener := range app.pendingTxListeners {
+		listener(hash)
+	}
 }
