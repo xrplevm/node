@@ -751,6 +751,7 @@ func New(
 		feemarkettypes.ModuleName,
 		erc20types.ModuleName,
 		feegrant.ModuleName,
+		ratelimittypes.ModuleName,
 	)
 
 	genesisModuleOrder := []string{
