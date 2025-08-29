@@ -12,6 +12,21 @@ func NoOpEVMOptions(_ uint64) error {
 	return nil
 }
 
+const (
+	AccountAddressPrefix = "ethm"
+	Bip44CoinType        = 60
+	Name                 = "exrp"
+	// DisplayDenom defines the denomination displayed to users in client applications.
+	DisplayDenom = "token"
+	// BaseDenom defines to the default denomination used in EVM
+	BaseDenom = "token"
+
+	// XrpDenom defines the xrp denomination used in EVM
+	XrpDenom = "axrp"
+	// XrpDisplayDenom defines the denomination dispkated to users in client applications.
+	XrpDisplayDenom = "xrp"
+)
+
 var (
 	// sealed specifies if the EVMConfigurator has been sealed or not.
 	sealed = false
@@ -59,11 +74,6 @@ func EVMAppOptions(chainID uint64) error {
 	if !found {
 		return fmt.Errorf("unknown EVM chain id: %d", chainID)
 	}
-
-	//// Set denom info for the chain
-	// if err := setBaseDenom(coinInfo); err != nil {
-	//	return err
-	//}
 
 	ethCfg := evmtypes.DefaultChainConfig(chainID)
 

@@ -157,21 +157,6 @@ import (
 	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 )
 
-const (
-	AccountAddressPrefix = "ethm"
-	Bip44CoinType        = 60
-	Name                 = "exrp"
-	// DisplayDenom defines the denomination displayed to users in client applications.
-	DisplayDenom = "token"
-	// BaseDenom defines to the default denomination used in EVM
-	BaseDenom = "token"
-
-	// XrpDenom defines the xrp denomination used in EVM
-	XrpDenom = "axrp"
-	// XrpDisplayDenom defines the denomination dispkated to users in client applications.
-	XrpDisplayDenom = "xrp"
-)
-
 var (
 	// DefaultNodeHome default home directories for the application daemon
 	DefaultNodeHome string
