@@ -165,6 +165,9 @@ test-sim-full-app-fast:
 	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
 		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
 
+test-solidity:
+	@echo "Beginning solidity tests..."
+	./scripts/run-solidity-tests.sh
 ###############################################################################
 ###                                Coverage                                 ###
 ###############################################################################

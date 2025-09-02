@@ -1123,9 +1123,9 @@ func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
 	return app.StakingKeeper
 }
 
-//func (app *App) GetMempool() sdkmempool.ExtMempool {
-//	return app.EVMMempool
-//}
+func (app *App) GetMempool() sdkmempool.ExtMempool {
+	return app.EVMMempool
+}
 
 func (app *App) GetAnteHandler() sdk.AnteHandler {
 	return app.BaseApp.AnteHandler()

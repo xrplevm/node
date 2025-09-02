@@ -1,9 +1,9 @@
 {
   "app_name": "exrpd",
-  "app_version": "v4.0.0-7-g40ab899",
-  "genesis_time": "2024-11-27T17:14:04.871328Z",
+  "app_version": "v8.0.0",
+  "genesis_time": "2025-08-27T12:28:43.010834Z",
   "chain_id": "exrp_1440002-1",
-  "initial_height": 8,
+  "initial_height": 40,
   "app_hash": null,
   "app_state": {
     "auth": {
@@ -65,7 +65,7 @@
             "key": "AyzS/NPje8oX+4+4uWP9f3060duAFXh3MpNWELtTxPz1"
           },
           "account_number": "0",
-          "sequence": "1"
+          "sequence": "3"
         },
         {
           "@type": "/cosmos.auth.v1beta1.ModuleAccount",
@@ -221,7 +221,7 @@
         "community_pool": []
       },
       "delegator_withdraw_infos": [],
-      "previous_proposer": "ethmvalcons123s7tvluhrla7tpj5mwysxqlcgwwzwavxenru7",
+      "previous_proposer": "ethmvalcons17wrntpsvn63le33d8rudjkhqg72zq6npy6ec7u",
       "outstanding_rewards": [
         {
           "validator_address": "ethmvaloper1dakgyqjulg29m5fmv992g2y66m9g2mjn48hmk4",
@@ -370,10 +370,50 @@
       "gen_txs": []
     },
     "gov": {
-      "starting_proposal_id": "1",
+      "starting_proposal_id": "2",
       "deposits": [],
       "votes": [],
-      "proposals": [],
+      "proposals": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade",
+              "authority": "ethm10d07y265gmmuvt4z0w9aw880jnsr700jpva843",
+              "plan": {
+                "name": "v9.0.0",
+                "time": "0001-01-01T00:00:00Z",
+                "height": "40",
+                "info": "v9.0.0",
+                "upgraded_client_state": null
+              }
+            }
+          ],
+          "status": "PROPOSAL_STATUS_PASSED",
+          "final_tally_result": {
+            "yes_count": "1000000",
+            "abstain_count": "0",
+            "no_count": "0",
+            "no_with_veto_count": "0"
+          },
+          "submit_time": "2025-08-27T12:29:03.604951Z",
+          "deposit_end_time": "2025-08-29T12:29:03.604951Z",
+          "total_deposit": [
+            {
+              "denom": "token",
+              "amount": "1"
+            }
+          ],
+          "voting_start_time": "2025-08-27T12:29:03.604951Z",
+          "voting_end_time": "2025-08-27T12:29:13.604951Z",
+          "metadata": "ipfs://CID",
+          "title": "test",
+          "summary": "test",
+          "proposer": "ethm1dakgyqjulg29m5fmv992g2y66m9g2mjn6hahwg",
+          "expedited": false,
+          "failed_reason": ""
+        }
+      ],
       "deposit_params": null,
       "voting_params": null,
       "tally_params": null,
@@ -416,7 +456,7 @@
               "@type": "/ibc.lightclients.localhost.v2.ClientState",
               "latest_height": {
                 "revision_number": "1",
-                "revision_height": "7"
+                "revision_height": "39"
               }
             }
           }
@@ -513,9 +553,9 @@
       "blacklisted_denoms": [],
       "pending_send_packet_sequence_numbers": [],
       "hour_epoch": {
-        "epoch_number": "17",
+        "epoch_number": "12",
         "duration": "3600s",
-        "epoch_start_time": "2024-11-27T17:00:00Z",
+        "epoch_start_time": "2025-08-27T12:00:00Z",
         "epoch_start_height": "0"
       }
     },
@@ -529,11 +569,11 @@
       },
       "signing_infos": [
         {
-          "address": "ethmvalcons123s7tvluhrla7tpj5mwysxqlcgwwzwavxenru7",
+          "address": "ethmvalcons17wrntpsvn63le33d8rudjkhqg72zq6npy6ec7u",
           "validator_signing_info": {
-            "address": "ethmvalcons123s7tvluhrla7tpj5mwysxqlcgwwzwavxenru7",
+            "address": "ethmvalcons17wrntpsvn63le33d8rudjkhqg72zq6npy6ec7u",
             "start_height": "0",
-            "index_offset": "6",
+            "index_offset": "38",
             "jailed_until": "1970-01-01T00:00:00Z",
             "tombstoned": false,
             "missed_blocks_counter": "0"
@@ -542,7 +582,7 @@
       ],
       "missed_blocks": [
         {
-          "address": "ethmvalcons123s7tvluhrla7tpj5mwysxqlcgwwzwavxenru7",
+          "address": "ethmvalcons17wrntpsvn63le33d8rudjkhqg72zq6npy6ec7u",
           "missed_blocks": []
         }
       ]
@@ -568,7 +608,7 @@
           "operator_address": "ethmvaloper1dakgyqjulg29m5fmv992g2y66m9g2mjn48hmk4",
           "consensus_pubkey": {
             "@type": "/cosmos.crypto.ed25519.PubKey",
-            "key": "x39TSSHGypcFLoD91nkVBQTiRT/KcVnnvyJrnXn0Bps="
+            "key": "a3zIQgHbsYNRfaLApzjiEk97Imm9wSzGnCIRiKNNLts="
           },
           "jailed": false,
           "status": "BOND_STATUS_BONDED",
@@ -589,7 +629,7 @@
               "max_rate": "0.200000000000000000",
               "max_change_rate": "0.010000000000000000"
             },
-            "update_time": "2024-11-27T17:14:04.871328Z"
+            "update_time": "2025-08-27T12:28:43.010834Z"
           },
           "min_self_delegation": "1",
           "unbonding_on_hold_ref_count": "0",
@@ -621,10 +661,10 @@
   "consensus": {
     "validators": [
       {
-        "address": "5461E5B3FCB8FFDF2C32A6DC48181FC21CE13BAC",
+        "address": "F38735860C9EA3FCC62D38F8D95AE04794206A61",
         "pub_key": {
           "type": "tendermint/PubKeyEd25519",
-          "value": "x39TSSHGypcFLoD91nkVBQTiRT/KcVnnvyJrnXn0Bps="
+          "value": "a3zIQgHbsYNRfaLApzjiEk97Imm9wSzGnCIRiKNNLts="
         },
         "power": "1",
         "name": "localnet"
