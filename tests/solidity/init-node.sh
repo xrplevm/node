@@ -62,12 +62,18 @@ USER3_MNEMONIC="will wear settle write dance topic tape sea glory hotel oppose r
 USER4_KEY="user4"
 USER4_MNEMONIC="doll midnight silk carpet brush boring pluck office gown inquiry duck chief aim exit gain never tennis crime fragile ship cloud surface exotic patch"
 
+SOLIDITY_KEY="solidity"
+SOLIDITY_MNEMONIC="exercise green picture marriage cause bike credit electric elephant someone march civil radio spoon sail vacant crime man fat save inject into grab drill"
+
 # Import keys from mnemonics
 echo "$VAL_MNEMONIC" | "$BINARY" keys add "$VAL_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$CHAINDIR"
 echo "$USER1_MNEMONIC" | "$BINARY" keys add "$USER1_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$CHAINDIR"
 echo "$USER2_MNEMONIC" | "$BINARY" keys add "$USER2_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$CHAINDIR"
 echo "$USER3_MNEMONIC" | "$BINARY" keys add "$USER3_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$CHAINDIR"
 echo "$USER4_MNEMONIC" | "$BINARY" keys add "$USER4_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$CHAINDIR"
+if ! "$BINARY" keys show "$SOLIDITY_KEY" --home "$CHAINDIR" >/dev/null 2>&1; then
+	echo "$SOLIDITY_MNEMONIC" | "$BINARY" keys add "$SOLIDITY_KEY" --recover --algo "$KEYALGO" --home "$CHAINDIR"
+fi
 
 # Set moniker and chain-id for Cosmos EVM (Moniker can be anything, chain-id must be an integer)
 "$BINARY" init "$MONIKER" --chain-id "$CHAINID" --home "$CHAINDIR"
@@ -114,6 +120,7 @@ sed -i.bak 's/create_empty_blocks = true/create_empty_blocks = false/g' "$CONFIG
 "$BINARY" add-genesis-account "$("$BINARY" keys show "$USER2_KEY" -a --keyring-backend "$KEYRING" --home "$CHAINDIR")" 1000000apoa,1000000000000000000000000000token --keyring-backend "$KEYRING" --home "$CHAINDIR"
 "$BINARY" add-genesis-account "$("$BINARY" keys show "$USER3_KEY" -a --keyring-backend "$KEYRING" --home "$CHAINDIR")" 1000000apoa,1000000000000000000000000000token --keyring-backend "$KEYRING" --home "$CHAINDIR"
 "$BINARY" add-genesis-account "$("$BINARY" keys show "$USER4_KEY" -a --keyring-backend "$KEYRING" --home "$CHAINDIR")" 1000000apoa,1000000000000000000000000000token --keyring-backend "$KEYRING" --home "$CHAINDIR"
+"$BINARY" add-genesis-account "$("$BINARY" keys show "$SOLIDITY_KEY" -a --home "$CHAINDIR")" 1000000apoa,1000000000000000000000000000token --home "$CHAINDIR"
 
 # set custom pruning settings
 if [ "$PRUNING" = "custom" ]; then
