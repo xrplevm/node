@@ -1,24 +1,7 @@
 pragma solidity >=0.8.24;
 
-contract Test1 {
-  function isSameAddress(address a, address b) public returns(bool){  //Simply add the two arguments and return
-      if (a == b) return true;
-      return false;
-  }
-}
-
 contract CancunOpCodes {
 
-    Test1 test1;
-
-    constructor() public {  //Constructor function
-      test1 = new Test1();  //Create new "Test1" function
-    }
-
-   modifier onlyOwner(address _owner) {
-      require(msg.sender == _owner);
-      _;
-   }
    // Add a todo to the list
    function test() public {
 

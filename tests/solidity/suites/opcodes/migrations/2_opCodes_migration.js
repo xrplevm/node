@@ -1,7 +1,9 @@
 /* eslint-disable no-undef */
 
-const OpCodes = artifacts.require('./CancunOpCodes.sol.sol')
+const CancunOpCodes = artifacts.require('./CancunOpCodes.sol')
+const PragueOpCodes = artifacts.require('./PragueOpCodes.sol')
 
-module.exports = function (deployer) {
-  deployer.deploy(OpCodes)
+module.exports = async function (deployer) {
+  await deployer.deploy(CancunOpCodes)
+  await deployer.deploy(PragueOpCodes)
 }

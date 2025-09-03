@@ -16,7 +16,13 @@ module.exports = {
   compilers: {
     solc: {
         version: '0.8.24',
-        evmVersion: 'cancun'
+        settings: {
+          evmVersion: 'cancun',
+          optimizer: {
+            enabled: false
+          },
+          viaIR: false
+        }
     }
   }
 }
