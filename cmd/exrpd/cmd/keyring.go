@@ -21,6 +21,5 @@ func CustomKeyringOption() keyring.Option {
 		options.LedgerCreateKey = evmkeyring.CreatePubkey
 		options.LedgerAppName = evmkeyring.AppName
 		options.LedgerSigSkipDERConv = evmkeyring.SkipDERConversion
-
 	}
 }
