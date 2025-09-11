@@ -46,6 +46,10 @@ linters-settings:
     allow-leading-space: true
     require-explanation: false
     require-specific: false
+  staticcheck:
+    checks:
+      - all
+      - '-SA1019'
   gofumpt:
     lang-version: "1.22"
   gomodguard:

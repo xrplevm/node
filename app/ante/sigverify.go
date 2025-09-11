@@ -23,7 +23,8 @@ const (
 )
 
 func SigVerificationGasConsumer(
-	meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error {
+	meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params,
+) error {
 	pubkey := sig.PubKey
 	switch pubkey := pubkey.(type) {
 

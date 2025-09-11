@@ -128,8 +128,6 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		sdktypes.NewCoin(n.cfg.BondDenom, DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))),
 	)
 
-	delegations := createDelegations(validators)
-
 	// Create a new EvmosApp with the following params
 	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
 
@@ -137,7 +135,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		denom:         n.cfg.BondDenom,
 		maxValidators: n.cfg.MaxValidators,
 		validators:    validators,
-		delegations:   delegations,
+		delegations:   createDelegations(validators),
 	}
 	govParams := GovCustomGenesisState{
 		denom:         n.cfg.Denom,
