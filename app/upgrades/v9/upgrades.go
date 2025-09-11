@@ -74,6 +74,7 @@ func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 	eips := make([]int64, len(legacyEvmParams.ExtraEIPs))
 
 	for i, extraEIP := range legacyEvmParams.ExtraEIPs {
+		//nolint:staticcheck
 		sanitized := strings.Trim(extraEIP, "ethereum_")
 		intEIP, err := strconv.ParseInt(sanitized, 10, 64)
 		if err != nil {
