@@ -107,7 +107,6 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	// Create validator set with the amount of validators specified in the config
 	// with the default power of 1.
-	//nolint:staticcheck
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
 
 	valFlags := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
@@ -122,10 +121,8 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	}
 
 	// Create genesis accounts and funded balances based on the config
-	//nolint:staticcheck
 	genAccounts, fundedAccountBalances := getGenAccountsAndBalances(n.cfg, validators)
 
-	//nolint:staticcheck
 	fundedAccountBalances = addBondedModuleAccountToFundedBalances(
 		fundedAccountBalances,
 		sdktypes.NewCoin(n.cfg.BondDenom, DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))),
