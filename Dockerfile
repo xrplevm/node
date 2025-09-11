@@ -17,7 +17,7 @@ RUN make build
 FROM base AS integration
 RUN make lint
 # Unit tests
-RUN make test-poa
+RUN make test-unit
 # Integration tests
 RUN make test-integration
 # Simulation tests

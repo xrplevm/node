@@ -25,7 +25,6 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
-	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/xrplevm/node/v9/app/ante"
 
 	evmante "github.com/cosmos/evm/ante"
@@ -888,7 +887,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SignModeHandler:        txConfig.SignModeHandler(),
 		SigGasConsumer:         ante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+		TxFeeChecker:           ante.NewDynamicDiscountTxFeeChecker(app.FeeMarketKeeper, 50),
 		StakingKeeper:          app.StakingKeeper,
 		DistributionKeeper:     app.DistrKeeper,
 		ExtraDecorator:         poaante.NewPoaDecorator(),
