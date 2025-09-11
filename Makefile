@@ -132,7 +132,7 @@ lint-fix:
 ###                                Testing                                  ###
 ###############################################################################
 EXCLUDED_POA_PACKAGES=$(shell go list ./x/poa/... | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
-EXCLUDED_UNIT_PACKAGES=$(shell go list ./... | grep -v tests | grep -v testutil | grep -v tools | grep -v app | grep -v docs | grep -v cmd | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
+EXCLUDED_UNIT_PACKAGES=$(shell go list ./... | grep -v tests | grep -v legacy | grep -v testutil | grep -v tools | grep -v docs | grep -v cmd | grep -v /x/poa/testutil | grep -v /x/poa/client | grep -v /x/poa/simulation | grep -v /x/poa/types)
 
 mocks:
 	@echo "--> Installing mockgen"
@@ -146,9 +146,9 @@ test-integration:
 	@echo "--> Running integration testsuite"
 	@go test -mod=readonly -tags=test -v ./tests/integration
 
-test-poa:
-	@echo "--> Running POA tests"
-	@go test $(EXCLUDED_POA_PACKAGES) 
+test-unit:
+	@echo "--> Running unit tests"
+	@go test $(EXCLUDED_UNIT_PACKAGES)
 
 test-sim-benchmark-simulation:
 	@echo "Running simulation invariant benchmarks..."
