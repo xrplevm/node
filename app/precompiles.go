@@ -44,24 +44,6 @@ func defaultOptionals() Optionals {
 
 type Option func(opts *Optionals)
 
-func WithAddressCodec(codec address.Codec) Option {
-	return func(opts *Optionals) {
-		opts.AddressCodec = codec
-	}
-}
-
-func WithValidatorAddrCodec(codec address.Codec) Option {
-	return func(opts *Optionals) {
-		opts.ValidatorAddrCodec = codec
-	}
-}
-
-func WithConsensusAddrCodec(codec address.Codec) Option {
-	return func(opts *Optionals) {
-		opts.ConsensusAddrCodec = codec
-	}
-}
-
 const bech32PrecompileBaseGas = 6_000
 
 // AvailableStaticPrecompiles returns the list of all available static precompiled contracts.
