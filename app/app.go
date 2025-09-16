@@ -28,7 +28,7 @@ import (
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 
 	ethante "github.com/cosmos/evm/ante/evm"
-	ante "github.com/cosmos/evm/evmd/ante"
+	"github.com/xrplevm/node/v9/app/ante"
 
 	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
@@ -129,7 +129,6 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	"github.com/xrplevm/node/v9/docs"
-	poaante "github.com/xrplevm/node/v9/x/poa/ante"
 	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
 	poatypes "github.com/xrplevm/node/v9/x/poa/types"
 
@@ -891,14 +890,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SigGasConsumer:         evmante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
-		ExtraDecorator:         poaante.NewPoaDecorator(),
-		AuthzDisabledMsgTypes: []string{
-			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
-			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
-		},
-		PendingTxListener: app.OnPendingTx,
+		PendingTxListener:      app.OnPendingTx,
 	}
 
 	if err := handlerOpts.Validate(); err != nil {
