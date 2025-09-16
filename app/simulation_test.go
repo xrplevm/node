@@ -13,9 +13,10 @@ import (
 	"github.com/cosmos/evm/ante"
 	ethante "github.com/cosmos/evm/ante/evm"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
+	evmante "github.com/cosmos/evm/evmd/ante"
 	etherminttypes "github.com/cosmos/evm/types"
 	"github.com/xrplevm/node/v9/app"
-	xrplevmante "github.com/xrplevm/node/v9/app/ante"
+
 	poaante "github.com/xrplevm/node/v9/x/poa/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -59,7 +60,7 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		app.EVMAppOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := &xrplevmante.HandlerOptions{
+	handlerOpts := &ante.HandlerOptions{
 		Cdc:                    bApp.AppCodec(),
 		AccountKeeper:          bApp.AccountKeeper,
 		BankKeeper:             bApp.BankKeeper,
@@ -67,29 +68,26 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		EvmKeeper:              bApp.EvmKeeper,
 		FeegrantKeeper:         bApp.FeeGrantKeeper,
 		// TODO: Update when migrating to v10
-		IBCKeeper:          bApp.IBCKeeper,
-		FeeMarketKeeper:    bApp.FeeMarketKeeper,
-		SignModeHandler:    bApp.GetTxConfig().SignModeHandler(),
-		SigGasConsumer:     ante.SigVerificationGasConsumer,
-		MaxTxGasWanted:     0,
-		TxFeeChecker:       ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
-		StakingKeeper:      bApp.StakingKeeper,
-		DistributionKeeper: bApp.DistrKeeper,
-		ExtraDecorator:     poaante.NewPoaDecorator(),
+		IBCKeeper:       bApp.IBCKeeper,
+		FeeMarketKeeper: bApp.FeeMarketKeeper,
+		SignModeHandler: bApp.GetTxConfig().SignModeHandler(),
+		SigGasConsumer:  ante.SigVerificationGasConsumer,
+		MaxTxGasWanted:  0,
+		TxFeeChecker:    ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
+		ExtraDecorator:  poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
 		},
+		PendingTxListener: bApp.OnPendingTx,
 	}
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
-	handler, err := xrplevmante.NewAnteHandler(*handlerOpts)
-	if err != nil {
-		panic(err)
-	}
+	handler := evmante.NewAnteHandler(*handlerOpts)
+
 	bApp.SetAnteHandler(handler)
 
 	if err := bApp.LoadLatestVersion(); err != nil {

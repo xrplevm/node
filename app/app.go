@@ -11,6 +11,7 @@ import (
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
 	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,8 +26,9 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+
 	ethante "github.com/cosmos/evm/ante/evm"
-	"github.com/xrplevm/node/v9/app/ante"
+	ante "github.com/cosmos/evm/evmd/ante"
 
 	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
@@ -876,7 +878,7 @@ func New(
 
 // use Ethermint's custom AnteHandler
 func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
-	handlerOpts := &ante.HandlerOptions{
+	handlerOpts := &evmante.HandlerOptions{
 		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
 		BankKeeper:             app.BankKeeper,
@@ -886,11 +888,9 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		IBCKeeper:              app.IBCKeeper,
 		FeeMarketKeeper:        app.FeeMarketKeeper,
 		SignModeHandler:        txConfig.SignModeHandler(),
-		SigGasConsumer:         ante.SigVerificationGasConsumer,
+		SigGasConsumer:         evmante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
 		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
-		StakingKeeper:          app.StakingKeeper,
-		DistributionKeeper:     app.DistrKeeper,
 		ExtraDecorator:         poaante.NewPoaDecorator(),
 		AuthzDisabledMsgTypes: []string{
 			sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}),
@@ -898,17 +898,14 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
 		},
-		PendingTxListener: app.onPendingTx,
+		PendingTxListener: app.OnPendingTx,
 	}
 
 	if err := handlerOpts.Validate(); err != nil {
 		panic(err)
 	}
 
-	handler, err := ante.NewAnteHandler(*handlerOpts)
-	if err != nil {
-		panic(err)
-	}
+	handler := ante.NewAnteHandler(*handlerOpts)
 
 	app.SetAnteHandler(handler)
 }
@@ -918,7 +915,6 @@ func (app *App) setPostHandler() {
 	if err != nil {
 		panic(err)
 	}
-
 	app.SetPostHandler(postHandler)
 }
 
@@ -1207,7 +1203,7 @@ func (app *App) SimulationManager() *module.SimulationManager {
 	return app.sm
 }
 
-func (app *App) onPendingTx(hash common.Hash) {
+func (app *App) OnPendingTx(hash common.Hash) {
 	for _, listener := range app.pendingTxListeners {
 		listener(hash)
 	}
