@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cosmos/gogoproto/proto"
+	legacytypes "github.com/xrplevm/node/v9/app/upgrades/v9/legacy/types"
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
@@ -111,7 +112,7 @@ func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAc
 	for _, acc := range accounts {
 		baseAcc := authtypes.NewBaseAccount(acc, nil, 0, 0)
 		// TODO: Update when replacing with forked cosmos/evm version is installed
-		ethAcc := &evmostypes.EthAccount{
+		ethAcc := &legacytypes.EthAccount{
 			BaseAccount: baseAcc,
 			CodeHash:    emptyCodeHash,
 		}
