@@ -14,7 +14,6 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	enccodec "github.com/cosmos/evm/encoding/codec"
 	"github.com/cosmos/evm/ethereum/eip712"
-	evmtypes "github.com/cosmos/evm/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	vmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/cosmos/gogoproto/proto"
@@ -42,11 +41,9 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	})
 
 	interfaceRegistry.RegisterImplementations((*sdk.AccountI)(nil),
-		&evmtypes.EthAccount{},    // cosmos-evm
 		&legacytypes.EthAccount{}, // evmos (legacy)
 	)
 	interfaceRegistry.RegisterImplementations((*authtypes.AccountI)(nil),
-		&evmtypes.EthAccount{},    // cosmos-evm
 		&legacytypes.EthAccount{}, // evmos (legacy)
 	)
 
