@@ -24,7 +24,6 @@ import (
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
-	"github.com/evmos/evmos/v20/encoding"
 	"github.com/evmos/evmos/v20/utils"
 	"github.com/evmos/evmos/v20/x/evm/core/vm"
 
@@ -123,7 +122,6 @@ import (
 	"github.com/xrplevm/node/v8/docs"
 	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
 	poatypes "github.com/xrplevm/node/v8/x/poa/types"
-	poalegacytypes "github.com/xrplevm/node/v8/x/poa/types/legacy"
 
 	// "github.com/xrplevm/node/v8/app/ante"
 	"github.com/evmos/evmos/v20/app/ante"
