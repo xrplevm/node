@@ -123,6 +123,7 @@ import (
 	"github.com/xrplevm/node/v8/docs"
 	poakeeper "github.com/xrplevm/node/v8/x/poa/keeper"
 	poatypes "github.com/xrplevm/node/v8/x/poa/types"
+	poalegacytypes "github.com/xrplevm/node/v8/x/poa/types/legacy"
 
 	// "github.com/xrplevm/node/v8/app/ante"
 	"github.com/evmos/evmos/v20/app/ante"
@@ -275,12 +276,10 @@ func New(
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
-	encodingConfig := encoding.MakeConfig()
+	encodingConfig := MakeConfig()
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
-
-	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil), &poatypes.MsgAddValidator{}, &poatypes.MsgRemoveValidator{})
 
 	bApp := baseapp.NewBaseApp(
 		Name,
