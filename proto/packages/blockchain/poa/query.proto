@@ -1,0 +1,25 @@
+syntax = "proto3";
+package packages.blockchain.poa;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "packages/blockchain/poa/params.proto";
+
+option go_package = "github.com/xrplevm/node/v8/x/poa/types/legacy";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Parameters queries the parameters of the module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/exrp/poa/params";
+  }
+}
+
+// QueryParamsRequest is request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params holds all the parameters of this module.
+  Params params = 1 [ (gogoproto.nullable) = false ];
+}

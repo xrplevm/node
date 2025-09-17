@@ -1,0 +1,10 @@
+syntax = "proto3";
+package packages.blockchain.poa;
+
+import "gogoproto/gogo.proto";
+import "packages/blockchain/poa/params.proto";
+
+option go_package = "github.com/xrplevm/node/v8/x/poa/types/legacy";
+
+// GenesisState defines the poa module's genesis state.
+message GenesisState { Params params = 1 [ (gogoproto.nullable) = false ]; }

@@ -1,0 +1,7 @@
+syntax = "proto3";
+package packages.blockchain.poa;
+
+option go_package = "github.com/xrplevm/node/v8/x/poa/types/legacy";
+
+// Params defines the parameters for the module.
+message Params {}
