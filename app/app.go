@@ -280,6 +280,8 @@ func New(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
+	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil), &poatypes.MsgAddValidator{}, &poatypes.MsgRemoveValidator{})
+
 	bApp := baseapp.NewBaseApp(
 		Name,
 		logger,
