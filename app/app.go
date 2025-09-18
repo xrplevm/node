@@ -10,7 +10,6 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
-	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -54,7 +53,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/consensus"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	evmmempool "github.com/cosmos/evm/mempool"
 	"github.com/xrplevm/node/v9/x/poa"
 
 	"cosmossdk.io/log"
@@ -239,7 +237,6 @@ type App struct {
 	EvmKeeper       *evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
 	Erc20Keeper     erc20keeper.Keeper
-	EVMMempool      *evmmempool.ExperimentalEVMMempool
 
 	// exrp keepers
 	PoaKeeper poakeeper.Keeper
@@ -810,45 +807,6 @@ func New(
 
 	app.setAnteHandler(app.txConfig, cast.ToUint64(appOpts.Get(srvflags.EVMMaxTxGasWanted)))
 
-	if evmtypes.GetChainConfig() != nil {
-		mempoolConfig := &evmmempool.EVMMempoolConfig{
-			AnteHandler:   app.GetAnteHandler(),
-			BlockGasLimit: 100_000_000,
-		}
-
-		evmMempool := evmmempool.NewExperimentalEVMMempool(
-			app.CreateQueryContext,
-			logger,
-			app.EvmKeeper,
-			app.FeeMarketKeeper,
-			app.txConfig,
-			app.clientCtx,
-			mempoolConfig,
-		)
-		app.EVMMempool = evmMempool
-
-		// Set the global mempool for RPC access
-		if err := evmmempool.SetGlobalEVMMempool(evmMempool); err != nil {
-			panic(err)
-		}
-
-		// Replace BaseApp mempool
-		app.SetMempool(evmMempool)
-
-		// Set custom CheckTx handler for nonce gap support
-		checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
-		app.SetCheckTxHandler(checkTxHandler)
-
-		// Set custom PrepareProposal handler
-		abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
-		abciProposalHandler.SetSignerExtractionAdapter(
-			evmmempool.NewEthSignerExtractionAdapter(
-				sdkmempool.NewDefaultSignerExtractionAdapter(),
-			),
-		)
-		app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
-	}
-
 	app.setPostHandler()
 	app.setupUpgradeHandlers()
 
@@ -1110,10 +1068,6 @@ func (app *App) GetStakingKeeper() *stakingkeeper.Keeper {
 // GetStakingKeeperSDK implements the TestingApp interface.
 func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
 	return app.StakingKeeper
-}
-
-func (app *App) GetMempool() sdkmempool.ExtMempool {
-	return app.EVMMempool
 }
 
 func (app *App) GetAnteHandler() sdk.AnteHandler {
