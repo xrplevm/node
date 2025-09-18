@@ -16,8 +16,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	ratelimitv2 "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/v2"
-
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
@@ -33,21 +31,15 @@ import (
 	evmante "github.com/cosmos/evm/ante"
 	etherminttypes "github.com/cosmos/evm/types"
 	cosmosevmutils "github.com/cosmos/evm/utils"
-	erc20v2 "github.com/cosmos/evm/x/erc20/v2"
 	"github.com/cosmos/gogoproto/proto"
 	ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v10"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/types"
 	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
-	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v10/testing"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/spf13/cast"
-
-	transferv2 "github.com/cosmos/evm/x/ibc/transfer/v2"
-	vmmod "github.com/cosmos/evm/x/vm"
-	ibcapi "github.com/cosmos/ibc-go/v10/modules/core/api"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
@@ -57,6 +49,7 @@ import (
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	evmmempool "github.com/cosmos/evm/mempool"
+	vmmod "github.com/cosmos/evm/x/vm"
 	"github.com/xrplevm/node/v9/x/poa"
 
 	"cosmossdk.io/log"
@@ -611,22 +604,6 @@ func New(
 		AddRoute(ibctransfertypes.ModuleName, transferStack)
 	app.IBCKeeper.SetRouter(ibcRouter)
 
-	/**** IBC V2 ****/
-
-	var transferStackV2 ibcapi.IBCModule
-	transferStackV2 = transferv2.NewIBCModule(app.TransferKeeper)
-	transferStackV2 = ratelimitv2.NewIBCMiddleware(app.RateLimitKeeper, transferStackV2)
-	transferStackV2 = erc20v2.NewIBCMiddleware(transferStackV2, app.Erc20Keeper)
-
-	ibcRouterV2 := ibcapi.NewRouter()
-	ibcRouterV2.AddRoute(ibctransfertypes.ModuleName, transferStackV2)
-
-	clientKeeper := app.IBCKeeper.ClientKeeper
-	storeProvider := app.IBCKeeper.ClientKeeper.GetStoreProvider()
-
-	tmLightClientModule := ibctm.NewLightClientModule(appCodec, storeProvider)
-	clientKeeper.AddRoute(ibctm.ModuleName, &tmLightClientModule)
-
 	/**** Module Hooks ****/
 
 	// register hooks after all modules have been initialized
@@ -664,7 +641,6 @@ func New(
 		ibc.NewAppModule(app.IBCKeeper),
 		ica.NewAppModule(nil, &app.ICAHostKeeper),
 		transferModule,
-		ibctm.NewAppModule(tmLightClientModule),
 		ratelimit.NewAppModule(appCodec, app.RateLimitKeeper),
 
 		// Ethermint app modules
