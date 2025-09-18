@@ -23,6 +23,8 @@ RUN make test-integration
 # Simulation tests
 RUN make test-sim-benchmark-simulation
 RUN make test-sim-full-app-fast
+# Solidity tests
+RUN make test-solidity
 
 RUN touch /test.lock
 
