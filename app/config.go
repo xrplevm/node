@@ -45,7 +45,7 @@ var (
 		Decimals:      evmtypes.EighteenDecimals,
 	}
 
-	LocalnetEVMChainID uint64 = 1440002
+	LocalnetEVMChainID uint64 = 1449999
 	MainnetEVMChainID  uint64 = 1440000
 	TestnetEVMChainID  uint64 = 1449000
 	DevnetEVMChainID   uint64 = 1440002

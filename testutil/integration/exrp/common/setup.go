@@ -101,7 +101,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	// Create exrp app
 	loadLatest := true
 
-	evmChainID := uint64(1440002)
+	evmChainID := uint64(1449999)
 	invCheckPeriod := uint(5)
 
 	return app.New(

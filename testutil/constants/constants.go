@@ -15,8 +15,8 @@ const (
 
 var (
 	LocalnetChainID = testconstants.ChainID{
-		ChainID:    "exrp_1440002-1",
-		EVMChainID: 1440002,
+		ChainID:    "exrp_1449999-1",
+		EVMChainID: 1449999,
 	}
 
 	ExampleChainCoinInfo = map[testconstants.ChainID]evmtypes.EvmCoinInfo{
