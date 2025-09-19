@@ -3,7 +3,11 @@ package app
 import (
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
-	legacytypes "github.com/xrplevm/node/v9/app/upgrades/v9/legacy/types"
+	v7 "github.com/cosmos/ibc-go/v10/modules/core/02-client/migrations/v7"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
+	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
+	tendermint "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
+	legacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/types"
 
 	amino "github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -18,6 +22,11 @@ import (
 	vmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	evmlegacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/evm"
+	feemarketlegacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/feemarket"
+	erc20legacytypes "github.com/xrplevm/node/v9/types/legacy/evmos/erc20"
+	poalegacytypes "github.com/xrplevm/node/v9/x/poa/types/legacy"
 )
 
 func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
@@ -39,6 +48,34 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 		ProtoFiles:     proto.HybridResolver,
 		SigningOptions: signingOptions,
 	})
+
+	interfaceRegistry.RegisterImplementations((*exported.ClientState)(nil),
+		&solomachine.ClientState{},
+		&tendermint.ClientState{},
+		&v7.ClientState{},
+	)
+
+	interfaceRegistry.RegisterImplementations((*exported.ConsensusState)(nil),
+		&solomachine.ConsensusState{},
+		&tendermint.ConsensusState{},
+		&v7.ConsensusState{},
+	)
+
+	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil),
+		&poalegacytypes.MsgAddValidator{},
+		&poalegacytypes.MsgRemoveValidator{},
+		&evmlegacytypes.MsgEthereumTx{},
+		&evmlegacytypes.MsgUpdateParams{},
+		&feemarketlegacytypes.MsgUpdateParams{},
+		&erc20legacytypes.MsgConvertERC20{},
+		&erc20legacytypes.MsgConvertCoin{},
+		&erc20legacytypes.MsgUpdateParams{},
+		&erc20legacytypes.MsgTransferOwnership{},
+		&erc20legacytypes.MsgMint{},
+		&erc20legacytypes.MsgBurn{},
+		&erc20legacytypes.MsgRegisterERC20{},
+		&erc20legacytypes.MsgToggleConversion{},
+	)
 
 	interfaceRegistry.RegisterImplementations((*sdk.AccountI)(nil),
 		&legacytypes.EthAccount{}, // evmos (legacy)

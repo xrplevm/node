@@ -15,8 +15,8 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/ethereum/go-ethereum/common"
-	legacyevmtypes "github.com/xrplevm/node/v9/app/upgrades/v9/legacy/evm/types"
-	legacytypes "github.com/xrplevm/node/v9/app/upgrades/v9/legacy/types"
+	legacyevmtypes "github.com/xrplevm/node/v9/types/legacy/ethermint/evm"
+	legacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/types"
 )
 
 func CreateUpgradeHandler(
