@@ -3,10 +3,6 @@ package app
 import (
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
-	v7 "github.com/cosmos/ibc-go/v10/modules/core/02-client/migrations/v7"
-	"github.com/cosmos/ibc-go/v10/modules/core/exported"
-	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
-	tendermint "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	legacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/types"
 
 	amino "github.com/cosmos/cosmos-sdk/codec"
@@ -48,18 +44,6 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 		ProtoFiles:     proto.HybridResolver,
 		SigningOptions: signingOptions,
 	})
-
-	interfaceRegistry.RegisterImplementations((*exported.ClientState)(nil),
-		&solomachine.ClientState{},
-		&tendermint.ClientState{},
-		&v7.ClientState{},
-	)
-
-	interfaceRegistry.RegisterImplementations((*exported.ConsensusState)(nil),
-		&solomachine.ConsensusState{},
-		&tendermint.ConsensusState{},
-		&v7.ConsensusState{},
-	)
 
 	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil),
 		&poalegacytypes.MsgAddValidator{},
