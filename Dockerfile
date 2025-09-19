@@ -20,6 +20,8 @@ RUN make lint
 RUN make test-poa
 # Integration tests
 RUN make test-integration
+# Solidity tests
+RUN make test-solidity
 # Simulation tests
 RUN make test-sim-benchmark-simulation
 RUN make test-sim-full-app-fast
