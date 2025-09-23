@@ -1,4 +1,4 @@
-CHAINID="exrp_1440002-1"
+CHAINID="exrp_1449999-1"
 MONIKER="localnet"
 # Remember to change to other types of keyring like 'file' in-case exposing to outside world,
 # otherwise your balance will be wiped quickly
@@ -47,8 +47,13 @@ jq '.app_state["gov"]["params"]["expedited_voting_period"]="5s"' "$GENESIS" >"$T
 jq '.app_state["staking"]["params"]["bond_denom"]="apoa"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["staking"]["params"]["unbonding_time"]="60s"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["feemarket"]["params"]["base_fee"]="'${BASEFEE}'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["erc20"]["token_pairs"][0]["denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["erc20"]["token_pairs"][0]["owner_address"]="ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+
+#jq '.app_state["erc20"]["token_pairs"][0]["denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+#jq '.app_state["erc20"]["token_pairs"][0]["owner_address"]="ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state.erc20.native_precompiles=["0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state.erc20.token_pairs=[{contract_owner:1,erc20_address:"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",denom:"token",enabled:true, "owner_address":"ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"}]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+
+
 jq '.app_state["slashing"]["params"]["slash_fraction_double_sign"]="0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["slashing"]["params"]["slash_fraction_downtime"]="0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 

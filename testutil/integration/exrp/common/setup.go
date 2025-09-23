@@ -11,7 +11,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -19,10 +19,10 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
 )
 
 // GenSetupFn is the type for the module genesis setup functions
@@ -98,26 +98,23 @@ func MustGetIntegrationTestNodeHome() string {
 
 // createExrpApp creates an exrp app
 func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp)) *app.App {
-	testNodeHome := MustGetIntegrationTestNodeHome()
 	// Create exrp app
-	db := dbm.NewMemDB()
-	logger := log.NewNopLogger()
 	loadLatest := true
-	skipUpgradeHeights := map[int64]bool{}
-	homePath := testNodeHome
+
+	evmChainID := uint64(1449999)
 	invCheckPeriod := uint(5)
-	appOptions := simutils.NewAppOptionsWithFlagHome(homePath)
-	baseAppOptions := append(customBaseAppOptions, baseapp.SetChainID(chainID)) //nolint:gocritic
 
 	return app.New(
-		logger,
-		db,
+		log.NewNopLogger(),
+		dbm.NewMemDB(),
 		nil,
 		loadLatest,
-		skipUpgradeHeights,
-		homePath,
+		map[int64]bool{},
+		MustGetIntegrationTestNodeHome(),
+		evmChainID,
 		invCheckPeriod,
-		appOptions,
-		baseAppOptions...,
+		simutils.NewAppOptionsWithFlagHome(MustGetIntegrationTestNodeHome()),
+		app.EVMAppOptions,
+		append(customBaseAppOptions, baseapp.SetChainID(chainID))...,
 	)
 }

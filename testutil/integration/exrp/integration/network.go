@@ -10,11 +10,13 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 
 	gethparams "github.com/ethereum/go-ethereum/params"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 
-	"github.com/evmos/evmos/v20/types"
+	"github.com/cosmos/evm/testutil/integration/base/network"
+	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtjson "github.com/cometbft/cometbft/libs/json"
@@ -26,8 +28,9 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.
@@ -35,20 +38,26 @@ import (
 // It was designed to avoid users to access module's keepers directly and force integration tests
 // to be closer to the real user's behavior.
 type Network interface {
-	exrpcommon.Network
+	network.Network
+
+	GetGovClient() govtypes.QueryClient
 
 	GetEIP155ChainID() *big.Int
 	GetValidatorSet() *cmttypes.ValidatorSet
+
+	GetMinDepositAmt() sdkmath.Int
 }
 
+// TODO: Update when migrating to v10
 var _ Network = (*IntegrationNetwork)(nil)
 
 // IntegrationNetwork is the implementation of the Network interface for integration tests.
 type IntegrationNetwork struct {
-	cfg        exrpcommon.Config
-	ctx        sdktypes.Context
-	validators []stakingtypes.Validator
-	app        *app.App
+	cfg         exrpcommon.Config
+	ctx         sdktypes.Context
+	validators  []stakingtypes.Validator
+	app         *app.App
+	baseDecimal evmtypes.Decimals
 
 	// This is only needed for IBC chain testing setup
 	valSet     *cmttypes.ValidatorSet
@@ -92,10 +101,13 @@ var (
 // configureAndInitChain initializes the network with the given configuration.
 // It creates the genesis state and starts the network.
 func (n *IntegrationNetwork) configureAndInitChain() error {
+	// The bonded amount should be updated to reflect the actual base denom
+	baseDecimals := n.cfg.ChainCoins.BaseDecimals()
+	n.baseDecimal = baseDecimals
+
 	// Create validator set with the amount of validators specified in the config
 	// with the default power of 1.
 	valSet, valSigners := createValidatorSetAndSigners(n.cfg.AmountOfValidators)
-	totalBonded := DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))
 
 	valFlags := make([]cmtproto.BlockIDFlag, len(valSet.Validators))
 	for i := range valSet.Validators {
@@ -113,10 +125,8 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	fundedAccountBalances = addBondedModuleAccountToFundedBalances(
 		fundedAccountBalances,
-		sdktypes.NewCoin(n.cfg.BondDenom, totalBonded),
+		sdktypes.NewCoin(n.cfg.BondDenom, DefaultBondedAmount.Mul(sdkmath.NewInt(int64(n.cfg.AmountOfValidators)))),
 	)
-
-	delegations := createDelegations(validators)
 
 	// Create a new EvmosApp with the following params
 	exrpApp := exrpcommon.CreateExrpApp(n.cfg.ChainID, n.cfg.CustomBaseAppOpts...)
@@ -125,7 +135,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 		denom:         n.cfg.BondDenom,
 		maxValidators: n.cfg.MaxValidators,
 		validators:    validators,
-		delegations:   delegations,
+		delegations:   createDelegations(validators),
 	}
 	govParams := GovCustomGenesisState{
 		denom:         n.cfg.Denom,
@@ -275,13 +285,17 @@ func (n *IntegrationNetwork) GetMinDepositAmt() sdkmath.Int {
 
 // GetChainConfig returns the network's chain config
 func (n *IntegrationNetwork) GetEVMChainConfig() *gethparams.ChainConfig {
-	params := n.app.EvmKeeper.GetParams(n.ctx)
-	return params.ChainConfig.EthereumConfig(n.cfg.EIP155ChainID)
+	// TODO: Implement this
+	return nil
 }
 
 // GetDenom returns the network's denom
-func (n *IntegrationNetwork) GetDenom() string {
+func (n *IntegrationNetwork) GetBaseDenom() string {
 	return n.cfg.Denom
+}
+
+func (n *IntegrationNetwork) GetBaseDecimal() evmtypes.Decimals {
+	return n.baseDecimal
 }
 
 // GetBondDenom returns the network's bond denom

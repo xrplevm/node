@@ -7,13 +7,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	evmostypes "github.com/evmos/evmos/v20/types"
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 )
 
 const (
 	bip44CoinType = 60
-	ChainID       = "exrp_1440002-1"
+	ChainID       = "exrp_1449999-1"
 )
 
 // Config defines the configuration for a chain.
@@ -35,6 +34,7 @@ type Config struct {
 	CustomBaseAppOpts  []func(*baseapp.BaseApp)
 	MinDepositAmt      sdkmath.Int
 	Quorum             string
+	ChainCoins         ChainCoins
 }
 
 type CustomGenesisState map[string]interface{}
@@ -43,9 +43,10 @@ type CustomGenesisState map[string]interface{}
 func DefaultConfig() Config {
 	return Config{
 		ChainID:       ChainID,
-		EIP155ChainID: big.NewInt(1440002),
+		EIP155ChainID: big.NewInt(1449999),
 		Balances:      nil,
 		Denom:         app.BaseDenom,
+		ChainCoins:    DefaultChainCoins(),
 	}
 }
 
@@ -53,18 +54,6 @@ func DefaultConfig() Config {
 // The purpose of this is to force to be declarative when the default configuration
 // requires to be changed.
 type ConfigOption func(*Config)
-
-// WithChainID sets a custom chainID for the network. It panics if the chainID is invalid.
-func WithChainID(chainID string) ConfigOption {
-	chainIDNum, err := evmostypes.ParseChainID(chainID)
-	if err != nil {
-		panic(err)
-	}
-	return func(cfg *Config) {
-		cfg.ChainID = chainID
-		cfg.EIP155ChainID = chainIDNum
-	}
-}
 
 // WithAmountOfValidators sets the amount of validators for the network.
 func WithAmountOfValidators(amount int) ConfigOption {

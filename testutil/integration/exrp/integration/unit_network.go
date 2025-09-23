@@ -4,11 +4,11 @@ package exrpintegration
 
 import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/evm/x/vm/statedb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/evmos/v20/x/evm/statedb"
-	inflationtypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
-	"github.com/xrplevm/node/v8/app"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v9/app"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 // UnitTestIntegrationNetwork is the implementation of the Network interface for unit tests.
@@ -19,6 +19,7 @@ type UnitTestIntegrationNetwork struct {
 	App *app.App
 }
 
+// TODO: Update when migrating to v10
 var _ Network = (*UnitTestIntegrationNetwork)(nil)
 
 // NewUnitTestNetwork configures and initializes a new Evmos Network instance with
@@ -49,9 +50,9 @@ func (n *UnitTestIntegrationNetwork) GetStateDB() *statedb.StateDB {
 func (n *UnitTestIntegrationNetwork) FundAccount(addr sdktypes.AccAddress, coins sdktypes.Coins) error {
 	ctx := n.GetContext()
 
-	if err := n.app.BankKeeper.MintCoins(ctx, inflationtypes.ModuleName, coins); err != nil {
+	if err := n.app.BankKeeper.MintCoins(ctx, banktypes.ModuleName, coins); err != nil {
 		return err
 	}
 
-	return n.app.BankKeeper.SendCoinsFromModuleToAccount(ctx, inflationtypes.ModuleName, addr, coins)
+	return n.app.BankKeeper.SendCoinsFromModuleToAccount(ctx, banktypes.ModuleName, addr, coins)
 }

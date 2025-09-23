@@ -5,7 +5,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 )
 
 // GenesisState The genesis state of the blockchain is represented here as a map of raw json
@@ -24,7 +24,7 @@ func NewDefaultGenesisState(app *App) GenesisState {
 	var feeMarketState feemarkettypes.GenesisState
 	app.cdc.MustUnmarshalJSON(genState[feemarkettypes.ModuleName], &feeMarketState)
 	feeMarketState.Params.NoBaseFee = true
-	feeMarketState.Params.BaseFee = sdkmath.NewInt(0)
+	feeMarketState.Params.BaseFee = sdkmath.LegacyNewDec(0)
 	genState[feemarkettypes.ModuleName] = app.cdc.MustMarshalJSON(&feeMarketState)
 
 	return genState

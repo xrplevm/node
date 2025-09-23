@@ -17,7 +17,7 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/xrplevm/node/v8/x/poa/types"
+	"github.com/xrplevm/node/v9/x/poa/types"
 )
 
 var _ types.QueryServer = Querier{}

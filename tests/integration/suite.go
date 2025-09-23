@@ -3,13 +3,13 @@ package integration
 import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
+	"github.com/cosmos/evm/testutil/integration/evm/factory"
+	"github.com/cosmos/evm/testutil/integration/evm/grpc"
+	"github.com/cosmos/evm/testutil/keyring"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v8/app"
-	factory "github.com/xrplevm/node/v8/testutil/integration/common/factory"
-	"github.com/xrplevm/node/v8/testutil/integration/common/grpc"
-	"github.com/xrplevm/node/v8/testutil/integration/common/keyring"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v9/app"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 )
 
 type TestSuite struct {
@@ -17,7 +17,7 @@ type TestSuite struct {
 
 	network     *Network
 	keyring     keyring.Keyring
-	factory     factory.CoreTxFactory
+	factory     factory.TxFactory
 	grpcHandler grpc.Handler
 }
 
@@ -53,8 +53,10 @@ func (s *TestSuite) SetupTest() {
 	)
 	s.Require().NotNil(s.network)
 
+	// TODO: Update when migrating to v10
 	grpcHandler := grpc.NewIntegrationHandler(s.network)
 
+	// TODO: Update when migrating to v10
 	s.factory = factory.New(s.network, grpcHandler)
 	s.keyring = kr
 	s.grpcHandler = grpcHandler

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cosmos/gogoproto/proto"
-
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
 	sdkmath "cosmossdk.io/math"
@@ -26,18 +25,14 @@ import (
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	evmostypes "github.com/cosmos/evm/types"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 
-	evmostypes "github.com/evmos/evmos/v20/types"
-	epochstypes "github.com/evmos/evmos/v20/x/epochs/types"
-	erc20types "github.com/evmos/evmos/v20/x/erc20/types"
-	feemarkettypes "github.com/evmos/evmos/v20/x/feemarket/types"
-	infltypes "github.com/evmos/evmos/v20/x/inflation/v1/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
+	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 
-	evmtypes "github.com/evmos/evmos/v20/x/evm/types"
-	exrpcommon "github.com/xrplevm/node/v8/testutil/integration/exrp/common"
-
-	"github.com/xrplevm/node/v8/app"
+	"github.com/xrplevm/node/v9/app"
 )
 
 // genSetupFn is the type for the module genesis setup functions
@@ -59,12 +54,10 @@ var genesisSetupFunctions = map[string]genSetupFn{
 	evmtypes.ModuleName:       genStateSetter[*evmtypes.GenesisState](evmtypes.ModuleName),
 	erc20types.ModuleName:     genStateSetter[*erc20types.GenesisState](erc20types.ModuleName),
 	govtypes.ModuleName:       genStateSetter[*govtypesv1.GenesisState](govtypes.ModuleName),
-	infltypes.ModuleName:      genStateSetter[*infltypes.GenesisState](infltypes.ModuleName),
 	feemarkettypes.ModuleName: genStateSetter[*feemarkettypes.GenesisState](feemarkettypes.ModuleName),
 	distrtypes.ModuleName:     genStateSetter[*distrtypes.GenesisState](distrtypes.ModuleName),
 	banktypes.ModuleName:      setBankGenesisState,
 	authtypes.ModuleName:      setAuthGenesisState,
-	epochstypes.ModuleName:    genStateSetter[*epochstypes.GenesisState](epochstypes.ModuleName),
 	consensustypes.ModuleName: func(_ *app.App, genesisState evmostypes.GenesisState, _ interface{}) (evmostypes.GenesisState, error) {
 		// no-op. Consensus does not have a genesis state on the application
 		// but the params are used on it
@@ -111,14 +104,10 @@ func createValidatorSetAndSigners(numberOfValidators int) (*cmttypes.ValidatorSe
 func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAccount {
 	numberOfAccounts := len(accounts)
 	genAccounts := make([]authtypes.GenesisAccount, 0, numberOfAccounts)
-	emptyCodeHash := crypto.Keccak256Hash(nil).String()
+
 	for _, acc := range accounts {
 		baseAcc := authtypes.NewBaseAccount(acc, nil, 0, 0)
-		ethAcc := &evmostypes.EthAccount{
-			BaseAccount: baseAcc,
-			CodeHash:    emptyCodeHash,
-		}
-		genAccounts = append(genAccounts, ethAcc)
+		genAccounts = append(genAccounts, baseAcc)
 	}
 	return genAccounts
 }

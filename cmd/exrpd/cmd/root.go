@@ -8,12 +8,17 @@ import (
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
+	evmkeyring "github.com/cosmos/evm/crypto/keyring"
+
+	evmserver "github.com/cosmos/evm/server"
 
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
+
+	srvflags "github.com/cosmos/evm/server/flags"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/snapshots"
@@ -38,16 +43,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/evmos/evmos/v20/crypto/hd"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	ethermintclient "github.com/evmos/evmos/v20/client"
-	ethermintserver "github.com/evmos/evmos/v20/server"
-	ethermintservercfg "github.com/evmos/evmos/v20/server/config"
-	ethermintserverflags "github.com/evmos/evmos/v20/server/flags"
-	"github.com/xrplevm/node/v8/app"
+	evmclient "github.com/cosmos/evm/client"
+	ethermintservercfg "github.com/cosmos/evm/server/config"
+	"github.com/xrplevm/node/v9/app"
 )
 
 type emptyAppOptions struct{}
@@ -65,7 +67,9 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		nil, true, nil,
 		tempDir(app.DefaultNodeHome),
 		0,
+		0,
 		emptyAppOptions{},
+		app.NoOpEVMOptions,
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
@@ -82,7 +86,8 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		WithAccountRetriever(types.AccountRetriever{}).
 		WithBroadcastMode(flags.BroadcastSync).
 		WithHomeDir(app.DefaultNodeHome).
-		WithKeyringOptions(hd.EthSecp256k1Option()).
+		WithKeyringOptions(evmkeyring.Option()).
+		WithLedgerHasProtobuf(true).
 		WithViper("exrp")
 
 	rootCmd := &cobra.Command{
@@ -125,7 +130,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 				return err
 			}
 
-			customAppTemplate, customAppConfig := initAppConfig()
+			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440002)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
@@ -164,9 +169,19 @@ func initRootCmd(
 ) {
 	a := appCreator{encodingConfig}
 
+	sdkAppCreatorWrapper := func(
+		l log.Logger,
+		d dbm.DB,
+		w io.Writer,
+		ao servertypes.AppOptions,
+	) servertypes.Application {
+		return a.newApp(l, d, w, ao)
+	}
+
 	rootCmd.AddCommand(
-		ethermintclient.ValidateChainID(
-			genutilcli.InitCmd(tempApp.BasicModuleManager, app.DefaultNodeHome),
+		genutilcli.InitCmd(
+			tempApp.BasicModuleManager,
+			app.DefaultNodeHome,
 		),
 		genutilcli.CollectGenTxsCmd(
 			banktypes.GenesisBalancesIterator{},
@@ -183,17 +198,16 @@ func initRootCmd(
 		genutilcli.ValidateGenesisCmd(tempApp.BasicModuleManager),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
-		ethermintclient.NewTestnetCmd(tempApp.BasicModuleManager, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
-		pruning.Cmd(a.newApp, app.DefaultNodeHome),
+		pruning.Cmd(sdkAppCreatorWrapper, app.DefaultNodeHome),
 		confixcmd.ConfigCommand(),
-		snapshot.Cmd(a.newApp),
+		snapshot.Cmd(sdkAppCreatorWrapper),
 	)
 
 	// add server commands
-	ethermintserver.AddCommands(
+	evmserver.AddCommands(
 		rootCmd,
-		ethermintserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
+		evmserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
 		a.appExport,
 		addModuleInitFlags,
 	)
@@ -203,10 +217,10 @@ func initRootCmd(
 		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		ethermintclient.KeyCommands(app.DefaultNodeHome),
+		evmclient.KeyCommands(app.DefaultNodeHome, true),
 	)
 
-	_, err := ethermintserverflags.AddTxFlags(rootCmd)
+	_, err := srvflags.AddTxFlags(rootCmd)
 	if err != nil {
 		panic(err)
 	}
@@ -261,10 +275,8 @@ func txCommand() *cobra.Command {
 		authcmd.GetSimulateCmd(),
 	)
 
-	// DefaultGasAdjustment value to use as default in gas-adjustment flag
-	flags.DefaultGasAdjustment = ethermintservercfg.DefaultGasAdjustment
-
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+	cmd.PersistentFlags().Float64(flags.FlagGasAdjustment, ethermintservercfg.DefaultGasAdjustment, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
 
 	return cmd
 }
@@ -301,7 +313,7 @@ func (a appCreator) newApp(
 	db dbm.DB,
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
-) servertypes.Application {
+) evmserver.Application {
 	var cache storetypes.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
@@ -345,15 +357,7 @@ func (a appCreator) newApp(
 		cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent)),
 	)
 
-	return app.New(
-		logger,
-		db,
-		traceStore,
-		true,
-		skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
-		appOpts,
+	baseappOptions := []func(*baseapp.BaseApp){
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
@@ -366,6 +370,20 @@ func (a appCreator) newApp(
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		baseapp.SetChainID(chainID),
+	}
+
+	return app.New(
+		logger,
+		db,
+		traceStore,
+		true,
+		skipUpgradeHeights,
+		cast.ToString(appOpts.Get(flags.FlagHome)),
+		CosmosToEVMChainID[chainID],
+		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
+		appOpts,
+		app.EVMAppOptions,
+		baseappOptions...,
 	)
 }
 
@@ -385,6 +403,8 @@ func (a appCreator) appExport(
 		return servertypes.ExportedApp{}, errors.New("application home not set")
 	}
 
+	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
+
 	app := app.New(
 		logger,
 		db,
@@ -392,8 +412,10 @@ func (a appCreator) appExport(
 		height == -1, // -1: no height provided
 		map[int64]bool{},
 		homePath,
+		CosmosToEVMChainID[chainID],
 		uint(1),
 		appOpts,
+		app.EVMAppOptions,
 	)
 
 	if height != -1 {
@@ -403,14 +425,6 @@ func (a appCreator) appExport(
 	}
 
 	return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
-}
-
-// initAppConfig helps to override default appConfig template and configs.
-// return "", nil if no custom configuration is required for the application.
-func initAppConfig() (string, interface{}) {
-	// The following code snippet is just for reference.
-	customAppTemplate, customAppConfig := ethermintservercfg.AppConfig(app.BaseDenom)
-	return customAppTemplate, customAppConfig
 }
 
 func tempDir(defaultHome string) string {
