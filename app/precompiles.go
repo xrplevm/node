@@ -75,13 +75,14 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate bech32 precompile: %w", err))
 	}
 
-	stakingPrecompile, err := stakingprecompile.NewPrecompile(stakingKeeper, options.AddressCodec)
+	stakingPrecompile, err := stakingprecompile.NewPrecompile(stakingKeeper, bankKeeper, options.AddressCodec)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate staking precompile: %w", err))
 	}
 
 	distributionPrecompile, err := distprecompile.NewPrecompile(
 		distributionKeeper,
+		bankKeeper,
 		stakingKeeper,
 		evmKeeper,
 		options.AddressCodec,
@@ -106,7 +107,7 @@ func NewAvailableStaticPrecompiles(
 		panic(fmt.Errorf("failed to instantiate bank precompile: %w", err))
 	}
 
-	govPrecompile, err := govprecompile.NewPrecompile(govKeeper, codec, options.AddressCodec)
+	govPrecompile, err := govprecompile.NewPrecompile(govKeeper, bankKeeper, codec, options.AddressCodec)
 	if err != nil {
 		panic(fmt.Errorf("failed to instantiate gov precompile: %w", err))
 	}
