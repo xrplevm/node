@@ -1729,6 +1729,8 @@ github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGC
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.2 h1:6wrgalo5fN/iBbDSfBYZ1RldNFHZIxE7ARV1JbrrBtM=
 github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.2/go.mod h1:7U3+WHZtI44dEOnU46+lDzBb2tFh1QlMvi8Z5JugopI=
+github.com/xrplevm/evm v0.4.2-xrplevm.1 h1:qWo+2DVQZ2KeuCKRXZGUDr624ULQZi9HRSlZRwdo7Jw=
+github.com/xrplevm/evm v0.4.2-xrplevm.1/go.mod h1:cNTIB4xuCht7Y6EnGdkwR2c2nCmhILZ8WHSdQ5m+g/E=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
