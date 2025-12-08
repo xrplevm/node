@@ -19,7 +19,6 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	evmlegacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/evm"
 	feemarketlegacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/feemarket"
 	erc20legacytypes "github.com/xrplevm/node/v9/types/legacy/evmos/erc20"
 	poalegacytypes "github.com/xrplevm/node/v9/x/poa/types/legacy"
@@ -48,8 +47,6 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil),
 		&poalegacytypes.MsgAddValidator{},
 		&poalegacytypes.MsgRemoveValidator{},
-		&evmlegacytypes.MsgEthereumTx{},
-		&evmlegacytypes.MsgUpdateParams{},
 		&feemarketlegacytypes.MsgUpdateParams{},
 		&erc20legacytypes.MsgConvertERC20{},
 		&erc20legacytypes.MsgConvertCoin{},
