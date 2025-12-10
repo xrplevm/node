@@ -261,6 +261,7 @@ replace (
 	cosmossdk.io/store => github.com/evmos/cosmos-sdk/store v0.0.0-20240718141609-414cbd051fbe
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// use xrplevm cometbft version until official version is released
 	github.com/cometbft/cometbft => github.com/xrplevm/cometbft v0.38.19-xrplevm.1
 	// use Cosmos-SDK fork to enable Ledger functionality
 	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.50.13-xrplevm.2
