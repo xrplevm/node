@@ -140,8 +140,6 @@ import (
 	"github.com/cosmos/evm/x/ibc/transfer"
 	ibctransferkeeper "github.com/cosmos/evm/x/ibc/transfer/keeper"
 
-	// Force load evmos app for variable modification
-	_ "github.com/cosmos/evm/evmd"
 	// Force-load the tracer engines to trigger registration due to Go-Ethereum v1.10.15 changes
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
 	_ "github.com/ethereum/go-ethereum/eth/tracers/native"

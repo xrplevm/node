@@ -23,8 +23,6 @@ jobs:
           ref: ${{ inputs.commit_branch }}
           fetch-depth: 0
           fetch-tags: true
-      - uses: docker/setup-qemu-action@v2
-      - uses: docker/setup-buildx-action@v2
       # Build and push docker image
       - name: Run go releaser
         run: |
