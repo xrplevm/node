@@ -3,8 +3,18 @@
 ####################################################################################################################
 
 version: "1.0"
+
+# Use GO scan linter
 linter: jetbrains/qodana-go:2025.2
+
+# Use recommended inspection profile
 profile:
   name: qodana.recommended
+
+# Enable license checks and specific Docker inspections
 include:
   - name: CheckDependencyLicenses
+  - name: DockerfileOptimization
+  - name: DockerfilePostInstallClean
+  - name: DockerfileMissingCommand
+  - name: DockerfileMiddleInstruction
