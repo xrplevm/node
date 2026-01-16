@@ -38,5 +38,6 @@ jobs:
           docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} -e GOPRIVATE=github.com/cometbft/cometbft-sec-tachyon\
              -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
              -v ~/.ssh:/root/.ssh:ro \
-             goreleaser/goreleaser-cross:v1.22 sh -c \
-             'git config --global url."ssh://git@github.com/cometbft/cometbft-sec-tachyon".insteadOf "https://github.com/cometbft/cometbft-sec-tachyon" && release --clean --skip validate'
+             --entrypoint /bin/sh \
+             goreleaser/goreleaser-cross:v1.22 -c \
+             'git config --global url."ssh://git@github.com/cometbft/cometbft-sec-tachyon".insteadOf "https://github.com/cometbft/cometbft-sec-tachyon" && goreleaser release --clean --skip validate'
