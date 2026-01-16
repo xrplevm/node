@@ -25,9 +25,18 @@ jobs:
           fetch-tags: true
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
+      # Configure SSH for private Go modules
+      - name: Setup SSH for private modules
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global url."ssh://git@github.com/cometbft/cometbft-sec-tachyon".insteadOf "https://github.com/cometbft/cometbft-sec-tachyon"
       # Build and push docker image
       - name: Run go releaser
         run: |
-          docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+          docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} -e GOPRIVATE=github.com/cometbft/cometbft-sec-tachyon\
              -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
+             -v ~/.ssh:/root/.ssh:ro -v ~/.gitconfig:/root/.gitconfig:ro \
              goreleaser/goreleaser-cross:v1.22 release --clean --skip validate
