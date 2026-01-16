@@ -40,4 +40,4 @@ jobs:
              -v ~/.ssh:/root/.ssh:ro \
              --entrypoint /bin/sh \
              goreleaser/goreleaser-cross:v1.22 -c \
-             'git config --global url."ssh://git@github.com/cometbft/cometbft-sec-tachyon".insteadOf "https://github.com/cometbft/cometbft-sec-tachyon" && goreleaser release --clean --skip validate'
+             'git config --global --add safe.directory /go/src/exrp && git config --global url."ssh://git@github.com/cometbft/cometbft-sec-tachyon".insteadOf "https://github.com/cometbft/cometbft-sec-tachyon" && goreleaser release --clean --skip validate'
