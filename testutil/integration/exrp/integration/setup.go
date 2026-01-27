@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cosmos/gogoproto/proto"
-
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
 	sdkmath "cosmossdk.io/math"
@@ -26,8 +25,6 @@ import (
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	evmostypes "github.com/cosmos/evm/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
@@ -107,15 +104,10 @@ func createValidatorSetAndSigners(numberOfValidators int) (*cmttypes.ValidatorSe
 func createGenesisAccounts(accounts []sdktypes.AccAddress) []authtypes.GenesisAccount {
 	numberOfAccounts := len(accounts)
 	genAccounts := make([]authtypes.GenesisAccount, 0, numberOfAccounts)
-	emptyCodeHash := crypto.Keccak256Hash(nil).String()
+
 	for _, acc := range accounts {
 		baseAcc := authtypes.NewBaseAccount(acc, nil, 0, 0)
-		// TODO: Update when replacing with forked cosmos/evm version is installed
-		ethAcc := &evmostypes.EthAccount{
-			BaseAccount: baseAcc,
-			CodeHash:    emptyCodeHash,
-		}
-		genAccounts = append(genAccounts, ethAcc)
+		genAccounts = append(genAccounts, baseAcc)
 	}
 	return genAccounts
 }

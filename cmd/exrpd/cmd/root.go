@@ -66,7 +66,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		tempDir(app.DefaultNodeHome),
-		1440002,
+		0,
 		0,
 		emptyAppOptions{},
 		app.NoOpEVMOptions,
@@ -84,7 +84,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
-		WithBroadcastMode(flags.FlagBroadcastMode).
+		WithBroadcastMode(flags.BroadcastSync).
 		WithHomeDir(app.DefaultNodeHome).
 		WithKeyringOptions(evmkeyring.Option()).
 		WithLedgerHasProtobuf(true).
@@ -130,7 +130,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 				return err
 			}
 
-			// TODO: retrieve evmChainID from genesis file
 			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440002)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
@@ -373,8 +372,6 @@ func (a appCreator) newApp(
 		baseapp.SetChainID(chainID),
 	}
 
-	_ = cast.ToUint64(appOpts.Get(flags.FlagChainID))
-
 	return app.New(
 		logger,
 		db,
@@ -382,8 +379,7 @@ func (a appCreator) newApp(
 		true,
 		skipUpgradeHeights,
 		cast.ToString(appOpts.Get(flags.FlagHome)),
-		// TODO: Review this
-		1440002,
+		CosmosToEVMChainID[chainID],
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		appOpts,
 		app.EVMAppOptions,
@@ -407,6 +403,8 @@ func (a appCreator) appExport(
 		return servertypes.ExportedApp{}, errors.New("application home not set")
 	}
 
+	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
+
 	app := app.New(
 		logger,
 		db,
@@ -414,7 +412,7 @@ func (a appCreator) appExport(
 		height == -1, // -1: no height provided
 		map[int64]bool{},
 		homePath,
-		1440002,
+		CosmosToEVMChainID[chainID],
 		uint(1),
 		appOpts,
 		app.EVMAppOptions,

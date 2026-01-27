@@ -12,7 +12,7 @@ import (
 
 const (
 	bip44CoinType = 60
-	ChainID       = "exrp_1440002-1"
+	ChainID       = "exrp_1449999-1"
 )
 
 // Config defines the configuration for a chain.
@@ -43,7 +43,7 @@ type CustomGenesisState map[string]interface{}
 func DefaultConfig() Config {
 	return Config{
 		ChainID:       ChainID,
-		EIP155ChainID: big.NewInt(1440002),
+		EIP155ChainID: big.NewInt(1449999),
 		Balances:      nil,
 		Denom:         app.BaseDenom,
 		ChainCoins:    DefaultChainCoins(),

@@ -15,12 +15,11 @@ require (
 	cosmossdk.io/x/feegrant v0.2.0
 	cosmossdk.io/x/tx v0.14.0
 	cosmossdk.io/x/upgrade v0.2.0
-	github.com/cometbft/cometbft v0.38.18
+	github.com/cometbft/cometbft v0.38.21
 	github.com/cosmos/cosmos-db v1.1.3
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/cosmos-sdk v0.53.4
 	github.com/cosmos/evm v0.4.0
-	github.com/cosmos/evm/evmd v0.0.0-20250817201932-204ff4ea8df2
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/cosmos/ibc-apps/modules/rate-limiting/v10 v10.1.0
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
@@ -280,15 +279,11 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
-	// map cosmos/evm to evmos
+	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.2
 	// fix cosmos-sdk store path mismatch
 	github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
-	// TODO: remove this once we have a proper fork of cosmos/evm
-	github.com/cosmos/evm => ../evm
-	// use Evmos geth fork
+	github.com/cosmos/evm => github.com/xrplevm/evm v0.4.2-xrplevm.2
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91
-	// use exrp Evmos fork
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1
 	// replace broken goleveldb

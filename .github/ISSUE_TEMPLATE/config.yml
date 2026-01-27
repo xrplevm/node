@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: EVM Sidechain docs
-    url: https://opensource.ripple.com/docs/evm-sidechain/intro-to-evm-sidechain/
+    url: https://docs.xrplevm.org
     about: Learn more about the EVM Sidechain.
   - name: Peersyst
     url: https://peersyst.com

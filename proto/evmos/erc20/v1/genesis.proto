@@ -1,0 +1,32 @@
+// Copyright Tharsis Labs Ltd.(Evmos)
+// SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
+syntax = "proto3";
+package evmos.erc20.v1;
+
+import "amino/amino.proto";
+import "evmos/erc20/v1/erc20.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/xrplevm/node/v9/types/legacy/evmos/erc20";
+
+// GenesisState defines the module's genesis state.
+message GenesisState {
+  // params are the erc20 module parameters at genesis
+  Params params = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+  // token_pairs is a slice of the registered token pairs at genesis
+  repeated TokenPair token_pairs = 2 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+}
+
+// Params defines the erc20 module params
+message Params {
+  // enable_erc20 is the parameter to enable the conversion of Cosmos coins <--> ERC20 tokens.
+  bool enable_erc20 = 1;
+  // enable_evm_hook is now depecrated
+  reserved 2;
+  // native_precompiles defines the slice of hex addresses of the
+  // active precompiles that are used to interact with native staking coins as ERC20s
+  repeated string native_precompiles = 3;
+  // dynamic_precompiles defines the slice of hex addresses of the
+  // active precompiles that are used to interact with Bank coins as ERC20s
+  repeated string dynamic_precompiles = 4;
+}

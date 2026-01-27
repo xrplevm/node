@@ -1,3 +1,8 @@
+version: 2
+
+git:
+  tag_sort: -version:creatordate
+
 before:
   hooks:
     - go mod download

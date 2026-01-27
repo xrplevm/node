@@ -2,18 +2,21 @@ package ante
 
 import (
 	errorsmod "cosmossdk.io/errors"
+	"github.com/cosmos/evm/ante"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 )
 
-// NewAnteHandler routes Ethereum or SDK transactions to the appropriate handler
-func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
-	if err := options.Validate(); err != nil {
-		return nil, err
-	}
-
-	return func(ctx sdk.Context, tx sdk.Tx, sim bool) (newCtx sdk.Context, err error) {
+// NewAnteHandler returns an ante handler responsible for attempting to route an
+// Ethereum or SDK transaction to an internal ante handler for performing
+// transaction-level processing (e.g. fee payment, signature verification) before
+// being passed onto it's respective handler.
+func NewAnteHandler(options ante.HandlerOptions) sdk.AnteHandler {
+	return func(
+		ctx sdk.Context, tx sdk.Tx, sim bool,
+	) (newCtx sdk.Context, err error) {
 		var anteHandler sdk.AnteHandler
 
 		txWithExtensions, ok := tx.(authante.HasExtensionOptionsTx)
@@ -47,5 +50,5 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		}
 
 		return anteHandler(ctx, tx, sim)
-	}, nil
+	}
 }
