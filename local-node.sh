@@ -1,4 +1,4 @@
-CHAINID="exrp_1449999-1"
+CHAINID="xrplevm_1449999-1"
 MONIKER="localnet"
 # Remember to change to other types of keyring like 'file' in-case exposing to outside world,
 # otherwise your balance will be wiped quickly

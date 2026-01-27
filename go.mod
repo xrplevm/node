@@ -15,7 +15,7 @@ require (
 	cosmossdk.io/x/feegrant v0.2.0
 	cosmossdk.io/x/tx v0.14.0
 	cosmossdk.io/x/upgrade v0.2.0
-	github.com/cometbft/cometbft v0.38.18
+	github.com/cometbft/cometbft v0.38.21
 	github.com/cosmos/cosmos-db v1.1.3
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/cosmos-sdk v0.53.4
@@ -284,7 +284,7 @@ replace (
 	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.2
 	// fix cosmos-sdk store path mismatch
 	github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
-	github.com/cosmos/evm => github.com/xrplevm/evm v0.4.2-xrplevm.1
+	github.com/cosmos/evm => github.com/xrplevm/evm v0.4.2-xrplevm.2
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.1

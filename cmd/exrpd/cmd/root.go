@@ -130,7 +130,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 				return err
 			}
 
-			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440002)
+			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440000)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
