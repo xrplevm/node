@@ -50,7 +50,7 @@ Head over there and check it out.
 ## Installation
 
 For prerequisites and detailed build instructions
-please read the [Join the EVM Sidechian](https://opensource.ripple.com/docs/evm-sidechain/join-evm-sidechain-devnet/) instructions.
+please read the [Join the EVM Sidechain](https://docs.xrplevm.org/pages/operators/getting-started/join-the-xrplevm) instructions.
 
 Or check out the latest [release](https://github.com/xrplevm/node/releases).
 
