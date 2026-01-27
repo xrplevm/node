@@ -1,7 +1,7 @@
 package cmd
 
 const (
-	LocalnetChainID string = "exrp_1449999-1"
+	LocalnetChainID string = "xrplevm_1449999-1"
 	DevnetChainID   string = "xrplevm_1449900-1"
 	TestnetChainID  string = "xrplevm_1449000-1"
 	MainnetChainID  string = "xrplevm_1440000-1"
