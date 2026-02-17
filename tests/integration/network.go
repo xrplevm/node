@@ -10,6 +10,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	precisebanktypes "github.com/cosmos/evm/x/precisebank/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
 	exrpintegration "github.com/xrplevm/node/v9/testutil/integration/exrp/integration"
@@ -76,4 +77,8 @@ func (n *Network) GetDistrClient() distrtypes.QueryClient {
 
 func (n *Network) GetPoaClient() poatypes.QueryClient {
 	return exrpcommon.GetPoaClient(n)
+}
+
+func (n *Network) GetPreciseBankClient() precisebanktypes.QueryClient {
+	return nil
 }
