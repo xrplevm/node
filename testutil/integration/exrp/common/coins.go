@@ -29,7 +29,7 @@ func DefaultChainCoins() ChainCoins {
 func getCoinInfo(coinInfo evmtypes.EvmCoinInfo) network.CoinInfo {
 	return network.CoinInfo{
 		Denom:    coinInfo.Denom,
-		Decimals: coinInfo.Decimals,
+		Decimals: evmtypes.Decimals(coinInfo.Decimals),
 	}
 }
 

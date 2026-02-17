@@ -30,34 +30,43 @@ func CreateUpgradeHandler(
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
-		logger := ctx.Logger().With("upgrade", UpgradeName)
-		logger.Info("Running v9 upgrade handler...")
-
-		ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
-		MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
-
-		ctx.Logger().Info("migrating erc20 module...")
-		MigrateErc20Module(
-			ctx,
-			storeKeys,
-			erc20Keeper,
-		)
-		ctx.Logger().Info("erc20 module migrated successfully")
-		ctx.Logger().Info("migrating evm module...")
-		if err := MigrateEvmModule(
-			ctx,
-			storeKeys,
-			appCodec,
-			evmKeeper,
-		); err != nil {
+		err := UpgradeHandler(ctx, storeKeys, appCodec, accountKeeper, evmKeeper, erc20Keeper)
+		if err != nil {
 			return nil, err
 		}
-		ctx.Logger().Info("evm module migrated successfully")
-
-		logger.Info("Finished v9 upgrade handler")
-
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
+}
+
+func UpgradeHandler(ctx sdk.Context, storeKeys map[string]*storetypes.KVStoreKey, appCodec codec.Codec, accountKeeper authkeeper.AccountKeeper, evmKeeper EvmKeeper, erc20Keeper ERC20Keeper) error {
+	logger := ctx.Logger().With("upgrade", UpgradeName)
+	logger.Info("Running v9 upgrade handler...")
+
+	ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
+	// FIXME: Add error handling here
+	MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
+
+	ctx.Logger().Info("migrating erc20 module...")
+	// FIXME: Add error handling here
+	MigrateErc20Module(
+		ctx,
+		storeKeys,
+		erc20Keeper,
+	)
+	ctx.Logger().Info("erc20 module migrated successfully")
+	ctx.Logger().Info("migrating evm module...")
+	if err := MigrateEvmModule(
+		ctx,
+		storeKeys,
+		appCodec,
+		evmKeeper,
+	); err != nil {
+		return err
+	}
+	ctx.Logger().Info("evm module migrated successfully")
+
+	logger.Info("Finished v9 upgrade handler")
+	return nil
 }
 
 func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, codec codec.Codec, evmKeeper EvmKeeper) error {
@@ -95,9 +104,10 @@ func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 	}
 
 	params := evmtypes.Params{
-		EvmDenom:                legacyEvmParams.EvmDenom,
-		ExtraEIPs:               eips,
-		AllowUnprotectedTxs:     legacyEvmParams.AllowUnprotectedTxs,
+		EvmDenom:  legacyEvmParams.EvmDenom,
+		ExtraEIPs: eips,
+		// FIXME: Investigate why this param is removed
+		// AllowUnprotectedTxs:     legacyEvmParams.AllowUnprotectedTxs,
 		EVMChannels:             legacyEvmParams.EVMChannels,
 		AccessControl:           accessControl,
 		ActiveStaticPrecompiles: legacyEvmParams.ActiveStaticPrecompiles,

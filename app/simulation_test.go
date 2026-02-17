@@ -11,9 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmante "github.com/cosmos/evm/ante"
-	ethante "github.com/cosmos/evm/ante/evm"
+	antetypes "github.com/cosmos/evm/ante/types"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
-	etherminttypes "github.com/cosmos/evm/types"
 	"github.com/xrplevm/node/v9/app"
 	"github.com/xrplevm/node/v9/app/ante"
 
@@ -49,18 +48,15 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		nil,
 		false,
 		map[int64]bool{},
-		app.DefaultNodeHome,
-		SimAppEVMChainID,
 		simcli.FlagPeriodValue,
 		appOptions,
-		app.EVMAppOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
 	handlerOpts := &evmante.HandlerOptions{
 		Cdc:                    bApp.AppCodec(),
 		AccountKeeper:          bApp.AccountKeeper,
 		BankKeeper:             bApp.BankKeeper,
-		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+		ExtensionOptionChecker: antetypes.HasDynamicFeeExtensionOption,
 		EvmKeeper:              bApp.EvmKeeper,
 		FeegrantKeeper:         bApp.FeeGrantKeeper,
 		// TODO: Update when migrating to v10
@@ -69,7 +65,7 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		SignModeHandler:   bApp.GetTxConfig().SignModeHandler(),
 		SigGasConsumer:    evmante.SigVerificationGasConsumer,
 		MaxTxGasWanted:    0,
-		TxFeeChecker:      ethante.NewDynamicFeeChecker(bApp.FeeMarketKeeper),
+		DynamicFeeChecker: true,
 		PendingTxListener: bApp.OnPendingTx,
 	}
 	if err := handlerOpts.Validate(); err != nil {

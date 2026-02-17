@@ -10,6 +10,7 @@ import (
 
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -23,11 +24,15 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 
-	ethante "github.com/cosmos/evm/ante/evm"
-	"github.com/xrplevm/node/v9/app/ante"
+	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
+	evmmempool "github.com/cosmos/evm/mempool"
 
 	evmante "github.com/cosmos/evm/ante"
-	etherminttypes "github.com/cosmos/evm/types"
+
+	antetypes "github.com/cosmos/evm/ante/types"
+	evmaddress "github.com/cosmos/evm/encoding/address"
+	precompiletypes "github.com/cosmos/evm/precompiles/types"
+
 	cosmosevmutils "github.com/cosmos/evm/utils"
 	"github.com/cosmos/gogoproto/proto"
 	ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v10"
@@ -187,6 +192,11 @@ func init() {
 	stakingtypes.DefaultMinCommissionRate = math.LegacyZeroDec()
 }
 
+func (app *App) GetMempool() sdkmempool.ExtMempool {
+	// FIXME: Set the default value?
+	return app.EVMMempool
+}
+
 // App extends an ABCI application, but with most of its parameters exported.
 // They are exported for convenience in creating helper functions, as object
 // capabilities aren't needed for testing.
@@ -198,6 +208,8 @@ type App struct {
 	interfaceRegistry types.InterfaceRegistry
 	txConfig          client.TxConfig
 	clientCtx         client.Context
+
+	EVMMempool *evmmempool.ExperimentalEVMMempool
 
 	invCheckPeriod uint
 
@@ -253,13 +265,11 @@ func New(
 	traceStore io.Writer,
 	loadLatest bool,
 	skipUpgradeHeights map[int64]bool,
-	homePath string,
-	evmChainID uint64,
 	invCheckPeriod uint,
 	appOpts servertypes.AppOptions,
-	evmAppOptions EVMOptionsFn,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
+	evmChainID := cast.ToUint64(appOpts.Get(srvflags.EVMChainID))
 	encodingConfig := MakeEncodingConfig(evmChainID)
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
@@ -277,10 +287,6 @@ func New(
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	bApp.SetTxEncoder(txConfig.TxEncoder())
-
-	if err := evmAppOptions(evmChainID); err != nil {
-		panic(err)
-	}
 
 	keys := storetypes.NewKVStoreKeys(
 		authtypes.StoreKey, authz.ModuleName, banktypes.StoreKey, stakingtypes.StoreKey,
@@ -328,7 +334,7 @@ func New(
 		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
 		authtypes.ProtoBaseAccount,
 		maccPerms,
-		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 		sdk.Bech32PrefixAccAddr,
 		authAddress,
 	)
@@ -369,8 +375,8 @@ func New(
 		app.AccountKeeper,
 		app.BankKeeper,
 		authAddress,
-		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
-		authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+		evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
 	)
 
 	app.DistrKeeper = distrkeeper.NewKeeper(
@@ -407,6 +413,12 @@ func New(
 		app.AccountKeeper,
 	)
 
+	// this check is necessary as we use the flag in x/upgrade.
+	// we can exit more gracefully by checking the flag here.
+	homePath, ok := appOpts.Get(flags.FlagHome).(string)
+	if !ok || homePath == "" {
+		homePath = DefaultNodeHome
+	}
 	app.UpgradeKeeper = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
 		runtime.NewKVStoreService(keys[upgradetypes.StoreKey]),
@@ -422,6 +434,15 @@ func New(
 			app.SlashingKeeper.Hooks(),
 		),
 	)
+
+	// Create IBC Keeper
+	app.IBCKeeper = ibckeeper.NewKeeper(
+		appCodec, runtime.NewKVStoreService(keys[ibcexported.StoreKey]),
+		app.GetSubspace(ibcexported.ModuleName), // TODO: Why is this removed in evmd? https://github.com/cosmos/evm/compare/v0.4.2...xrplevm:evm:v0.5.1#diff-4c6513c07222d1681d2d45e32bd32d240a48f17b35f9730f2fc88126cd376498L429
+		app.UpgradeKeeper,
+		authAddress,
+	)
+
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
 	// NOTE: Distr and Slashing must be created before calling the Hooks method to avoid returning a Keeper without its table generated
@@ -456,7 +477,20 @@ func New(
 		// FIX: Temporary solution to solve keeper interdependency while new precompile module
 		// is being developed.
 		&app.Erc20Keeper,
+		evmChainID,
 		tracer,
+	).WithStaticPrecompiles(
+		precompiletypes.DefaultStaticPrecompiles(
+			*app.StakingKeeper,
+			app.DistrKeeper,
+			app.BankKeeper,
+			&app.Erc20Keeper,
+			&app.TransferKeeper,
+			app.IBCKeeper.ChannelKeeper,
+			app.GovKeeper,
+			app.SlashingKeeper,
+			appCodec,
+		),
 	)
 
 	// ERC20 Keeper
@@ -466,13 +500,6 @@ func New(
 		&app.TransferKeeper,
 	)
 
-	// Create IBC Keeper
-	app.IBCKeeper = ibckeeper.NewKeeper(
-		appCodec, runtime.NewKVStoreService(keys[ibcexported.StoreKey]),
-		app.GetSubspace(ibcexported.ModuleName),
-		app.UpgradeKeeper,
-		authAddress,
-	)
 	// Create the rate limit keeper
 	app.RateLimitKeeper = *ratelimitkeeper.NewKeeper(
 		appCodec,
@@ -488,7 +515,6 @@ func New(
 	app.TransferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[ibctransfertypes.StoreKey]),
-		app.GetSubspace(ibctransfertypes.ModuleName),
 		app.IBCKeeper.ChannelKeeper,
 		app.IBCKeeper.ChannelKeeper,
 		app.MsgServiceRouter(),
@@ -497,6 +523,8 @@ func New(
 		app.Erc20Keeper, // Add ERC20 Keeper for ERC20 transfers
 		authAddress,
 	)
+	app.TransferKeeper.SetAddressCodec(evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32AccountAddrPrefix()))
+
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	// Create the app.ICAHostKeeper
 	app.ICAHostKeeper = icahostkeeper.NewKeeper(
@@ -546,20 +574,6 @@ func New(
 	app.GovKeeper = *govKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(
 		// register the governance hooks
-		),
-	)
-
-	app.EvmKeeper.WithStaticPrecompiles(
-		NewAvailableStaticPrecompiles(
-			*app.StakingKeeper,
-			app.DistrKeeper,
-			app.BankKeeper,
-			app.Erc20Keeper,
-			app.TransferKeeper,
-			*app.IBCKeeper.ChannelKeeper,
-			app.EvmKeeper,
-			app.GovKeeper,
-			app.AppCodec(),
 		),
 	)
 
@@ -647,7 +661,7 @@ func New(
 
 		// Ethermint app modules
 		feemarket.NewAppModule(app.FeeMarketKeeper),
-		vmmod.NewAppModule(app.EvmKeeper, app.AccountKeeper, app.AccountKeeper.AddressCodec()),
+		vmmod.NewAppModule(app.EvmKeeper, app.AccountKeeper, app.BankKeeper, app.AccountKeeper.AddressCodec()),
 		erc20.NewAppModule(app.Erc20Keeper, app.AccountKeeper),
 
 		// exrp app modules
@@ -678,6 +692,7 @@ func New(
 	app.mm.SetOrderPreBlockers(
 		upgradetypes.ModuleName,
 		authtypes.ModuleName,
+		evmtypes.ModuleName,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -820,7 +835,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		Cdc:                    app.appCodec,
 		AccountKeeper:          app.AccountKeeper,
 		BankKeeper:             app.BankKeeper,
-		ExtensionOptionChecker: etherminttypes.HasDynamicFeeExtensionOption,
+		ExtensionOptionChecker: antetypes.HasDynamicFeeExtensionOption,
 		EvmKeeper:              app.EvmKeeper,
 		FeegrantKeeper:         app.FeeGrantKeeper,
 		IBCKeeper:              app.IBCKeeper,
@@ -828,7 +843,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		SignModeHandler:        txConfig.SignModeHandler(),
 		SigGasConsumer:         evmante.SigVerificationGasConsumer,
 		MaxTxGasWanted:         maxGasWanted,
-		TxFeeChecker:           ethante.NewDynamicFeeChecker(app.FeeMarketKeeper),
+		DynamicFeeChecker:      true,
 		PendingTxListener:      app.OnPendingTx,
 	}
 
@@ -836,7 +851,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		panic(err)
 	}
 
-	handler := ante.NewAnteHandler(*handlerOpts)
+	handler := evmante.NewAnteHandler(*handlerOpts)
 
 	app.SetAnteHandler(handler)
 }
@@ -937,7 +952,7 @@ func (app *App) AppCodec() codec.Codec {
 }
 
 // DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
-func (app *App) DefaultGenesis() etherminttypes.GenesisState {
+func (app *App) DefaultGenesis() map[string]json.RawMessage {
 	genesis := app.BasicModuleManager.DefaultGenesis(app.appCodec)
 
 	evmGenState := evmtypes.DefaultGenesisState()
@@ -1077,9 +1092,9 @@ func (app *App) AutoCliOpts() autocli.AppOptions {
 	return autocli.AppOptions{
 		Modules:               modules,
 		ModuleOptions:         runtimeservices.ExtractAutoCLIOptions(app.mm.Modules),
-		AddressCodec:          authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
-		ValidatorAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
-		ConsensusAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+		AddressCodec:          evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		ValidatorAddressCodec: evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		ConsensusAddressCodec: evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
 	}
 }
 

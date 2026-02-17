@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
-	evmkeyring "github.com/cosmos/evm/crypto/keyring"
+	evmdebug "github.com/cosmos/evm/client/debug"
+	"github.com/cosmos/evm/config"
+	"github.com/cosmos/evm/crypto/hd"
 
 	evmserver "github.com/cosmos/evm/server"
 
@@ -31,7 +32,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
-	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
@@ -39,10 +39,8 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -65,11 +63,8 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
 		nil, true, nil,
-		tempDir(app.DefaultNodeHome),
-		0,
 		0,
 		emptyAppOptions{},
-		app.NoOpEVMOptions,
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
@@ -85,8 +80,8 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
 		WithBroadcastMode(flags.BroadcastSync).
-		WithHomeDir(app.DefaultNodeHome).
-		WithKeyringOptions(evmkeyring.Option()).
+		WithHomeDir(MustGetDefaultNodeHome()).
+		WithKeyringOptions(hd.EthSecp256k1Option()).
 		WithLedgerHasProtobuf(true).
 		WithViper("exrp")
 
@@ -130,7 +125,11 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 				return err
 			}
 
-			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, 1440000)
+			chainID, err := CosmosChainIDToEvmChainID(initClientCtx.ChainID)
+			if err != nil {
+				chainID = 9999
+			}
+			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, chainID)
 			customTMConfig := initTendermintConfig()
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
@@ -178,28 +177,13 @@ func initRootCmd(
 		return a.newApp(l, d, w, ao)
 	}
 
+	defaultNodeHome := config.MustGetDefaultNodeHome()
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(
-			tempApp.BasicModuleManager,
-			app.DefaultNodeHome,
-		),
-		genutilcli.CollectGenTxsCmd(
-			banktypes.GenesisBalancesIterator{},
-			app.DefaultNodeHome,
-			genutiltypes.DefaultMessageValidator,
-			tempApp.GetTxConfig().SigningContext().ValidatorAddressCodec(),
-		),
-		genutilcli.GenTxCmd(
-			tempApp.BasicModuleManager, tempApp.GetTxConfig(),
-			banktypes.GenesisBalancesIterator{},
-			app.DefaultNodeHome,
-			tempApp.GetTxConfig().SigningContext().ValidatorAddressCodec(),
-		),
-		genutilcli.ValidateGenesisCmd(tempApp.BasicModuleManager),
-		AddGenesisAccountCmd(app.DefaultNodeHome),
+		genutilcli.InitCmd(tempApp.BasicModuleManager, defaultNodeHome),
+		genutilcli.Commands(tempApp.TxConfig(), tempApp.BasicModuleManager, defaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
-		debug.Cmd(),
-		pruning.Cmd(sdkAppCreatorWrapper, app.DefaultNodeHome),
+		evmdebug.Cmd(),
+		pruning.Cmd(sdkAppCreatorWrapper, defaultNodeHome),
 		confixcmd.ConfigCommand(),
 		snapshot.Cmd(sdkAppCreatorWrapper),
 	)
@@ -207,7 +191,7 @@ func initRootCmd(
 	// add server commands
 	evmserver.AddCommands(
 		rootCmd,
-		evmserver.NewDefaultStartOptions(a.newApp, app.DefaultNodeHome),
+		evmserver.NewDefaultStartOptions(a.newApp, defaultNodeHome),
 		a.appExport,
 		addModuleInitFlags,
 	)
@@ -217,7 +201,7 @@ func initRootCmd(
 		sdkserver.StatusCommand(),
 		queryCommand(),
 		txCommand(),
-		evmclient.KeyCommands(app.DefaultNodeHome, true),
+		evmclient.KeyCommands(defaultNodeHome, true),
 	)
 
 	_, err := srvflags.AddTxFlags(rootCmd)
@@ -330,8 +314,12 @@ func (a appCreator) newApp(
 		panic(err)
 	}
 
+	chainID, err := getChainIDFromOpts(appOpts)
+	if err != nil {
+		panic(err)
+	}
+
 	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
-	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
 	if chainID == "" {
 		// fallback to genesis chain-id
 		appGenesis, err := tmtypes.GenesisDocFromFile(filepath.Join(homeDir, "config", "genesis.json"))
@@ -378,11 +366,8 @@ func (a appCreator) newApp(
 		traceStore,
 		true,
 		skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		CosmosToEVMChainID[chainID],
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		appOpts,
-		app.EVMAppOptions,
 		baseappOptions...,
 	)
 }
@@ -398,41 +383,40 @@ func (a appCreator) appExport(
 	appOpts servertypes.AppOptions,
 	modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
-	homePath, ok := appOpts.Get(flags.FlagHome).(string)
-	if !ok || homePath == "" {
-		return servertypes.ExportedApp{}, errors.New("application home not set")
+	var newApp *app.App
+
+	chainID, err := getChainIDFromOpts(appOpts)
+	if err != nil {
+		return servertypes.ExportedApp{}, err
 	}
 
-	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
-
-	app := app.New(
-		logger,
-		db,
-		traceStore,
-		height == -1, // -1: no height provided
-		map[int64]bool{},
-		homePath,
-		CosmosToEVMChainID[chainID],
-		uint(1),
-		appOpts,
-		app.EVMAppOptions,
-	)
-
 	if height != -1 {
-		if err := app.LoadHeight(height); err != nil {
+		newApp = app.New(logger, db, traceStore, false, map[int64]bool{}, uint(1), appOpts, baseapp.SetChainID(chainID))
+
+		if err := newApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
+		}
+	} else {
+		newApp = app.New(logger, db, traceStore, true, map[int64]bool{}, uint(1), appOpts, baseapp.SetChainID(chainID))
+	}
+
+	return newApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
+}
+
+// getChainIDFromOpts returns the chain Id from app Opts
+// It first tries to get from the chainId flag, if not available
+// it will load from home
+func getChainIDFromOpts(appOpts servertypes.AppOptions) (chainID string, err error) {
+	// Get the chain Id from appOpts
+	chainID = cast.ToString(appOpts.Get(flags.FlagChainID))
+	if chainID == "" {
+		// If not available load from home
+		homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
+		chainID, err = config.GetChainIDFromHome(homeDir)
+		if err != nil {
+			return "", err
 		}
 	}
 
-	return app.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
-}
-
-func tempDir(defaultHome string) string {
-	dir, err := os.MkdirTemp("", ".exrpd-tmp")
-	if err != nil {
-		dir = defaultHome
-	}
-	defer os.RemoveAll(dir)
-
-	return dir
+	return
 }

@@ -101,7 +101,6 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	// Create exrp app
 	loadLatest := true
 
-	evmChainID := uint64(1449999)
 	invCheckPeriod := uint(5)
 
 	return app.New(
@@ -110,11 +109,8 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		nil,
 		loadLatest,
 		map[int64]bool{},
-		MustGetIntegrationTestNodeHome(),
-		evmChainID,
 		invCheckPeriod,
 		simutils.NewAppOptionsWithFlagHome(MustGetIntegrationTestNodeHome()),
-		app.EVMAppOptions,
 		append(customBaseAppOptions, baseapp.SetChainID(chainID))...,
 	)
 }
