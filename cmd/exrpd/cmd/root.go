@@ -177,7 +177,7 @@ func initRootCmd(
 		return a.newApp(l, d, w, ao)
 	}
 
-	defaultNodeHome := config.MustGetDefaultNodeHome()
+	defaultNodeHome := MustGetDefaultNodeHome()
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(tempApp.BasicModuleManager, defaultNodeHome),
 		genutilcli.Commands(tempApp.TxConfig(), tempApp.BasicModuleManager, defaultNodeHome),
