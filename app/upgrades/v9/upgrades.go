@@ -103,10 +103,8 @@ func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 	}
 
 	params := evmtypes.Params{
-		EvmDenom:  legacyEvmParams.EvmDenom,
-		ExtraEIPs: eips,
-		// FIXME: Investigate why this param is removed
-		// AllowUnprotectedTxs:     legacyEvmParams.AllowUnprotectedTxs,
+		EvmDenom:                legacyEvmParams.EvmDenom,
+		ExtraEIPs:               eips,
 		EVMChannels:             legacyEvmParams.EVMChannels,
 		AccessControl:           accessControl,
 		ActiveStaticPrecompiles: legacyEvmParams.ActiveStaticPrecompiles,
