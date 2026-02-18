@@ -3,7 +3,6 @@ package v9
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -31,41 +30,34 @@ func CreateUpgradeHandler(
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
-		err := UpgradeHandler(ctx, storeKeys, appCodec, accountKeeper, evmKeeper, erc20Keeper)
-		if err != nil {
+		logger := ctx.Logger().With("upgrade", UpgradeName)
+		logger.Info("Running v9 upgrade handler...")
+
+		ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
+		MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
+
+		ctx.Logger().Info("migrating erc20 module...")
+		MigrateErc20Module(
+			ctx,
+			storeKeys,
+			erc20Keeper,
+		)
+		ctx.Logger().Info("erc20 module migrated successfully")
+		ctx.Logger().Info("migrating evm module...")
+		if err := MigrateEvmModule(
+			ctx,
+			storeKeys,
+			appCodec,
+			evmKeeper,
+		); err != nil {
 			return nil, err
 		}
+		ctx.Logger().Info("evm module migrated successfully")
+
+		logger.Info("Finished v9 upgrade handler")
+
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
-}
-
-func UpgradeHandler(ctx sdk.Context, storeKeys map[string]*storetypes.KVStoreKey, appCodec codec.Codec, accountKeeper authkeeper.AccountKeeper, evmKeeper EvmKeeper, erc20Keeper ERC20Keeper) error {
-	logger := ctx.Logger().With("upgrade", UpgradeName)
-	logger.Info("Running v9 upgrade handler...")
-
-	ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
-	MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
-
-	ctx.Logger().Info("migrating erc20 module...")
-	MigrateErc20Module(
-		ctx,
-		storeKeys,
-		erc20Keeper,
-	)
-	ctx.Logger().Info("erc20 module migrated successfully")
-	ctx.Logger().Info("migrating evm module...")
-	if err := MigrateEvmModule(
-		ctx,
-		storeKeys,
-		appCodec,
-		evmKeeper,
-	); err != nil {
-		return err
-	}
-	ctx.Logger().Info("evm module migrated successfully")
-
-	logger.Info("Finished v9 upgrade handler")
-	return nil
 }
 
 func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, codec codec.Codec, evmKeeper EvmKeeper) error {
@@ -144,7 +136,6 @@ func MigrateEthAccountsToBaseAccounts(ctx sdk.Context, ak authkeeper.AccountKeep
 	ak.IterateAccounts(ctx, func(account sdk.AccountI) (stop bool) {
 		ethAcc, ok := account.(*legacytypes.EthAccount)
 		if !ok {
-			ctx.Logger().Warn(fmt.Sprintf("skipping non EthAccount %s", account.GetAddress().String()))
 			return false
 		}
 
