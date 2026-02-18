@@ -12,7 +12,7 @@ import (
 	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
-	"github.com/xrplevm/node/v9/app/ante"
+	"github.com/xrplevm/node/v10/app/ante"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -52,7 +52,7 @@ import (
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	vmmod "github.com/cosmos/evm/x/vm"
-	"github.com/xrplevm/node/v9/x/poa"
+	"github.com/xrplevm/node/v10/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -123,9 +123,9 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
-	"github.com/xrplevm/node/v9/docs"
-	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v9/x/poa/types"
+	"github.com/xrplevm/node/v10/docs"
+	poakeeper "github.com/xrplevm/node/v10/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v10/x/poa/types"
 
 	srvflags "github.com/cosmos/evm/server/flags"
 
