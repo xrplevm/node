@@ -283,7 +283,7 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	// github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.4-xrplevm.2
+	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.5-xrplevm.1
 	// fix cosmos-sdk store path mismatch
 	// github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91
