@@ -60,11 +60,7 @@ func (app *App) setupUpgradeHandlers() {
 		v10.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
-			app.keys,
-			app.appCodec,
-			app.AccountKeeper,
 			app.EvmKeeper,
-			app.Erc20Keeper,
 		),
 	)
 
