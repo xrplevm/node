@@ -23,7 +23,7 @@ func CreateUpgradeHandler(
 	evmKeeper EvmKeeper,
 	erc20Keeper ERC20Keeper,
 ) upgradetypes.UpgradeHandler {
-	return func(c context.Context, plan upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
 		logger := ctx.Logger().With("upgrade", UpgradeName)
 
