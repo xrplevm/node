@@ -12,7 +12,7 @@ import (
 	v9 "github.com/xrplevm/node/v9/app/upgrades/v9"
 )
 
-var MainnetChainID = "xrplevm_1440000-1"
+const MainnetChainID = "xrplevm_1440000-1"
 
 func CreateUpgradeHandler(
 	mm *module.Manager,

@@ -12,6 +12,7 @@ import (
 	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
+	"github.com/xrplevm/node/v9/app/ante"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -851,7 +852,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		panic(err)
 	}
 
-	handler := evmante.NewAnteHandler(*handlerOpts)
+	handler := ante.NewAnteHandler(*handlerOpts)
 
 	app.SetAnteHandler(handler)
 }
