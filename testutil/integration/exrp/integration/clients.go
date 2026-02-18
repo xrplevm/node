@@ -87,6 +87,7 @@ func (n *IntegrationNetwork) GetDistrClient() distrtypes.QueryClient {
 func (n *IntegrationNetwork) GetMintClient() minttypes.QueryClient {
 	return nil
 }
+
 func (n *IntegrationNetwork) GetPreciseBankClient() precisebanktypes.QueryClient {
 	return nil
 }
