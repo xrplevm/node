@@ -3,6 +3,7 @@ package v9
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -43,11 +44,9 @@ func UpgradeHandler(ctx sdk.Context, storeKeys map[string]*storetypes.KVStoreKey
 	logger.Info("Running v9 upgrade handler...")
 
 	ctx.Logger().Info("migration EthAccounts to BaseAccounts...")
-	// FIXME: Add error handling here
 	MigrateEthAccountsToBaseAccounts(ctx, accountKeeper, evmKeeper)
 
 	ctx.Logger().Info("migrating erc20 module...")
-	// FIXME: Add error handling here
 	MigrateErc20Module(
 		ctx,
 		storeKeys,
@@ -147,6 +146,7 @@ func MigrateEthAccountsToBaseAccounts(ctx sdk.Context, ak authkeeper.AccountKeep
 	ak.IterateAccounts(ctx, func(account sdk.AccountI) (stop bool) {
 		ethAcc, ok := account.(*legacytypes.EthAccount)
 		if !ok {
+			ctx.Logger().Warn(fmt.Sprintf("skipping non EthAccount %s", account.GetAddress().String()))
 			return false
 		}
 
