@@ -194,7 +194,6 @@ func init() {
 }
 
 func (app *App) GetMempool() sdkmempool.ExtMempool {
-	// FIXME: Set the default value?
 	return app.EVMMempool
 }
 
