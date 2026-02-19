@@ -25,18 +25,18 @@ import (
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	evmostypes "github.com/cosmos/evm/types"
+	"github.com/cosmos/evm/testutil"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v10/testutil/integration/exrp/common"
 
-	"github.com/xrplevm/node/v9/app"
+	"github.com/xrplevm/node/v10/app"
 )
 
 // genSetupFn is the type for the module genesis setup functions
-type genSetupFn func(app *app.App, genesisState evmostypes.GenesisState, customGenesis interface{}) (evmostypes.GenesisState, error)
+type genSetupFn func(app *app.App, genesisState testutil.GenesisState, customGenesis interface{}) (testutil.GenesisState, error)
 
 // defaultGenesisParams contains the params that are needed to
 // setup the default genesis for the testing setup
@@ -58,7 +58,7 @@ var genesisSetupFunctions = map[string]genSetupFn{
 	distrtypes.ModuleName:     genStateSetter[*distrtypes.GenesisState](distrtypes.ModuleName),
 	banktypes.ModuleName:      setBankGenesisState,
 	authtypes.ModuleName:      setAuthGenesisState,
-	consensustypes.ModuleName: func(_ *app.App, genesisState evmostypes.GenesisState, _ interface{}) (evmostypes.GenesisState, error) {
+	consensustypes.ModuleName: func(_ *app.App, genesisState testutil.GenesisState, _ interface{}) (testutil.GenesisState, error) {
 		// no-op. Consensus does not have a genesis state on the application
 		// but the params are used on it
 		// (e.g. block max gas, max bytes).
@@ -70,7 +70,7 @@ var genesisSetupFunctions = map[string]genSetupFn{
 
 // genStateSetter is a generic function to set module-specific genesis state
 func genStateSetter[T proto.Message](moduleName string) genSetupFn {
-	return func(app *app.App, genesisState evmostypes.GenesisState, customGenesis interface{}) (evmostypes.GenesisState, error) {
+	return func(app *app.App, genesisState testutil.GenesisState, customGenesis interface{}) (testutil.GenesisState, error) {
 		moduleGenesis, ok := customGenesis.(T)
 		if !ok {
 			return nil, fmt.Errorf("invalid type %T for %s module genesis state", customGenesis, moduleName)
@@ -275,7 +275,7 @@ type StakingCustomGenesisState struct {
 }
 
 // setDefaultStakingGenesisState sets the default staking genesis state
-func setDefaultStakingGenesisState(app *app.App, genesisState evmostypes.GenesisState, overwriteParams StakingCustomGenesisState) evmostypes.GenesisState {
+func setDefaultStakingGenesisState(app *app.App, genesisState testutil.GenesisState, overwriteParams StakingCustomGenesisState) testutil.GenesisState {
 	// Set staking params
 	stakingParams := stakingtypes.DefaultParams()
 	stakingParams.BondDenom = overwriteParams.denom
@@ -296,15 +296,11 @@ type BankCustomGenesisState struct {
 }
 
 // setDefaultBankGenesisState sets the default bank genesis state
-func setDefaultBankGenesisState(app *app.App, genesisState evmostypes.GenesisState, overwriteParams BankCustomGenesisState) evmostypes.GenesisState {
-	bankGenesis := banktypes.NewGenesisState(
-		banktypes.DefaultGenesisState().Params,
-		overwriteParams.balances,
-		overwriteParams.totalSupply,
-		[]banktypes.Metadata{},
-		[]banktypes.SendEnabled{},
-	)
-	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
+func setDefaultBankGenesisState(bApp *app.App, genesisState testutil.GenesisState, overwriteParams BankCustomGenesisState) testutil.GenesisState {
+	bankGenesis := app.NewBankGenesisState()
+	bankGenesis.Balances = overwriteParams.balances
+	bankGenesis.Supply = overwriteParams.totalSupply
+	genesisState[banktypes.ModuleName] = bApp.AppCodec().MustMarshalJSON(bankGenesis)
 	return genesisState
 }
 
@@ -316,7 +312,7 @@ type SlashingCustomGenesisState struct {
 }
 
 // setDefaultSlashingGenesisState sets the default slashing genesis state
-func setDefaultSlashingGenesisState(app *app.App, genesisState evmostypes.GenesisState, overwriteParams SlashingCustomGenesisState) evmostypes.GenesisState {
+func setDefaultSlashingGenesisState(app *app.App, genesisState testutil.GenesisState, overwriteParams SlashingCustomGenesisState) testutil.GenesisState {
 	slashingGen := slashingtypes.DefaultGenesisState()
 	slashingGen.SigningInfos = overwriteParams.signingInfo
 	slashingGen.MissedBlocks = overwriteParams.missedBlocks
@@ -329,7 +325,7 @@ func setDefaultSlashingGenesisState(app *app.App, genesisState evmostypes.Genesi
 }
 
 // setBankGenesisState updates the bank genesis state with custom genesis state
-func setBankGenesisState(app *app.App, genesisState evmostypes.GenesisState, customGenesis interface{}) (evmostypes.GenesisState, error) {
+func setBankGenesisState(app *app.App, genesisState testutil.GenesisState, customGenesis interface{}) (testutil.GenesisState, error) {
 	customGen, ok := customGenesis.(*banktypes.GenesisState)
 	if !ok {
 		return nil, fmt.Errorf("invalid type %T for bank module genesis state", customGenesis)
@@ -381,14 +377,14 @@ func addBondedModuleAccountToFundedBalances(
 }
 
 // setDefaultAuthGenesisState sets the default auth genesis state
-func setDefaultAuthGenesisState(app *app.App, genesisState evmostypes.GenesisState, genAccs []authtypes.GenesisAccount) evmostypes.GenesisState {
+func setDefaultAuthGenesisState(app *app.App, genesisState testutil.GenesisState, genAccs []authtypes.GenesisAccount) testutil.GenesisState {
 	defaultAuthGen := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
 	genesisState[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(defaultAuthGen)
 	return genesisState
 }
 
 // setAuthGenesisState updates the bank genesis state with custom genesis state
-func setAuthGenesisState(app *app.App, genesisState evmostypes.GenesisState, customGenesis interface{}) (evmostypes.GenesisState, error) {
+func setAuthGenesisState(app *app.App, genesisState testutil.GenesisState, customGenesis interface{}) (testutil.GenesisState, error) {
 	customGen, ok := customGenesis.(*authtypes.GenesisState)
 	if !ok {
 		return nil, fmt.Errorf("invalid type %T for auth module genesis state", customGenesis)
@@ -414,7 +410,7 @@ type GovCustomGenesisState struct {
 }
 
 // setDefaultGovGenesisState sets the default gov genesis state
-func setDefaultGovGenesisState(app *app.App, genesisState evmostypes.GenesisState, overwriteParams GovCustomGenesisState) evmostypes.GenesisState {
+func setDefaultGovGenesisState(app *app.App, genesisState testutil.GenesisState, overwriteParams GovCustomGenesisState) testutil.GenesisState {
 	govGen := govtypesv1.DefaultGenesisState()
 	updatedParams := govGen.Params
 	minDepositAmt := overwriteParams.minDepositAmt
@@ -425,7 +421,7 @@ func setDefaultGovGenesisState(app *app.App, genesisState evmostypes.GenesisStat
 	return genesisState
 }
 
-func setDefaultErc20GenesisState(app *app.App, genesisState evmostypes.GenesisState) evmostypes.GenesisState {
+func setDefaultErc20GenesisState(app *app.App, genesisState testutil.GenesisState) testutil.GenesisState {
 	erc20Gen := erc20types.DefaultGenesisState()
 	genesisState[erc20types.ModuleName] = app.AppCodec().MustMarshalJSON(erc20Gen)
 	return genesisState
@@ -433,7 +429,7 @@ func setDefaultErc20GenesisState(app *app.App, genesisState evmostypes.GenesisSt
 
 // defaultAuthGenesisState sets the default genesis state
 // for the testing setup
-func newDefaultGenesisState(app *app.App, params defaultGenesisParams) evmostypes.GenesisState {
+func newDefaultGenesisState(app *app.App, params defaultGenesisParams) testutil.GenesisState {
 	genesisState := app.DefaultGenesis()
 
 	genesisState = setDefaultAuthGenesisState(app, genesisState, params.genAccounts)
@@ -448,7 +444,7 @@ func newDefaultGenesisState(app *app.App, params defaultGenesisParams) evmostype
 
 // customizeGenesis modifies genesis state if there're any custom genesis state
 // for specific modules
-func customizeGenesis(app *app.App, customGen exrpcommon.CustomGenesisState, genesisState evmostypes.GenesisState) (evmostypes.GenesisState, error) {
+func customizeGenesis(app *app.App, customGen exrpcommon.CustomGenesisState, genesisState testutil.GenesisState) (testutil.GenesisState, error) {
 	var err error
 	for mod, modGenState := range customGen {
 		if fn, found := genesisSetupFunctions[mod]; found {

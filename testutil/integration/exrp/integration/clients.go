@@ -17,6 +17,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	precisebanktypes "github.com/cosmos/evm/x/precisebank/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 )
 
@@ -84,5 +85,9 @@ func (n *IntegrationNetwork) GetDistrClient() distrtypes.QueryClient {
 
 // NOTE: Not needed
 func (n *IntegrationNetwork) GetMintClient() minttypes.QueryClient {
+	return nil
+}
+
+func (n *IntegrationNetwork) GetPreciseBankClient() precisebanktypes.QueryClient {
 	return nil
 }

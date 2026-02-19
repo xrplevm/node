@@ -7,7 +7,7 @@ import "amino/amino.proto";
 import "ethermint/feemarket/v1/feemarket.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/xrplevm/node/v9/types/legacy/ethermint/feemarket";
+option go_package = "github.com/xrplevm/node/v10/types/legacy/ethermint/feemarket";
 
 // GenesisState defines the feemarket module's genesis state.
 message GenesisState {

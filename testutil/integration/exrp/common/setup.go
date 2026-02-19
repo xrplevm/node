@@ -11,7 +11,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/xrplevm/node/v9/app"
+	"github.com/xrplevm/node/v10/app"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -101,7 +101,6 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	// Create exrp app
 	loadLatest := true
 
-	evmChainID := uint64(1449999)
 	invCheckPeriod := uint(5)
 
 	return app.New(
@@ -110,11 +109,8 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		nil,
 		loadLatest,
 		map[int64]bool{},
-		MustGetIntegrationTestNodeHome(),
-		evmChainID,
 		invCheckPeriod,
 		simutils.NewAppOptionsWithFlagHome(MustGetIntegrationTestNodeHome()),
-		app.EVMAppOptions,
 		append(customBaseAppOptions, baseapp.SetChainID(chainID))...,
 	)
 }

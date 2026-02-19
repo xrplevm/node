@@ -13,10 +13,9 @@ import (
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 
 	gethparams "github.com/ethereum/go-ethereum/params"
-	"github.com/xrplevm/node/v9/app"
+	"github.com/xrplevm/node/v10/app"
 
 	"github.com/cosmos/evm/testutil/integration/base/network"
-	"github.com/cosmos/evm/types"
 
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtjson "github.com/cometbft/cometbft/libs/json"
@@ -30,7 +29,7 @@ import (
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
+	exrpcommon "github.com/xrplevm/node/v10/testutil/integration/exrp/common"
 )
 
 // Network is the interface that wraps the methods to interact with integration test network.
@@ -71,6 +70,8 @@ type IntegrationNetwork struct {
 //
 // It panics if an error occurs.
 func New(opts ...exrpcommon.ConfigOption) *IntegrationNetwork {
+	configurator := evmtypes.NewEVMConfigurator()
+	configurator.ResetTestConfig()
 	cfg := DefaultIntegrationConfig()
 	// Modify the default config with the given options
 	for _, opt := range opts {
@@ -237,7 +238,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 
 	n.app = exrpApp
 	n.ctx = n.ctx.WithConsensusParams(*consensusParams)
-	n.ctx = n.ctx.WithBlockGasMeter(types.NewInfiniteGasMeterWithLimit(blockMaxGas))
+	n.ctx = n.ctx.WithBlockGasMeter(evmtypes.NewInfiniteGasMeterWithLimit(blockMaxGas))
 
 	n.validators = validators
 	n.valSet = valSet

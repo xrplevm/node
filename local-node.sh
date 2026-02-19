@@ -29,7 +29,7 @@ rm -rf $HOMEDIR
 
 make build
 
-bin/exrpd --home "$HOMEDIR" config set client chain-id "$CHAINID"
+bin/exrpd --home "$HOMEDIR" config set client chain-id "$CHAINID" --chain-id "$CHAINID"
 bin/exrpd --home "$HOMEDIR" config set client keyring-backend "$KEYRING"
 
 echo "$MNEMONIC" | bin/exrpd --home "$HOMEDIR" keys add "$KEY_NAME" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO"
@@ -37,33 +37,37 @@ echo "$MNEMONIC" | bin/exrpd --home "$HOMEDIR" keys add "$KEY_NAME" --recover --
 bin/exrpd --home "$HOMEDIR" init "$MONIKER" -o --chain-id "$CHAINID"
 
 jq '.consensus.params["block"]["max_gas"]="10500000"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["crisis"]["constant_fee"]["denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["evm"]["params"]["evm_denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["evm"]["params"]["allow_unprotected_txs"]=true' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state["gov"]["params"]["min_deposit"][0]["denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state["crisis"]["constant_fee"]["denom"]="axrp"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state["evm"]["params"]["evm_denom"]="axrp"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state["gov"]["params"]["min_deposit"][0]["denom"]="axrp"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["gov"]["params"]["min_deposit"][0]["amount"]="1"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["gov"]["params"]["voting_period"]="10s"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["gov"]["params"]["expedited_voting_period"]="5s"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["staking"]["params"]["bond_denom"]="apoa"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["staking"]["params"]["unbonding_time"]="60s"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["feemarket"]["params"]["base_fee"]="'${BASEFEE}'"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state["feemarket"]["params"]["no_base_fee"]=true' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 
-#jq '.app_state["erc20"]["token_pairs"][0]["denom"]="token"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state.bank.denom_metadata=[{"description":"XRP is the gas token","denom_units":[{"denom":"axrp"},{"denom":"xrp","exponent":18}],"base":"axrp","display":"xrp","name":"XRP","symbol":"XRP"}]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+
+#jq '.app_state["erc20"]["token_pairs"][0]["denom"]="axrp"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 #jq '.app_state["erc20"]["token_pairs"][0]["owner_address"]="ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state.erc20.native_precompiles=["0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
-jq '.app_state.erc20.token_pairs=[{contract_owner:1,erc20_address:"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",denom:"token",enabled:true, "owner_address":"ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"}]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state.erc20.native_precompiles=["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
+jq '.app_state.erc20.token_pairs=[{contract_owner:1,erc20_address:"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",denom:"axrp",enabled:true,"owner_address":"ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"}]' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 
 
 jq '.app_state["slashing"]["params"]["slash_fraction_double_sign"]="0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 jq '.app_state["slashing"]["params"]["slash_fraction_downtime"]="0"' "$GENESIS" >"$TMP_GENESIS" && mv "$TMP_GENESIS" "$GENESIS"
 
-bin/exrpd --home "$HOMEDIR" add-genesis-account "$(bin/exrpd --home "$HOMEDIR" keys show "$KEY_NAME" -a --keyring-backend "$KEYRING")" 1000000apoa,1000000000000000000000000000token --keyring-backend "$KEYRING"
+bin/exrpd --home "$HOMEDIR" genesis add-genesis-account "$(bin/exrpd --home "$HOMEDIR" keys show "$KEY_NAME" -a --keyring-backend "$KEYRING")" 1000000apoa,1000000000000000000000000000axrp --keyring-backend "$KEYRING"
 
-bin/exrpd --home "$HOMEDIR" gentx alice 1000000apoa --gas-prices ${BASEFEE}token --keyring-backend "$KEYRING" --chain-id "$CHAINID"
+bin/exrpd --home "$HOMEDIR" genesis add-genesis-account "ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2" 1000000000000000000000000000axrp --keyring-backend "$KEYRING"
 
-bin/exrpd --home "$HOMEDIR" collect-gentxs
+bin/exrpd --home "$HOMEDIR" genesis gentx alice 1000000apoa --gas-prices ${BASEFEE}axrp --keyring-backend "$KEYRING" --chain-id "$CHAINID"
 
-bin/exrpd --home "$HOMEDIR" validate-genesis
+bin/exrpd --home "$HOMEDIR" genesis collect-gentxs
+
+bin/exrpd --home "$HOMEDIR" genesis validate
 
 if [[ $1 == "pending" ]]; then
 		if [[ "$OSTYPE" == "darwin"* ]]; then

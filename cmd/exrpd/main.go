@@ -8,14 +8,14 @@ import (
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
-	"github.com/xrplevm/node/v9/app"
-	"github.com/xrplevm/node/v9/cmd/exrpd/cmd"
+	"github.com/xrplevm/node/v10/app"
+	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
 )
 
 func main() {
 	initSDKConfig()
 	rootCmd, _ := cmd.NewRootCmd()
-	if err := svrcmd.Execute(rootCmd, "", app.DefaultNodeHome); err != nil {
+	if err := svrcmd.Execute(rootCmd, "", cmd.MustGetDefaultNodeHome()); err != nil {
 		fmt.Fprintln(rootCmd.OutOrStderr(), err)
 		os.Exit(1)
 	}

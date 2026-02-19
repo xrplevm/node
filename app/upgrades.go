@@ -5,12 +5,13 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	v9 "github.com/xrplevm/node/v9/app/upgrades/v9"
+	v10 "github.com/xrplevm/node/v10/app/upgrades/v10"
+	v9 "github.com/xrplevm/node/v10/app/upgrades/v9"
 
-	v5 "github.com/xrplevm/node/v9/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v9/app/upgrades/v6"
-	v7 "github.com/xrplevm/node/v9/app/upgrades/v7"
-	v8 "github.com/xrplevm/node/v9/app/upgrades/v8"
+	v5 "github.com/xrplevm/node/v10/app/upgrades/v5"
+	v6 "github.com/xrplevm/node/v10/app/upgrades/v6"
+	v7 "github.com/xrplevm/node/v10/app/upgrades/v7"
+	v8 "github.com/xrplevm/node/v10/app/upgrades/v8"
 )
 
 func (app *App) setupUpgradeHandlers() {
@@ -52,6 +53,14 @@ func (app *App) setupUpgradeHandlers() {
 			app.AccountKeeper,
 			app.EvmKeeper,
 			app.Erc20Keeper,
+		),
+	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v10.UpgradeName,
+		v10.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+			app.EvmKeeper,
 		),
 	)
 

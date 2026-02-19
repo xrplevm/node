@@ -6,9 +6,8 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/evm/x/vm/statedb"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/xrplevm/node/v9/app"
-	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v10/app"
+	exrpcommon "github.com/xrplevm/node/v10/testutil/integration/exrp/common"
 )
 
 // UnitTestIntegrationNetwork is the implementation of the Network interface for unit tests.
@@ -38,11 +37,10 @@ func NewUnitTestNetwork(opts ...exrpcommon.ConfigOption) *UnitTestIntegrationNet
 
 // GetStateDB returns the state database for the current block.
 func (n *UnitTestIntegrationNetwork) GetStateDB() *statedb.StateDB {
-	headerHash := n.GetContext().HeaderHash()
 	return statedb.New(
 		n.GetContext(),
 		n.App.EvmKeeper,
-		statedb.NewEmptyTxConfig(common.BytesToHash(headerHash)),
+		statedb.NewEmptyTxConfig(),
 	)
 }
 

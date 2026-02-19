@@ -1,7 +1,7 @@
 syntax = "proto3";
 package poa;
 
-option go_package = "github.com/xrplevm/node/v9/x/poa/types";
+option go_package = "github.com/xrplevm/node/v10/x/poa/types";
 
 // Params defines the parameters for the module.
 message Params {}

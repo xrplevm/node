@@ -15,8 +15,8 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/ethereum/go-ethereum/common"
-	legacyevmtypes "github.com/xrplevm/node/v9/types/legacy/ethermint/evm"
-	legacytypes "github.com/xrplevm/node/v9/types/legacy/ethermint/types"
+	legacyevmtypes "github.com/xrplevm/node/v10/types/legacy/ethermint/evm"
+	legacytypes "github.com/xrplevm/node/v10/types/legacy/ethermint/types"
 )
 
 func CreateUpgradeHandler(
@@ -97,7 +97,6 @@ func MigrateEvmModule(ctx sdk.Context, keys map[string]*storetypes.KVStoreKey, c
 	params := evmtypes.Params{
 		EvmDenom:                legacyEvmParams.EvmDenom,
 		ExtraEIPs:               eips,
-		AllowUnprotectedTxs:     legacyEvmParams.AllowUnprotectedTxs,
 		EVMChannels:             legacyEvmParams.EVMChannels,
 		AccessControl:           accessControl,
 		ActiveStaticPrecompiles: legacyEvmParams.ActiveStaticPrecompiles,

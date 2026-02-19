@@ -3,7 +3,7 @@
 syntax = "proto3";
 package ethermint.feemarket.v1;
 
-option go_package = "github.com/xrplevm/node/v9/types/legacy/ethermint/feemarket";
+option go_package = "github.com/xrplevm/node/v10/types/legacy/ethermint/feemarket";
 
 // EventFeeMarket is the event type for the fee market module
 message EventFeeMarket {
