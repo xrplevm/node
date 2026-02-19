@@ -16,22 +16,12 @@ jobs:
             -   uses: actions/checkout@v2
             -   uses: docker/setup-qemu-action@v2
             -   uses: docker/setup-buildx-action@v2
-            -   uses: actions/cache@v3
-                with:
-                    path: /tmp/.buildx-cache
-                    key: ${{ github.job }}-${{ runner.os }}-${{ github.event.pull_request.number }}-buildx
-                    restore-keys: |
-                        ${{ github.job }}-${{ runner.os }}-${{ github.event.pull_request.number }}-buildx
             # Build docker image
-            -   name: Build docker image
-                uses: docker/build-push-action@v4
-                with:
-                    target: integration
-                    push: false
-                    cache-from: type=local,src=/tmp/.buildx-cache
-                    cache-to: type=local,dest=/tmp/.buildx-cache-new
-            -   name: Move cache
-                if: always()
-                run: |
-                    rm -rf /tmp/.buildx-cache
-                    mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+            - name: Build docker image
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  target: integration
+                  push: false
+                  secrets: |
+                      ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
