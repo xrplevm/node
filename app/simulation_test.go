@@ -13,8 +13,8 @@ import (
 	evmante "github.com/cosmos/evm/ante"
 	antetypes "github.com/cosmos/evm/ante/types"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
-	"github.com/xrplevm/node/v9/app"
-	"github.com/xrplevm/node/v9/app/ante"
+	"github.com/xrplevm/node/v10/app"
+	"github.com/xrplevm/node/v10/app/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"

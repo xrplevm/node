@@ -6,7 +6,7 @@ package ethermint.types.v1;
 import "amino/amino.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/xrplevm/node/v9/types/legacy/ethermint/types";
+option go_package = "github.com/xrplevm/node/v10/types/legacy/ethermint/types";
 
 // ExtensionOptionDynamicFeeTx is an extension option that specifies the maxPrioPrice for cosmos tx
 message ExtensionOptionDynamicFeeTx {

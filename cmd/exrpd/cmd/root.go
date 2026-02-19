@@ -47,7 +47,7 @@ import (
 
 	evmclient "github.com/cosmos/evm/client"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
-	"github.com/xrplevm/node/v9/app"
+	"github.com/xrplevm/node/v10/app"
 )
 
 type emptyAppOptions struct{}
@@ -96,9 +96,13 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			if err != nil {
 				return err
 			}
+			cmdChainID := initClientCtx.ChainID
 			initClientCtx, err = clientcfg.ReadFromClientConfig(initClientCtx)
 			if err != nil {
 				return err
+			}
+			if cmdChainID != "" && initClientCtx.ChainID == "" {
+				initClientCtx = initClientCtx.WithChainID(cmdChainID)
 			}
 
 			// This needs to go after ReadFromClientConfig, as that function

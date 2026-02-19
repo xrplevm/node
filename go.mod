@@ -1,4 +1,4 @@
-module github.com/xrplevm/node/v9
+module github.com/xrplevm/node/v10
 
 go 1.23.8
 
@@ -18,8 +18,8 @@ require (
 	github.com/cometbft/cometbft v0.38.21
 	github.com/cosmos/cosmos-db v1.1.3
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
-	github.com/cosmos/cosmos-sdk v0.53.5
-	github.com/cosmos/evm v0.5.1
+	github.com/cosmos/cosmos-sdk v0.53.6
+	github.com/cosmos/evm v0.6.0
 	github.com/cosmos/gogoproto v1.7.2
 	github.com/cosmos/ibc-apps/modules/rate-limiting/v10 v10.1.0
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
@@ -283,7 +283,9 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use Cosmos-SDK fork to enable Ledger functionality
-	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.5-xrplevm.1
+	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.6-xrplevm.1
+	// cosmos evm private fork
+	github.com/cosmos/evm => github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.1
 	// fix cosmos-sdk store path mismatch
 	// github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91

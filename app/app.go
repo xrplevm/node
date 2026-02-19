@@ -12,7 +12,7 @@ import (
 	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
-	"github.com/xrplevm/node/v9/app/ante"
+	"github.com/xrplevm/node/v10/app/ante"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -38,7 +38,6 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	ratelimit "github.com/cosmos/ibc-apps/modules/rate-limiting/v10"
 	ratelimittypes "github.com/cosmos/ibc-apps/modules/rate-limiting/v10/types"
-	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
 	ibctesting "github.com/cosmos/ibc-go/v10/testing"
@@ -53,7 +52,7 @@ import (
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	vmmod "github.com/cosmos/evm/x/vm"
-	"github.com/xrplevm/node/v9/x/poa"
+	"github.com/xrplevm/node/v10/x/poa"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -119,15 +118,14 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/types"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
-	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	ibcporttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
-	"github.com/xrplevm/node/v9/docs"
-	poakeeper "github.com/xrplevm/node/v9/x/poa/keeper"
-	poatypes "github.com/xrplevm/node/v9/x/poa/types"
+	"github.com/xrplevm/node/v10/docs"
+	poakeeper "github.com/xrplevm/node/v10/x/poa/keeper"
+	poatypes "github.com/xrplevm/node/v10/x/poa/types"
 
 	srvflags "github.com/cosmos/evm/server/flags"
 
@@ -143,8 +141,10 @@ import (
 	// Overriders
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	"github.com/cosmos/evm/x/ibc/transfer"
-	ibctransferkeeper "github.com/cosmos/evm/x/ibc/transfer/keeper"
+
+	transfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	transferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
 	// Force-load the tracer engines to trigger registration due to Go-Ethereum v1.10.15 changes
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
@@ -232,7 +232,7 @@ type App struct {
 	IBCKeeper             *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
 	ICAHostKeeper         icahostkeeper.Keeper
 	EvidenceKeeper        evidencekeeper.Keeper
-	TransferKeeper        ibctransferkeeper.Keeper
+	TransferKeeper        transferkeeper.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 	RateLimitKeeper       ratelimitkeeper.Keeper
@@ -512,15 +512,15 @@ func New(
 		app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
 	)
 	// Create Transfer Keepers
-	app.TransferKeeper = ibctransferkeeper.NewKeeper(
+	app.TransferKeeper = transferkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[ibctransfertypes.StoreKey]),
+		nil,
 		app.IBCKeeper.ChannelKeeper,
 		app.IBCKeeper.ChannelKeeper,
 		app.MsgServiceRouter(),
 		app.AccountKeeper,
 		app.BankKeeper,
-		app.Erc20Keeper, // Add ERC20 Keeper for ERC20 transfers
 		authAddress,
 	)
 	app.TransferKeeper.SetAddressCodec(evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32AccountAddrPrefix()))
@@ -682,7 +682,7 @@ func New(
 					paramsclient.ProposalHandler,
 				},
 			),
-			ibctransfertypes.ModuleName: transfer.AppModuleBasic{AppModuleBasic: &ibctransfer.AppModuleBasic{}},
+			ibctransfertypes.ModuleName: transfer.AppModuleBasic{},
 		},
 	)
 	app.BasicModuleManager.RegisterLegacyAminoCodec(cdc)

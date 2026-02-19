@@ -29,7 +29,7 @@ rm -rf $HOMEDIR
 
 make build
 
-bin/exrpd --home "$HOMEDIR" config set client chain-id "$CHAINID"
+bin/exrpd --home "$HOMEDIR" config set client chain-id "$CHAINID" --chain-id "$CHAINID"
 bin/exrpd --home "$HOMEDIR" config set client keyring-backend "$KEYRING"
 
 echo "$MNEMONIC" | bin/exrpd --home "$HOMEDIR" keys add "$KEY_NAME" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO"
