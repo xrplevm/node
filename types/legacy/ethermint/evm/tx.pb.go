@@ -442,14 +442,20 @@ func (m *MsgUpdateParamsResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgUpdateParamsResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*MsgEthereumTx)(nil), "ethermint.evm.v1.MsgEthereumTx")
-	proto.RegisterType((*LegacyTx)(nil), "ethermint.evm.v1.LegacyTx")
-	proto.RegisterType((*AccessListTx)(nil), "ethermint.evm.v1.AccessListTx")
-	proto.RegisterType((*DynamicFeeTx)(nil), "ethermint.evm.v1.DynamicFeeTx")
-	proto.RegisterType((*ExtensionOptionsEthereumTx)(nil), "ethermint.evm.v1.ExtensionOptionsEthereumTx")
-	proto.RegisterType((*MsgEthereumTxResponse)(nil), "ethermint.evm.v1.MsgEthereumTxResponse")
-	proto.RegisterType((*MsgUpdateParams)(nil), "ethermint.evm.v1.MsgUpdateParams")
-	proto.RegisterType((*MsgUpdateParamsResponse)(nil), "ethermint.evm.v1.MsgUpdateParamsResponse")
+	// NOTE: Proto type registration is DISABLED here to avoid conflicts.
+	// The node application uses the EVM module via a local replace (github.com/cosmos/evm => ../evm),
+	// which means proto registration happens in evm/rpc/types/legacy/tx.pb.go.
+	//
+	// These struct definitions are kept for backward compatibility but registration is done elsewhere.
+
+	//proto.RegisterType((*MsgEthereumTx)(nil), "ethermint.evm.v1.MsgEthereumTx")
+	//proto.RegisterType((*LegacyTx)(nil), "ethermint.evm.v1.LegacyTx")
+	//proto.RegisterType((*AccessListTx)(nil), "ethermint.evm.v1.AccessListTx")
+	//proto.RegisterType((*DynamicFeeTx)(nil), "ethermint.evm.v1.DynamicFeeTx")
+	//proto.RegisterType((*ExtensionOptionsEthereumTx)(nil), "ethermint.evm.v1.ExtensionOptionsEthereumTx")
+	//proto.RegisterType((*MsgEthereumTxResponse)(nil), "ethermint.evm.v1.MsgEthereumTxResponse")
+	//proto.RegisterType((*MsgUpdateParams)(nil), "ethermint.evm.v1.MsgUpdateParams")
+	//proto.RegisterType((*MsgUpdateParamsResponse)(nil), "ethermint.evm.v1.MsgUpdateParamsResponse")
 }
 
 func init() { proto.RegisterFile("ethermint/evm/v1/tx.proto", fileDescriptor_f75ac0a12d075f21) }
