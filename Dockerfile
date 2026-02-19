@@ -6,6 +6,15 @@ RUN apt update && \
         ca-certificates
 WORKDIR /app
 COPY . .
+
+# Hotfix to allow download of private go module
+ENV GOPRIVATE=github.com/xrplevm/evm-sec-papyrus
+RUN mkdir -p ~/.ssh
+RUN --mount=type=secret,id=ssh_key_b64 base64 -d -i /run/secrets/ssh_key_b64 > ~/.ssh/id_rsa
+RUN chmod 600 ~/.ssh/id_rsa
+RUN ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN git config --global url."ssh://git@github.com/xrplevm/evm-sec-papyrus".insteadOf "https://github.com/xrplevm/evm-sec-papyrus"
+
 RUN make install
 
 

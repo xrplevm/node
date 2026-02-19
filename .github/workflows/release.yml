@@ -46,6 +46,8 @@ jobs:
           tags: |
             peersyst/exrp:${{ github.event.inputs.tag }}
             ${{ fromJSON('["", "peersyst/exrp:latest"]')[github.event.inputs.is_latest_release == 'true'] }}
+          secrets: |
+            ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
       - name: Publish the Release
         uses: softprops/action-gh-release@v1
         with:
