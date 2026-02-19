@@ -96,13 +96,13 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			if err != nil {
 				return err
 			}
-			cmdChainId := initClientCtx.ChainID
+			cmdChainID := initClientCtx.ChainID
 			initClientCtx, err = clientcfg.ReadFromClientConfig(initClientCtx)
 			if err != nil {
 				return err
 			}
-			if cmdChainId != "" && initClientCtx.ChainID == "" {
-				initClientCtx = initClientCtx.WithChainID(cmdChainId)
+			if cmdChainID != "" && initClientCtx.ChainID == "" {
+				initClientCtx = initClientCtx.WithChainID(cmdChainID)
 			}
 
 			// This needs to go after ReadFromClientConfig, as that function
