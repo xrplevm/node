@@ -285,7 +285,7 @@ replace (
 	// use Cosmos-SDK fork to enable Ledger functionality
 	github.com/cosmos/cosmos-sdk => github.com/xrplevm/cosmos-sdk v0.53.6-xrplevm.1
 	// cosmos evm private fork
-	github.com/cosmos/evm => github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.2
+	github.com/cosmos/evm => github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.3
 	// fix cosmos-sdk store path mismatch
 	// github.com/cosmos/cosmos-sdk/store => cosmossdk.io/store v1.1.2
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v0.0.0-20250806193535-2fc7571efa91
