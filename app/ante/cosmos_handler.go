@@ -7,7 +7,7 @@ import (
 	evmante "github.com/cosmos/evm/ante/evm"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	ibcante "github.com/cosmos/ibc-go/v10/modules/core/ante"
-	poaante "github.com/xrplevm/node/v9/x/poa/ante"
+	poaante "github.com/xrplevm/node/v10/x/poa/ante"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"

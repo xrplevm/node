@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/evm/testutil/keyring"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/suite"
-	"github.com/xrplevm/node/v9/app"
-	exrpcommon "github.com/xrplevm/node/v9/testutil/integration/exrp/common"
+	"github.com/xrplevm/node/v10/app"
+	exrpcommon "github.com/xrplevm/node/v10/testutil/integration/exrp/common"
 )
 
 type TestSuite struct {

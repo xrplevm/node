@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/xrplevm/node/v9/x/poa/types"
+	"github.com/xrplevm/node/v10/x/poa/types"
 )
 
 type msgServer struct {

@@ -3,7 +3,7 @@ package exrpcommon
 import (
 	"github.com/cosmos/evm/testutil/integration/evm/network"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
-	testconstants "github.com/xrplevm/node/v9/testutil/constants"
+	testconstants "github.com/xrplevm/node/v10/testutil/constants"
 )
 
 var defaultChain = testconstants.LocalnetChainID
