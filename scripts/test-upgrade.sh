@@ -95,9 +95,9 @@ jq '.initial_height = (.initial_height | tostring)' "$NODE_HOME"/config/genesis.
 echo "ℹ️  Starting the node in background process..."
 exrpd start --home "$NODE_HOME" &
 
-sleep 10
+sleep 30
 
-INITIAL_HEIGHT=$(jq '.initial_height' .exrpd/config/genesis.json)
+INITIAL_HEIGHT=$(jq '.initial_height' $NODE_HOME/config/genesis.json)
 INITIAL_HEIGHT=${INITIAL_HEIGHT//\"/}
 PROPOSAL_HEIGHT=$(( INITIAL_HEIGHT + 15 ))
 echo "ℹ️  Creating upgrade proposal for version $VERSION and height $PROPOSAL_HEIGHT..."
