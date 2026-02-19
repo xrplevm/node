@@ -1727,8 +1727,8 @@ github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGC
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/xrplevm/cosmos-sdk v0.53.6-xrplevm.1 h1:fBMklkMKZbrVoEhGU0JyeaINkRA9lVA9K/zRY73EGh0=
 github.com/xrplevm/cosmos-sdk v0.53.6-xrplevm.1/go.mod h1:N6YuprhAabInbT3YGumGDKONbvPX5dNro7RjHvkQoKE=
-github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.1 h1:43snJmiQDOEg6wVhEOoFGOP3TW8HlWsi7E/uXquwwKo=
-github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.1/go.mod h1:MUrVrODPlGdehAzc2KjUPEVHLtA7WChEvrFLs5kWa9E=
+github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.2 h1:t6W4XDZyp7BzEJQP1TSUElgtCaV+j58cvUNZaO9rvxY=
+github.com/xrplevm/evm-sec-papyrus v0.6.0-xrplevm.2/go.mod h1:MUrVrODPlGdehAzc2KjUPEVHLtA7WChEvrFLs5kWa9E=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
