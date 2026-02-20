@@ -37,7 +37,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	gaia "github.com/xrplevm/node/v10/app"
+	gaia "github.com/xrplevm/node/v9/app"
 )
 
 const (
