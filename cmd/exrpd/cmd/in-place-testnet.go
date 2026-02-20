@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -33,9 +34,9 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 
 	gaia "github.com/xrplevm/node/v9/app"
 )
@@ -334,11 +335,11 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 
 	// Fund testnet accounts
 	for _, account := range args.accountsToFund {
-		err := app.BankKeeper.MintCoins(appCtx, minttypes.ModuleName, defaultCoins)
+		err := app.BankKeeper.MintCoins(appCtx, evmtypes.ModuleName, defaultCoins)
 		if err != nil {
 			return err
 		}
-		err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, minttypes.ModuleName, account, defaultCoins)
+		err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
 		if err != nil {
 			return err
 		}
@@ -348,6 +349,15 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 }
 
 func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, appHeight int64, args valArgs) error {
+	// Clear addrbook to prevent peers from the original network sending votes
+	// that reference validator indices not present in our single-validator set.
+	addrBookPath := filepath.Join(args.homeDir, "config", "addrbook.json")
+	if err := os.WriteFile(addrBookPath, []byte("{}"), 0o600); err != nil {
+		logger.Error("Failed to clear addrbook.json", "err", err)
+	} else {
+		logger.Info("Cleared addrbook.json to isolate node from original network peers")
+	}
+
 	// create validator set from the local validator
 	newTmVal := tmtypes.NewValidator(tmd25519.PubKey(args.validatorConsPubKeyByte), valVotingPower)
 	logger.Info("Creating new validator:", "validator", newTmVal)
@@ -474,10 +484,15 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 		}}
 	}
 
-	// Update the state with the new validator set
+	// Update the state with the new validator set.
+	// LastHeightValidatorsChanged must be set to LastBlockHeight so that
+	// CometBFT's LoadValidators always resolves back to this height (where we
+	// store the full 1-validator set) instead of following the old pointer to
+	// the original 25-validator set.
 	state.LastValidators = currentValidators
 	state.Validators = currentValidators
 	state.NextValidators = currentValidators
+	state.LastHeightValidatorsChanged = state.LastBlockHeight
 	// save state store
 	if err = stateStore.Save(state); err != nil {
 		return err
