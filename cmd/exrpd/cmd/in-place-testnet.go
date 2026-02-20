@@ -320,18 +320,24 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 	}
 	params.VotingPeriod = &shortVotingPeriod
 	params.ExpeditedVotingPeriod = &expeditedVotingPeriod
+	params.MinDeposit = sdk.NewCoins(sdk.NewInt64Coin(gaia.XrpDenom, 1))
+	params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewInt64Coin(gaia.XrpDenom, 1))
 	err = app.GovKeeper.Params.Set(appCtx, params)
 	if err != nil {
 		return err
 	}
-	appCtx.Logger().Info("Updated governance voting period", "voting_period", shortVotingPeriod, "expedited_voting_period", expeditedVotingPeriod)
+	appCtx.Logger().Info("Updated governance params", "voting_period", shortVotingPeriod, "expedited_voting_period", expeditedVotingPeriod, "min_deposit", params.MinDeposit)
 
 	// BANK
 	bondDenom, err := app.StakingKeeper.BondDenom(appCtx)
 	if err != nil {
 		return err
 	}
-	defaultCoins := sdk.NewCoins(sdk.NewInt64Coin(bondDenom, 1000000000000000))
+	// Fund accounts with both the bond denom and axrp (needed for gov deposits and gas)
+	defaultCoins := sdk.NewCoins(
+		sdk.NewInt64Coin(bondDenom, 1000000000000000),
+		sdk.NewInt64Coin(gaia.XrpDenom, 1000000000000000000),
+	)
 
 	// Fund testnet accounts
 	for _, account := range args.accountsToFund {
