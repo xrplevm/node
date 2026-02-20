@@ -23,6 +23,7 @@ const (
 
 	// XrpDenom defines the xrp denomination used in EVM
 	XrpDenom = "axrp"
+	XrpErc20 = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 	// XrpDisplayDenom defines the denomination dispkated to users in client applications.
 	XrpDisplayDenom = "xrp"
 )

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
@@ -54,6 +55,8 @@ var (
 	flagReplaceValidator         = "replace-validator"
 	flagReplacedOperatorAddress  = "replaced-operator-address"
 	flagReplacedConsensusAddress = "replaced-consensus-address"
+	flagXrpOwnerAddress          = "xrp-owner-address"
+	flagUpgradeVersion           = "upgrade-version"
 )
 
 type valArgs struct {
@@ -62,9 +65,11 @@ type valArgs struct {
 	validatorConsPrivKey     crypto.PrivKey   // validator's consensus private key
 	accountsToFund           []sdk.AccAddress // list of accounts to fund and use for testing later on
 	homeDir                  string
-	replaceValidator         bool   // if set, replaces a validator with new keys
-	replacedOperatorAddress  string // operator address of the validator to be replaced
-	replacedConsensusAddress string // consensus address of the validator to be replaced
+	replaceValidator         bool           // if set, replaces a validator with new keys
+	replacedOperatorAddress  string         // operator address of the validator to be replaced
+	replacedConsensusAddress string         // consensus address of the validator to be replaced
+	xrpOwnerAddress          sdk.AccAddress // new XRP owner address
+	upgradeVersion           string         // upgrade version that will be applied
 }
 
 func testnetUnsafeStartLocalValidatorCmd(ac appCreator) *cobra.Command {
@@ -89,6 +94,8 @@ Example:
 	cmd.Flags().Bool(flagReplaceValidator, false, "Replaces a specified validator with the new keys")
 	cmd.Flags().String(flagReplacedOperatorAddress, "", "Operator address of the validator to be replaced")
 	cmd.Flags().String(flagReplacedConsensusAddress, "", "Consensus address of the validator to be replaced")
+	cmd.Flags().String(flagXrpOwnerAddress, "", "New XRP owner address")
+	cmd.Flags().String(flagUpgradeVersion, "", "If set, the upgrade version that will be applied right just after the chain starts")
 
 	return cmd
 }
@@ -160,6 +167,20 @@ func getCommandArgs(appOpts servertypes.AppOptions) (valArgs, error) {
 			return args, errors.New("invalid replaced validator consensus address string")
 		}
 		args.replacedConsensusAddress = replacedConsensusAddress
+	}
+
+	newXrpOwnerAddress := cast.ToString(appOpts.Get(flagXrpOwnerAddress))
+	if newXrpOwnerAddress != "" {
+		newOwnerAddr, err := sdk.AccAddressFromBech32(newXrpOwnerAddress)
+		if err != nil {
+			return args, fmt.Errorf("invalid bech32 address format %w", err)
+		}
+		args.xrpOwnerAddress = newOwnerAddr
+	}
+
+	upgradeVersion := cast.ToString(appOpts.Get(flagUpgradeVersion))
+	if upgradeVersion != "" {
+		args.upgradeVersion = upgradeVersion
 	}
 
 	// home dir
@@ -329,13 +350,11 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 	appCtx.Logger().Info("Updated governance params", "voting_period", shortVotingPeriod, "expedited_voting_period", expeditedVotingPeriod, "min_deposit", params.MinDeposit)
 
 	// BANK
-	bondDenom, err := app.StakingKeeper.BondDenom(appCtx)
 	if err != nil {
 		return err
 	}
 	// Fund accounts with both the bond denom and axrp (needed for gov deposits and gas)
 	defaultCoins := sdk.NewCoins(
-		sdk.NewInt64Coin(bondDenom, 1000000000000000),
 		sdk.NewInt64Coin(gaia.XrpDenom, 1000000000000000000),
 	)
 
@@ -348,6 +367,32 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 		err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
 		if err != nil {
 			return err
+		}
+	}
+
+	// ERC20
+	if args.xrpOwnerAddress != nil {
+		pair, found := app.Erc20Keeper.GetTokenPair(appCtx, app.Erc20Keeper.GetTokenPairID(appCtx, gaia.XrpErc20))
+		if !found {
+			return errors.New("token pair not found")
+		}
+		app.Erc20Keeper.SetTokenPairOwnerAddress(appCtx, pair, args.xrpOwnerAddress.String())
+	}
+
+	// UPGRADE
+	if args.upgradeVersion != "" {
+		upgradePlan := upgradetypes.Plan{
+			Height: appCtx.BlockHeight() + 1,
+			Name:   args.upgradeVersion,
+			Info:   "Testnet upgrade to " + args.upgradeVersion,
+		}
+		if err := app.UpgradeKeeper.ScheduleUpgrade(appCtx, upgradePlan); err != nil {
+			panic(
+				fmt.Errorf(
+					"failed to schedule upgrade %s during BeginBlock at height %d: %w",
+					upgradePlan.Name, appCtx.BlockHeight(), err,
+				),
+			)
 		}
 	}
 
