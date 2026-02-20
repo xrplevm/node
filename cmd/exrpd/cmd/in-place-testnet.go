@@ -381,8 +381,9 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 
 	// UPGRADE
 	if args.upgradeVersion != "" {
+		fmt.Println("Scheduling upgrade to", app.LastBlockHeight(), "at height", app.LastBlockHeight()+5, "with name", args.upgradeVersion)
 		upgradePlan := upgradetypes.Plan{
-			Height: appCtx.BlockHeight() + 1,
+			Height: app.LastBlockHeight() + 5,
 			Name:   args.upgradeVersion,
 			Info:   "Testnet upgrade to " + args.upgradeVersion,
 		}
@@ -390,7 +391,7 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 			panic(
 				fmt.Errorf(
 					"failed to schedule upgrade %s during BeginBlock at height %d: %w",
-					upgradePlan.Name, appCtx.BlockHeight(), err,
+					upgradePlan.Name, app.LastBlockHeight()+5, err,
 				),
 			)
 		}
