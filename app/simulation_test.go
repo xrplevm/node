@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cosmossdk.io/log"
+	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -42,6 +43,11 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 	appOptions[flags.FlagHome] = app.DefaultNodeHome
 	appOptions[server.FlagInvCheckPeriod] = simcli.FlagPeriodValue
 
+	evmChainID, err := cmd.CosmosChainIDToEvmChainID(config.ChainID)
+	if err != nil {
+		return nil, err
+	}
+
 	bApp := app.New(
 		logger,
 		db,
@@ -49,6 +55,7 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		false,
 		map[int64]bool{},
 		simcli.FlagPeriodValue,
+		evmChainID,
 		appOptions,
 		baseapp.SetChainID(config.ChainID),
 	)

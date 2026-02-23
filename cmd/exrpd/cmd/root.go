@@ -71,6 +71,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		0,
+		0,
 		tmpAppOptions{},
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
@@ -371,6 +372,11 @@ func (a appCreator) newApp(
 		baseapp.SetChainID(chainID),
 	}
 
+	evmChainID, err := CosmosChainIDToEvmChainID(chainID)
+	if err != nil {
+		panic(err)
+	}
+
 	return app.New(
 		logger,
 		db,
@@ -378,6 +384,7 @@ func (a appCreator) newApp(
 		true,
 		skipUpgradeHeights,
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
+		evmChainID,
 		appOpts,
 		baseappOptions...,
 	)
@@ -401,14 +408,19 @@ func (a appCreator) appExport(
 		return servertypes.ExportedApp{}, err
 	}
 
+	evmChainID, err := CosmosChainIDToEvmChainID(chainID)
+	if err != nil {
+		return servertypes.ExportedApp{}, err
+	}
+
 	if height != -1 {
-		newApp = app.New(logger, db, traceStore, false, map[int64]bool{}, uint(1), appOpts, baseapp.SetChainID(chainID))
+		newApp = app.New(logger, db, traceStore, false, map[int64]bool{}, uint(1), evmChainID, appOpts, baseapp.SetChainID(chainID))
 
 		if err := newApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		newApp = app.New(logger, db, traceStore, true, map[int64]bool{}, uint(1), appOpts, baseapp.SetChainID(chainID))
+		newApp = app.New(logger, db, traceStore, true, map[int64]bool{}, uint(1), evmChainID, appOpts, baseapp.SetChainID(chainID))
 	}
 
 	return newApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
