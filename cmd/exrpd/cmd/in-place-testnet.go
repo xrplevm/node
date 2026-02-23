@@ -360,13 +360,15 @@ func updateApplicationState(app *gaia.App, args valArgs) error {
 
 	// Fund testnet accounts
 	for _, account := range args.accountsToFund {
-		err := app.BankKeeper.MintCoins(appCtx, evmtypes.ModuleName, defaultCoins)
-		if err != nil {
-			return err
-		}
-		err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
-		if err != nil {
-			return err
+		for i := 0; i < 50; i++ {
+			err := app.BankKeeper.MintCoins(appCtx, evmtypes.ModuleName, defaultCoins)
+			if err != nil {
+				return err
+			}
+			err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
