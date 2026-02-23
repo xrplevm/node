@@ -4,6 +4,7 @@ on:
     push:
         branches:
             - "main"
+            - "fix-check-tx-issue"
 
 concurrency:
   # Cancel old runs if there is a new commit in the same branch
