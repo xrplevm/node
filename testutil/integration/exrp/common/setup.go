@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
 
 	dbm "github.com/cosmos/cosmos-db"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
@@ -103,6 +104,11 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 
 	invCheckPeriod := uint(5)
 
+	evmChainID, err := cmd.CosmosChainIDToEvmChainID(chainID)
+	if err != nil {
+		panic(err)
+	}
+
 	return app.New(
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
@@ -110,6 +116,7 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		loadLatest,
 		map[int64]bool{},
 		invCheckPeriod,
+		evmChainID,
 		simutils.NewAppOptionsWithFlagHome(MustGetIntegrationTestNodeHome()),
 		append(customBaseAppOptions, baseapp.SetChainID(chainID))...,
 	)

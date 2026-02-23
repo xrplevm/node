@@ -266,10 +266,10 @@ func New(
 	loadLatest bool,
 	skipUpgradeHeights map[int64]bool,
 	invCheckPeriod uint,
+	evmChainID uint64,
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
-	evmChainID := cast.ToUint64(appOpts.Get(srvflags.EVMChainID))
 	encodingConfig := MakeEncodingConfig(evmChainID)
 	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
