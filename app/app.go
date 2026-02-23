@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -479,19 +480,25 @@ func New(
 		&app.Erc20Keeper,
 		evmChainID,
 		tracer,
-	).WithStaticPrecompiles(
-		precompiletypes.DefaultStaticPrecompiles(
-			*app.StakingKeeper,
-			app.DistrKeeper,
-			app.BankKeeper,
-			&app.Erc20Keeper,
-			&app.TransferKeeper,
-			app.IBCKeeper.ChannelKeeper,
-			app.GovKeeper,
-			app.SlashingKeeper,
-			appCodec,
-		),
-	)
+	).WithDefaultEvmCoinInfo(evmtypes.EvmCoinInfo{
+		Denom:         BaseDenom,
+		Decimals:      18,
+		ExtendedDenom: BaseDenom,
+		DisplayDenom:  Denom,
+	}).
+		WithStaticPrecompiles(
+			precompiletypes.DefaultStaticPrecompiles(
+				*app.StakingKeeper,
+				app.DistrKeeper,
+				app.BankKeeper,
+				&app.Erc20Keeper,
+				&app.TransferKeeper,
+				app.IBCKeeper.ChannelKeeper,
+				app.GovKeeper,
+				app.SlashingKeeper,
+				appCodec,
+			),
+		)
 
 	// ERC20 Keeper
 	app.Erc20Keeper = erc20keeper.NewKeeper(
@@ -891,6 +898,12 @@ func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.
 
 func (app *App) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
 	return app.mm.PreBlock(ctx)
+}
+
+func (app *App) FinalizeBlock(req *abci.RequestFinalizeBlock) (res *abci.ResponseFinalizeBlock, err error) {
+	res, err = app.BaseApp.FinalizeBlock(req)
+	fmt.Println("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 FinalizeBlock", hex.EncodeToString(res.AppHash))
+	return res, err
 }
 
 // LoadHeight loads a particular height
