@@ -50,9 +50,16 @@ import (
 	"github.com/xrplevm/node/v10/app"
 )
 
-type emptyAppOptions struct{}
+type tmpAppOptions struct{}
 
-func (ao emptyAppOptions) Get(_ string) interface{} { return nil }
+func (ao tmpAppOptions) Get(searchFlag string) interface{} {
+	switch searchFlag {
+	case flags.FlagHome:
+		return tempDir(app.DefaultNodeHome)
+	default:
+		return nil
+	}
+}
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
 func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
@@ -64,7 +71,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, nil,
 		0,
-		emptyAppOptions{},
+		tmpAppOptions{},
 	)
 	encodingConfig := sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
@@ -423,4 +430,14 @@ func getChainIDFromOpts(appOpts servertypes.AppOptions) (chainID string, err err
 	}
 
 	return
+}
+
+func tempDir(defaultHome string) string {
+	dir, err := os.MkdirTemp("", ".exrpd-tmp")
+	if err != nil {
+		dir = defaultHome
+	}
+	defer os.RemoveAll(dir)
+
+	return dir
 }
