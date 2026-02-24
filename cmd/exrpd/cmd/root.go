@@ -188,6 +188,7 @@ func initRootCmd(
 		pruning.Cmd(a.newApp, app.DefaultNodeHome),
 		confixcmd.ConfigCommand(),
 		snapshot.Cmd(a.newApp),
+		testnetUnsafeStartLocalValidatorCmd(a),
 	)
 
 	// add server commands
