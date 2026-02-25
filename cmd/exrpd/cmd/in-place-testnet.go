@@ -353,22 +353,21 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 	if err != nil {
 		return err
 	}
+	amount, _ := math.NewIntFromString("10000000000000000000000")
 	// Fund accounts with both the bond denom and axrp (needed for gov deposits and gas)
 	defaultCoins := sdk.NewCoins(
-		sdk.NewInt64Coin(xrplevm.BaseDenom, 1000000000000000000),
+		sdk.NewCoin(xrplevm.BaseDenom, amount),
 	)
 
 	// Fund testnet accounts
 	for _, account := range args.accountsToFund {
-		for i := 0; i < 50; i++ {
-			err := app.BankKeeper.MintCoins(appCtx, evmtypes.ModuleName, defaultCoins)
-			if err != nil {
-				return err
-			}
-			err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
-			if err != nil {
-				return err
-			}
+		err := app.BankKeeper.MintCoins(appCtx, evmtypes.ModuleName, defaultCoins)
+		if err != nil {
+			return err
+		}
+		err = app.BankKeeper.SendCoinsFromModuleToAccount(appCtx, evmtypes.ModuleName, account, defaultCoins)
+		if err != nil {
+			return err
 		}
 	}
 
