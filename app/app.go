@@ -491,7 +491,12 @@ func New(
 			app.SlashingKeeper,
 			appCodec,
 		),
-	)
+	).WithDefaultEvmCoinInfo(evmtypes.EvmCoinInfo{
+		Denom:         BaseDenom,
+		ExtendedDenom: BaseDenom,
+		DisplayDenom:  Denom,
+		Decimals:      18,
+	})
 
 	// ERC20 Keeper
 	app.Erc20Keeper = erc20keeper.NewKeeper(
@@ -572,9 +577,7 @@ func New(
 	govKeeper.SetLegacyRouter(govRouter)
 
 	app.GovKeeper = *govKeeper.SetHooks(
-		govtypes.NewMultiGovHooks(
-		// register the governance hooks
-		),
+		govtypes.NewMultiGovHooks(),
 	)
 
 	/**** IBC Routing ****/
