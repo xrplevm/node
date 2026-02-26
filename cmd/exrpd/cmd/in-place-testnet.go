@@ -123,7 +123,7 @@ func getCommandArgs(appOpts servertypes.AppOptions) (valArgs, error) {
 	if err != nil {
 		return args, fmt.Errorf("cannot decode validator pubkey %w", err)
 	}
-	args.validatorConsPubKeyByte = []byte(decPubKey)
+	args.validatorConsPubKeyByte = decPubKey
 
 	// validate  and set validator privkey
 	validatorPrivKey := cast.ToString(appOpts.Get(flagValidatorPrivKey))
@@ -134,7 +134,7 @@ func getCommandArgs(appOpts servertypes.AppOptions) (valArgs, error) {
 	if err != nil {
 		return args, fmt.Errorf("cannot decode validator private key %w", err)
 	}
-	args.validatorConsPrivKey = tmd25519.PrivKey([]byte(decPrivKey))
+	args.validatorConsPrivKey = tmd25519.PrivKey(decPrivKey)
 
 	// validate  and set accounts to fund
 	accountsString := cast.ToString(appOpts.Get(flagAccountsToFund))
@@ -290,6 +290,7 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 			store.Delete(stakingtypes.GetValidatorsByPowerIndexKey(v, app.StakingKeeper.PowerReduction(appCtx), app.StakingKeeper.ValidatorAddressCodec()))
 			store.Delete(stakingtypes.GetLastValidatorPowerKey(valAddr))
 			if v.IsUnbonding() {
+				//nolint:errcheck
 				app.StakingKeeper.DeleteValidatorQueueTimeSlice(appCtx, v.UnbondingTime, v.UnbondingHeight)
 			}
 			if args.replaceValidator {
@@ -304,21 +305,28 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 	}
 
 	// Add our validator to power and last validators store
+	//nolint:errcheck
 	app.StakingKeeper.SetValidator(appCtx, newVal)
 	err = app.StakingKeeper.SetValidatorByConsAddr(appCtx, newVal)
 	if err != nil {
 		return err
 	}
+	//nolint:errcheck
 	app.StakingKeeper.SetValidatorByPowerIndex(appCtx, newVal)
+	//nolint:errcheck
 	app.StakingKeeper.SetLastValidatorPower(appCtx, newValAddr, valVotingPower)
 	if err := app.StakingKeeper.Hooks().AfterValidatorCreated(appCtx, newValAddr); err != nil {
 		return err
 	}
 	// DISTRIBUTION
 	// Initialize records for this validator across all distribution stores
+	//nolint:errcheck
 	app.DistrKeeper.SetValidatorHistoricalRewards(appCtx, newValAddr, 0, distrtypes.NewValidatorHistoricalRewards(sdk.DecCoins{}, 1))
+	//nolint:errcheck
 	app.DistrKeeper.SetValidatorCurrentRewards(appCtx, newValAddr, distrtypes.NewValidatorCurrentRewards(sdk.DecCoins{}, 1))
+	//nolint:errcheck
 	app.DistrKeeper.SetValidatorAccumulatedCommission(appCtx, newValAddr, distrtypes.InitialValidatorAccumulatedCommission())
+	//nolint:errcheck
 	app.DistrKeeper.SetValidatorOutstandingRewards(appCtx, newValAddr, distrtypes.ValidatorOutstandingRewards{Rewards: sdk.DecCoins{}})
 
 	// SLASHING
@@ -329,7 +337,7 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 		StartHeight: app.LastBlockHeight() - 1,
 		Tombstoned:  false,
 	}
-
+	//nolint:errcheck
 	app.SlashingKeeper.SetValidatorSigningInfo(appCtx, newConsAddr, newValidatorSigningInfo)
 
 	// GOVERNANCE
@@ -350,9 +358,6 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 	appCtx.Logger().Info("Updated governance params", "voting_period", shortVotingPeriod, "expedited_voting_period", expeditedVotingPeriod, "min_deposit", params.MinDeposit)
 
 	// BANK
-	if err != nil {
-		return err
-	}
 	amount, _ := math.NewIntFromString("10000000000000000000000")
 	// Fund accounts with both the bond denom and axrp (needed for gov deposits and gas)
 	defaultCoins := sdk.NewCoins(
@@ -486,6 +491,7 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 			// logger.Info("Commit signature", "idx", idx, "address", fmt.Sprintf("%X", validatorAddress), "commitSig", commitSig)
 			if validatorAddress.String() == args.replacedConsensusAddress {
 				logger.Info("Found validator to replace", "idx", idx, "consensus_address", fmt.Sprintf("%X", validatorAddress))
+				//nolint:gosec
 				vote = lastCommit.GetVote(int32(idx))
 				sigIndex = idx
 				break
@@ -505,7 +511,7 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 			BlockIDFlag:      tmtypes.BlockIDFlagCommit,
 			ValidatorAddress: newTmVal.Address,
 			Timestamp:        vote.Timestamp,
-			Signature:        []byte(signatureBytes),
+			Signature:        signatureBytes,
 		}
 	} else {
 		// Clear the validator set
@@ -516,6 +522,7 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 			if commitSig.BlockIDFlag == tmtypes.BlockIDFlagAbsent {
 				continue
 			}
+			//nolint:gosec
 			vote = lastCommit.GetVote(int32(idx))
 			break
 		}
@@ -533,7 +540,7 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 			BlockIDFlag:      tmtypes.BlockIDFlagCommit,
 			ValidatorAddress: newTmVal.Address,
 			Timestamp:        vote.Timestamp,
-			Signature:        []byte(signatureBytes),
+			Signature:        signatureBytes,
 		}}
 	}
 
@@ -560,8 +567,11 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 
 	// when the storeState is saved in consensus it is done for the nextBlock+1,
 	// that is why we need to update 2 future blocks
+	//nolint:errcheck
 	saveValidatorsInfo(stateDB, state.LastBlockHeight, valInfo)
+	//nolint:errcheck
 	saveValidatorsInfo(stateDB, state.LastBlockHeight+1, valInfo)
+	//nolint:errcheck
 	saveValidatorsInfo(stateDB, state.LastBlockHeight+2, valInfo)
 
 	// if store height is greater than app height and state height, we will remove the last block from the store to avoid
@@ -573,6 +583,7 @@ func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, app
 	// that greater version from the app iavl store
 	blockStoreState := store.LoadBlockStoreState(blockStoreDB)
 	if blockStoreState.Height > state.LastBlockHeight && blockStoreState.Height > appHeight {
+		//nolint:errcheck
 		blockStore.DeleteLatestBlock()
 	}
 
