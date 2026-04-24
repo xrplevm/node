@@ -34,5 +34,3 @@ jobs:
                   target: release
                   push: true
                   tags: peersyst/exrp:${{ env.BRANCH }}
-                  secrets: |
-                    ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
