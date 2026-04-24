@@ -159,10 +159,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		panic(err)
 	}
 
-	overwriteFlagDefaults(rootCmd, map[string]string{
-		flags.FlagKeyringBackend: "test",
-	})
-
 	return rootCmd, encodingConfig
 }
 
