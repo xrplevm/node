@@ -12,9 +12,13 @@ on:
         description: The branch or the commit sha to push tag to
         required: true
 
+permissions: {}
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Free disk space
         run: rm -rf /opt/hostedtoolcache

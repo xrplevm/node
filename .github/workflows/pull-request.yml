@@ -4,6 +4,8 @@ on:
     pull_request:
         types: [opened, synchronize]
 
+permissions: {}
+
 concurrency:
     # Cancel old runs if there is a new commit in the same branch
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +14,8 @@ concurrency:
 jobs:
     integration:
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
         steps:
             -   uses: actions/checkout@v2
             -   uses: docker/setup-qemu-action@v2

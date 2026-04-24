@@ -12,11 +12,13 @@ on:
         description: Is this the latest release
         type: boolean
         required: true
-permissions:
-  contents: write
+permissions: {}
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,6 +60,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   goreleaser:
     needs: [ release ]
+    permissions:
+      contents: write
     uses: ./.github/workflows/goreleaser.yml
     secrets: inherit
     with:

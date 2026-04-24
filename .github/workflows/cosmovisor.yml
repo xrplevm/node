@@ -7,9 +7,13 @@ on:
         description: The docker tag for the publish
         required: true
 
+permissions: {}
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v2
