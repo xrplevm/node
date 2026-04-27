@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -139,7 +140,10 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 
 			chainID, err := CosmosChainIDToEvmChainID(initClientCtx.ChainID)
 			if err != nil {
-				chainID = 9999
+				if initClientCtx.ChainID != "" {
+					return fmt.Errorf("invalid chain ID format %q: %w", initClientCtx.ChainID, err)
+				}
+				chainID = 0
 			}
 			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, chainID)
 			customTMConfig := initTendermintConfig()
