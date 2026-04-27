@@ -29,6 +29,7 @@ func newCosmosAnteHandler(ctx sdk.Context, options baseevmante.HandlerOptions) s
 			sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}),
 			sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}),
+			sdk.MsgTypeURL(&stakingtypes.MsgCreateValidator{}),
 			sdk.MsgTypeURL(&sdkvesting.MsgCreateVestingAccount{}),
 			sdk.MsgTypeURL(&evmtypes.MsgEthereumTx{}),
 		),
