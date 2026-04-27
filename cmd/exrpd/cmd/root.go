@@ -41,12 +41,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	"github.com/spf13/cast"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
 	evmclient "github.com/cosmos/evm/client"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
+	"github.com/spf13/cast"
+	"github.com/spf13/cobra"
 	"github.com/xrplevm/node/v10/app"
 )
 
@@ -158,10 +156,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
 	}
-
-	overwriteFlagDefaults(rootCmd, map[string]string{
-		flags.FlagKeyringBackend: "test",
-	})
 
 	return rootCmd, encodingConfig
 }
@@ -281,23 +275,6 @@ func txCommand() *cobra.Command {
 func addModuleInitFlags(startCmd *cobra.Command) {
 	crisis.AddModuleInitFlags(startCmd)
 	// this line is used by starport scaffolding # root/arguments
-}
-
-func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
-	set := func(s *pflag.FlagSet, key, val string) {
-		if f := s.Lookup(key); f != nil {
-			f.DefValue = val
-			//nolint:errcheck
-			f.Value.Set(val)
-		}
-	}
-	for key, val := range defaults {
-		set(c.Flags(), key, val)
-		set(c.PersistentFlags(), key, val)
-	}
-	for _, c := range c.Commands() {
-		overwriteFlagDefaults(c, defaults)
-	}
 }
 
 type appCreator struct {
