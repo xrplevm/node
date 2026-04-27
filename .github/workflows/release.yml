@@ -32,8 +32,10 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PUSH_TOKEN }}
-      - run: |
-          TAG=${{ github.event.inputs.tag }}
+      - name: Parse version
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       # Build and push docker image
       - name: Build docker image
