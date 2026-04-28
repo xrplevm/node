@@ -284,6 +284,21 @@ func (mr *MockStakingKeeperMockRecorder) GetParams(ctx interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParams", reflect.TypeOf((*MockStakingKeeper)(nil).GetParams), ctx)
 }
 
+// GetUnbondingDelegations mocks base method.
+func (m *MockStakingKeeper) GetUnbondingDelegations(ctx context.Context, delegator types.AccAddress, maxRetrieve uint16) ([]types1.UnbondingDelegation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnbondingDelegations", ctx, delegator, maxRetrieve)
+	ret0, _ := ret[0].([]types1.UnbondingDelegation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUnbondingDelegations indicates an expected call of GetUnbondingDelegations.
+func (mr *MockStakingKeeperMockRecorder) GetUnbondingDelegations(ctx, delegator, maxRetrieve interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnbondingDelegations", reflect.TypeOf((*MockStakingKeeper)(nil).GetUnbondingDelegations), ctx, delegator, maxRetrieve)
+}
+
 // GetUnbondingDelegationsFromValidator mocks base method.
 func (m *MockStakingKeeper) GetUnbondingDelegationsFromValidator(ctx context.Context, validator types.ValAddress) ([]types1.UnbondingDelegation, error) {
 	m.ctrl.T.Helper()
