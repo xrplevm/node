@@ -5,6 +5,7 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -28,38 +29,32 @@ func newAnteHandler(
 	return func(
 		ctx sdk.Context, tx sdk.Tx, sim bool,
 	) (newCtx sdk.Context, err error) {
-		var anteHandler sdk.AnteHandler
-
-		txWithExtensions, ok := tx.(ante.HasExtensionOptionsTx)
-		if ok {
-			opts := txWithExtensions.GetExtensionOptions()
-			if len(opts) > 0 {
-				switch typeURL := opts[0].GetTypeUrl(); typeURL {
-				case "/cosmos.evm.vm.v1.ExtensionOptionsEthereumTx":
-					// handle as *evmtypes.MsgEthereumTx
-					anteHandler = evmHandler(ctx, options)
-				case "/cosmos.evm.ante.v1.ExtensionOptionDynamicFeeTx":
-					// cosmos-sdk tx with dynamic fee extension
-					anteHandler = cosmosHandler(ctx, options)
-				default:
-					return ctx, errorsmod.Wrapf(
-						errortypes.ErrUnknownExtensionOptions,
-						"rejecting tx with unsupported extension option: %s", typeURL,
-					)
-				}
-
-				return anteHandler(ctx, tx, sim)
-			}
+		if tx == nil {
+			return ctx, errorsmod.Wrap(errortypes.ErrUnknownRequest, "tx is nil")
 		}
 
-		// handle as totally normal Cosmos SDK tx
-		switch tx.(type) {
-		case sdk.Tx:
+		var opts []*codectypes.Any
+		if txExt, ok := tx.(ante.HasExtensionOptionsTx); ok {
+			opts = txExt.GetExtensionOptions()
+		}
+		if len(opts) == 0 {
+			return cosmosHandler(ctx, options)(ctx, tx, sim)
+		}
+
+		var anteHandler sdk.AnteHandler
+		switch typeURL := opts[0].GetTypeUrl(); typeURL {
+		case "/cosmos.evm.vm.v1.ExtensionOptionsEthereumTx":
+			// handle as *evmtypes.MsgEthereumTx
+			anteHandler = evmHandler(ctx, options)
+		case "/cosmos.evm.ante.v1.ExtensionOptionDynamicFeeTx":
+			// cosmos-sdk tx with dynamic fee extension
 			anteHandler = cosmosHandler(ctx, options)
 		default:
-			return ctx, errorsmod.Wrapf(errortypes.ErrUnknownRequest, "invalid transaction type: %T", tx)
+			return ctx, errorsmod.Wrapf(
+				errortypes.ErrUnknownExtensionOptions,
+				"rejecting tx with unsupported extension option: %s", typeURL,
+			)
 		}
-
 		return anteHandler(ctx, tx, sim)
 	}
 }

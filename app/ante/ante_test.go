@@ -27,8 +27,10 @@ type routingTx struct {
 	extensionOptions []*codectypes.Any
 }
 
-var _ sdk.Tx = routingTx{}
-var _ authante.HasExtensionOptionsTx = routingTx{}
+var (
+	_ sdk.Tx                         = routingTx{}
+	_ authante.HasExtensionOptionsTx = routingTx{}
+)
 
 func (tx routingTx) GetMsgs() []sdk.Msg {
 	return tx.msgs
@@ -98,7 +100,7 @@ func TestNewAnteHandlerRouting(t *testing.T) {
 			name:            "nil tx is rejected",
 			tx:              nil,
 			wantErr:         errortypes.ErrUnknownRequest,
-			wantErrContains: "invalid transaction type: <nil>",
+			wantErrContains: "tx is nil",
 		},
 	}
 
