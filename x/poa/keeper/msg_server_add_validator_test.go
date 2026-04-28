@@ -7,7 +7,7 @@ import (
 	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/x/poa/testutil"
 	"github.com/xrplevm/node/v10/x/poa/types"
