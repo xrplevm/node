@@ -36,8 +36,7 @@ exclude:
   paths:
     - cmd
     - docs
-    - ^app$
-    - ^app/upgrades/
+    - ^app/app\.go$
     - tools
     - tests
     - \.pb\.go$
