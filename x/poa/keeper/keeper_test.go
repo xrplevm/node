@@ -26,6 +26,7 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 		}, nil).AnyTimes()
 		stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).AnyTimes()
 		stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil).AnyTimes()
+		stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil).AnyTimes()
 		stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil).AnyTimes()
 		stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
 		stakingKeeper.EXPECT().RemoveDelegation(ctx, gomock.Any()).Return(nil).AnyTimes()
@@ -425,6 +426,15 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 	}
 }
 
+func mustAccAddress(t testing.TB, address string) sdk.AccAddress {
+	t.Helper()
+
+	accAddr, err := sdk.AccAddressFromBech32(address)
+	require.NoError(t, err)
+
+	return accAddr
+}
+
 func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -525,8 +535,37 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				hooks.EXPECT().BeforeValidatorSlashed(ctx, gomock.Any(), gomock.Any()).Return(errors.New("staking keeper hook error"))
 				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
 
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{}, nil,
+				)
+
 				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(
 					stakingtypes.Validator{}, errors.New("staking keeper remove validator tokens error"),
+				)
+			},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		},
+		{
+			name:             "should fail - staking keeper returns error on GetValidatorDelegations",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			expectedError:    errors.New("staking keeper get validator delegations error"),
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom: "BND",
+				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{
+					Tokens: math.NewInt(0),
+				}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
+					[]stakingtypes.UnbondingDelegation{}, nil,
+				)
+
+				hooks := testutil.NewMockStakingHooks(ctrl)
+				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					nil, errors.New("staking keeper get validator delegations error"),
 				)
 			},
 			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
@@ -538,28 +577,46 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				validatorTokens := math.NewInt(10)
+				validator := stakingtypes.Validator{
+					OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+					Tokens:          validatorTokens,
+					DelegatorShares: math.LegacyNewDec(10),
+					Status:          stakingtypes.Bonded,
+				}
+
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
 				}, nil)
-				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{
-					Tokens: math.NewInt(0),
-				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(validator, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
 					[]stakingtypes.UnbondingDelegation{}, nil,
 				)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				hooks.EXPECT().BeforeValidatorSlashed(ctx, gomock.Any(), math.LegacyOneDec()).Return(nil)
 				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
 
-				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{}, nil,
+				)
+
+				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, validator, validatorTokens).Return(
 					stakingtypes.Validator{
-						Status: stakingtypes.Bonded,
+						OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						DelegatorShares: validator.DelegatorShares,
+						Status:          stakingtypes.Bonded,
 					}, nil,
 				)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank keeper burn coins error"))
+				validatorTokens := math.NewInt(10)
+				bankKeeper.EXPECT().BurnCoins(
+					ctx,
+					stakingtypes.BondedPoolName,
+					sdk.NewCoins(sdk.NewCoin("BND", validatorTokens)),
+				).Return(errors.New("bank keeper burn coins error"))
 			},
 		},
 		//nolint:dupl
@@ -569,35 +626,52 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				validatorTokens := math.NewInt(10)
+				validator := stakingtypes.Validator{
+					OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+					Tokens:          validatorTokens,
+					DelegatorShares: math.LegacyNewDec(10),
+					Status:          stakingtypes.Unbonding,
+				}
+
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
 				}, nil)
-				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{
-					Tokens: math.NewInt(0),
-				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(validator, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
 					[]stakingtypes.UnbondingDelegation{}, nil,
 				)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				hooks.EXPECT().BeforeValidatorSlashed(ctx, gomock.Any(), math.LegacyOneDec()).Return(nil)
 				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
 
-				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{}, nil,
+				)
+
+				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, validator, validatorTokens).Return(
 					stakingtypes.Validator{
-						Status: stakingtypes.Unbonding,
+						OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						DelegatorShares: validator.DelegatorShares,
+						Status:          stakingtypes.Unbonding,
 					}, nil,
 				)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(errors.New("bank keeper burn coins error"))
+				validatorTokens := math.NewInt(10)
+				bankKeeper.EXPECT().BurnCoins(
+					ctx,
+					stakingtypes.NotBondedPoolName,
+					sdk.NewCoins(sdk.NewCoin("BND", validatorTokens)),
+				).Return(errors.New("bank keeper burn coins error"))
 			},
 		},
 		{
 			name:             "should fail - bank keeper returns error for invalid validator status",
 			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
 			expectedError:    types.ErrInvalidValidatorStatus,
-			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -612,6 +686,10 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
 				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{}, nil,
+				)
 
 				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(
 					stakingtypes.Validator{
@@ -640,18 +718,217 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
 				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
 
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{{
+						DelegatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+						ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						Shares:           math.LegacyOneDec(),
+					}}, nil,
+				)
+
 				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(
 					stakingtypes.Validator{
 						Status: stakingtypes.Bonded,
 					}, nil,
 				)
 
-				stakingKeeper.EXPECT().Unbond(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
-					math.NewInt(0), errors.New("staking keeper unbond error"),
-				)
+				stakingKeeper.EXPECT().Unbond(
+					ctx,
+					mustAccAddress(t, "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp"),
+					gomock.Any(),
+					math.LegacyOneDec(),
+				).Return(math.NewInt(0), errors.New("staking keeper unbond error"))
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().BurnCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name:             "should fail - invalid delegator bech32 in delegation list",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			expectedError:    errors.New("decoding bech32 failed"),
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom: "BND",
+				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{
+					Tokens: math.NewInt(0),
+				}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
+					[]stakingtypes.UnbondingDelegation{}, nil,
+				)
+
+				hooks := testutil.NewMockStakingHooks(ctrl)
+				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{{
+						DelegatorAddress: "not-a-valid-bech32",
+						ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						Shares:           math.LegacyOneDec(),
+					}}, nil,
+				)
+			},
+			bankMocks: func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
+		},
+		{
+			name:             "should succeed - no delegations skips unbond",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			expectedError:    nil,
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				validatorTokens := math.ZeroInt()
+				validator := stakingtypes.Validator{
+					OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+					Tokens:          validatorTokens,
+				}
+
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom: "BND",
+				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(validator, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
+					[]stakingtypes.UnbondingDelegation{}, nil,
+				)
+
+				hooks := testutil.NewMockStakingHooks(ctrl)
+				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
+
+				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, validator, validatorTokens).Return(
+					stakingtypes.Validator{
+						OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						Status:          stakingtypes.Bonded,
+					}, nil,
+				)
+			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
+				bankKeeper.EXPECT().BurnCoins(
+					ctx,
+					stakingtypes.BondedPoolName,
+					sdk.NewCoins(sdk.NewCoin("BND", math.ZeroInt())),
+				).Return(nil)
+			},
+		},
+		{
+			name:             "should succeed - burns tokens and unbonds only self delegation",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			expectedError:    nil,
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				selfDelegatorAddr := mustAccAddress(t, "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp")
+				validatorTokens := math.NewInt(1)
+				validator := stakingtypes.Validator{
+					OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+					Tokens:          validatorTokens,
+					DelegatorShares: math.LegacyOneDec(),
+					Status:          stakingtypes.Bonded,
+				}
+
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom: "BND",
+				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(validator, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
+					[]stakingtypes.UnbondingDelegation{}, nil,
+				)
+
+				hooks := testutil.NewMockStakingHooks(ctrl)
+				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				hooks.EXPECT().BeforeValidatorSlashed(ctx, gomock.Any(), math.LegacyOneDec()).Return(nil)
+				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{
+						{
+							DelegatorAddress: selfDelegatorAddr.String(),
+							ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+							Shares:           math.LegacyOneDec(),
+						},
+					}, nil,
+				)
+
+				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, validator, validatorTokens).Return(
+					stakingtypes.Validator{
+						OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						DelegatorShares: validator.DelegatorShares,
+						Status:          stakingtypes.Bonded,
+					}, nil,
+				)
+
+				stakingKeeper.EXPECT().Unbond(ctx, selfDelegatorAddr, gomock.Any(), math.LegacyOneDec()).Return(math.NewInt(0), nil)
+			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
+				validatorTokens := math.NewInt(1)
+				bankKeeper.EXPECT().BurnCoins(
+					ctx,
+					stakingtypes.BondedPoolName,
+					sdk.NewCoins(sdk.NewCoin("BND", validatorTokens)),
+				).Return(nil)
+			},
+		},
+		{
+			name:             "should succeed - burns tokens and unbonds self plus foreign delegators",
+			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			expectedError:    nil,
+			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+				selfDelegatorAddr := mustAccAddress(t, "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp")
+				foreignDelegatorAddr := mustAccAddress(t, "ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq")
+				validatorTokens := math.NewInt(3)
+				validator := stakingtypes.Validator{
+					OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+					Tokens:          validatorTokens,
+					DelegatorShares: math.LegacyNewDec(3),
+					Status:          stakingtypes.Bonded,
+				}
+
+				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+					BondDenom: "BND",
+				}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(validator, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return(
+					[]stakingtypes.UnbondingDelegation{}, nil,
+				)
+
+				hooks := testutil.NewMockStakingHooks(ctrl)
+				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
+				hooks.EXPECT().BeforeValidatorSlashed(ctx, gomock.Any(), math.LegacyOneDec()).Return(nil)
+				stakingKeeper.EXPECT().Hooks().Return(hooks).AnyTimes()
+
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return(
+					[]stakingtypes.Delegation{
+						{
+							DelegatorAddress: selfDelegatorAddr.String(),
+							ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+							Shares:           math.LegacyOneDec(),
+						},
+						{
+							DelegatorAddress: foreignDelegatorAddr.String(),
+							ValidatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+							Shares:           math.LegacyNewDec(2),
+						},
+					}, nil,
+				)
+
+				stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, validator, validatorTokens).Return(
+					stakingtypes.Validator{
+						OperatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+						DelegatorShares: validator.DelegatorShares,
+						Status:          stakingtypes.Bonded,
+					}, nil,
+				)
+
+				stakingKeeper.EXPECT().Unbond(ctx, selfDelegatorAddr, gomock.Any(), math.LegacyOneDec()).Return(math.NewInt(0), nil)
+				stakingKeeper.EXPECT().Unbond(ctx, foreignDelegatorAddr, gomock.Any(), math.LegacyNewDec(2)).Return(math.NewInt(0), nil)
+			},
+			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
+				validatorTokens := math.NewInt(3)
+				bankKeeper.EXPECT().BurnCoins(
+					ctx,
+					stakingtypes.BondedPoolName,
+					sdk.NewCoins(sdk.NewCoin("BND", validatorTokens)),
+				).Return(nil)
 			},
 		},
 	}
