@@ -249,6 +249,20 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		}
 	}
 
+	// Fetch and validate delegations before mutating state.
+	delegations, err := k.sk.GetValidatorDelegations(ctx, valAddress)
+	if err != nil {
+		return err
+	}
+	delegatorAddrs := make([]sdk.AccAddress, 0, len(delegations))
+	for _, del := range delegations {
+		delAddr, err := sdk.AccAddressFromBech32(del.DelegatorAddress)
+		if err != nil {
+			return errors.Wrapf(err, "invalid delegator address %q for validator %q", del.DelegatorAddress, validatorAddress)
+		}
+		delegatorAddrs = append(delegatorAddrs, delAddr)
+	}
+
 	changedVal, err := k.sk.RemoveValidatorTokens(ctx, validator, validator.Tokens)
 	if err != nil {
 		return err
@@ -271,10 +285,13 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		return types.ErrInvalidValidatorStatus
 	}
 
-	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, changedVal.DelegatorShares)
-	if err != nil {
-		return err
+	// Burn the validator tokens first to preserve POA removal semantics: stake is
+	// destroyed, not returned to delegators. Unbond is still used afterwards so
+	// staking removes each delegation's shares through its normal hooks/indexes.
+	for i, del := range delegations {
+		if _, err := k.sk.Unbond(ctx, delegatorAddrs[i], valAddress, del.Shares); err != nil {
+			return errors.Wrapf(err, "failed to unbond delegation from %q to validator %q", del.DelegatorAddress, validatorAddress)
+		}
 	}
 
 	ctx.EventManager().EmitEvent(

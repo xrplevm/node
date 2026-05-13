@@ -36,6 +36,7 @@ type StakingKeeper interface {
 	GetAllValidators(ctx context.Context) (validators []stakingtypes.Validator, err error)
 	GetAllDelegations(ctx context.Context) (delegations []stakingtypes.Delegation, err error)
 	GetAllDelegatorDelegations(ctx context.Context, delegator sdk.AccAddress) ([]stakingtypes.Delegation, error)
+	GetValidatorDelegations(ctx context.Context, valAddr sdk.ValAddress) ([]stakingtypes.Delegation, error)
 	GetUnbondingDelegationsFromValidator(ctx context.Context, validator sdk.ValAddress) ([]stakingtypes.UnbondingDelegation, error)
 	SlashUnbondingDelegation(ctx context.Context, ubd stakingtypes.UnbondingDelegation, infractionHeight int64, slashFactor math.LegacyDec) (totalSlashAmount math.Int, err error)
 	RemoveDelegation(ctx context.Context, delegation stakingtypes.Delegation) error
