@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -48,6 +49,18 @@ func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
 	}
 
 	return setupPoaKeeper(t, stakingExpectations, bankExpectations)
+}
+
+func successfulAddValidatorStakingMocks(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
+	stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
+		BondDenom:     "BND",
+		MaxValidators: 2,
+	}, nil)
+	stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
+	stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).Times(1)
+	stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
+	stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+	stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: sdk.DefaultPowerReduction}, nil).Times(1)
 }
 
 // Define here Keeper methods to be unit tested
@@ -347,16 +360,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			name:             "should pass - MsgAddValidator",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			pubKey:           msgPubKey,
-			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-					BondDenom:     "BND",
-					MaxValidators: 2,
-				}, nil)
-				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
-				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
-				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
-			},
+			stakingMocks:     successfulAddValidatorStakingMocks,
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
 					Denom:  "BND",
@@ -386,6 +390,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 					},
 				}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: sdk.DefaultPowerReduction}, nil).Times(1)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -423,6 +428,47 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKeeper_ExecuteAddValidator_EmitsPostCreateStakingTokens(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pubKey := testutil.NewMockPubKey(ctrl)
+	msgPubKey, _ := types1.NewAnyWithValue(pubKey)
+
+	keeper, ctx := setupPoaKeeper(
+		t,
+		successfulAddValidatorStakingMocks,
+		func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
+			bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
+				Denom:  "BND",
+				Amount: math.NewInt(0),
+			})
+			bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil)
+			bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		},
+	)
+
+	msg := &types.MsgAddValidator{
+		Authority:        keeper.GetAuthority(),
+		ValidatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+		Description: stakingtypes.Description{
+			Moniker: "test",
+		},
+		Pubkey: msgPubKey,
+	}
+
+	err := keeper.ExecuteAddValidator(ctx, msg)
+	require.NoError(t, err)
+
+	events := ctx.EventManager().Events()
+	require.NotEmpty(t, events)
+
+	event := events[len(events)-1]
+	require.Equal(t, types.EventTypeAddValidator, event.Type)
+
+	attribute, ok := event.GetAttribute(types.AttributeStakingTokens)
+	require.True(t, ok)
+	require.Equal(t, fmt.Sprintf("%d", sdk.DefaultPowerReduction), attribute.Value)
 }
 
 func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
