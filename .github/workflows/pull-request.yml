@@ -4,6 +4,8 @@ on:
     pull_request:
         types: [opened, synchronize]
 
+permissions: {}
+
 concurrency:
     # Cancel old runs if there is a new commit in the same branch
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,16 +14,18 @@ concurrency:
 jobs:
     integration:
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
         steps:
-            -   uses: actions/checkout@v2
-            -   uses: docker/setup-qemu-action@v2
-            -   uses: docker/setup-buildx-action@v2
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+            -   uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+            -   uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
             # Build docker image
             - name: Build docker image
-              uses: docker/build-push-action@v4
+              uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
               with:
                   context: .
                   target: integration
                   push: false
-                  secrets: |
-                      ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
+                  provenance: false
+                  sbom: false
