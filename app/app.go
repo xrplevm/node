@@ -76,7 +76,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	testdata_pulsar "github.com/cosmos/cosmos-sdk/testutil/testdata/testpb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -783,8 +782,6 @@ func New(
 		panic(err)
 	}
 	reflectionv1.RegisterReflectionServiceServer(app.GRPCQueryRouter(), reflectionSvc)
-	// add test gRPC service for testing gRPC queries in isolation
-	testdata_pulsar.RegisterQueryServer(app.GRPCQueryRouter(), testdata_pulsar.QueryImpl{})
 
 	// create the simulation manager and define the order of the modules for deterministic simulations
 	//
