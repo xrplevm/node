@@ -15,7 +15,6 @@ import (
 
 	math "cosmossdk.io/math"
 	types "github.com/cosmos/cosmos-sdk/types"
-	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	types0 "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	types1 "github.com/cosmos/cosmos-sdk/x/staking/types"
 	gomock "go.uber.org/mock/gomock"
@@ -463,43 +462,4 @@ func (m *MockSlashingKeeper) GetParams(ctx context.Context) (types0.Params, erro
 func (mr *MockSlashingKeeperMockRecorder) GetParams(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParams", reflect.TypeOf((*MockSlashingKeeper)(nil).GetParams), ctx)
-}
-
-// MockGovKeeper is a mock of GovKeeper interface.
-type MockGovKeeper struct {
-	ctrl     *gomock.Controller
-	recorder *MockGovKeeperMockRecorder
-	isgomock struct{}
-}
-
-// MockGovKeeperMockRecorder is the mock recorder for MockGovKeeper.
-type MockGovKeeperMockRecorder struct {
-	mock *MockGovKeeper
-}
-
-// NewMockGovKeeper creates a new mock instance.
-func NewMockGovKeeper(ctrl *gomock.Controller) *MockGovKeeper {
-	mock := &MockGovKeeper{ctrl: ctrl}
-	mock.recorder = &MockGovKeeperMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockGovKeeper) EXPECT() *MockGovKeeperMockRecorder {
-	return m.recorder
-}
-
-// SubmitProposal mocks base method.
-func (m *MockGovKeeper) SubmitProposal(ctx context.Context, messages []types.Msg, metadata string) (v1.Proposal, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitProposal", ctx, messages, metadata)
-	ret0, _ := ret[0].(v1.Proposal)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubmitProposal indicates an expected call of SubmitProposal.
-func (mr *MockGovKeeperMockRecorder) SubmitProposal(ctx, messages, metadata any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitProposal", reflect.TypeOf((*MockGovKeeper)(nil).SubmitProposal), ctx, messages, metadata)
 }
