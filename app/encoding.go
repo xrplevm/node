@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	legacytypes "github.com/xrplevm/node/v10/types/legacy/ethermint/types"
@@ -39,10 +41,13 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 		},
 	}
 
-	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
+	interfaceRegistry, err := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles:     proto.HybridResolver,
 		SigningOptions: signingOptions,
 	})
+	if err != nil {
+		panic(fmt.Errorf("failed to create interface registry: %w", err))
+	}
 
 	interfaceRegistry.RegisterImplementations((*sdk.Msg)(nil),
 		&poalegacytypes.MsgAddValidator{},
