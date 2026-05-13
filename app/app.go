@@ -751,7 +751,6 @@ func New(
 		feegrant.ModuleName,
 		upgradetypes.ModuleName,
 		// Evmos
-		erc20types.ModuleName,
 		poatypes.ModuleName,
 		crisistypes.ModuleName,
 		ratelimittypes.ModuleName,
