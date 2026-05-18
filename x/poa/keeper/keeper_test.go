@@ -8,10 +8,10 @@ import (
 	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/x/poa/testutil"
 	"github.com/xrplevm/node/v10/x/poa/types"
+	"go.uber.org/mock/gomock"
 )
 
 func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {

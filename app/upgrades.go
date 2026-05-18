@@ -79,8 +79,12 @@ func (app *App) setupUpgradeHandlers() {
 	var storeUpgrades *storetypes.StoreUpgrades
 
 	switch upgradeInfo.Name {
-	case v5.UpgradeName, v6.UpgradeName:
-		// No store upgrades for v5
+	case v5.UpgradeName,
+		v6.UpgradeName,
+		v7.UpgradeName,
+		v8.UpgradeName,
+		v9.UpgradeName,
+		v10.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{}
 	}
 
