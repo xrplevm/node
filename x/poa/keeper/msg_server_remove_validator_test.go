@@ -10,10 +10,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/x/poa/testutil"
 	"github.com/xrplevm/node/v10/x/poa/types"
+	"go.uber.org/mock/gomock"
 )
 
 func TestMsgServer_RemoveValidator(t *testing.T) {
