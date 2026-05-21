@@ -1,7 +1,6 @@
 package ante
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -32,44 +31,71 @@ func setupPoaDecorator(t *testing.T) (
 func TestPoaDecorator_AnteHandle(t *testing.T) {
 	tt := []struct {
 		name          string
+		blockHeight   int64
 		msgs          []sdk.Msg
 		expectedError error
 	}{
 		{
-			name: "should return error - tx not allowed",
-			msgs: []sdk.Msg{
-				&stakingtypes.MsgUndelegate{},
-				&stakingtypes.MsgBeginRedelegate{},
-				&stakingtypes.MsgDelegate{},
-				&stakingtypes.MsgCancelUnbondingDelegation{},
-			},
-			expectedError: errors.New("tx type not allowed"),
+			name:          "should return error - rejects MsgUndelegate post-genesis",
+			blockHeight:   1,
+			msgs:          []sdk.Msg{&stakingtypes.MsgUndelegate{}},
+			expectedError: ErrTxTypeNotAllowed,
 		},
 		{
-			name: "should not return error",
-			msgs: []sdk.Msg{
-				&stakingtypes.MsgEditValidator{},
-			},
+			name:          "should return error - rejects MsgBeginRedelegate post-genesis",
+			blockHeight:   1,
+			msgs:          []sdk.Msg{&stakingtypes.MsgBeginRedelegate{}},
+			expectedError: ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "should return error - rejects MsgDelegate post-genesis",
+			blockHeight:   1,
+			msgs:          []sdk.Msg{&stakingtypes.MsgDelegate{}},
+			expectedError: ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "should return error - rejects MsgCancelUnbondingDelegation post-genesis",
+			blockHeight:   1,
+			msgs:          []sdk.Msg{&stakingtypes.MsgCancelUnbondingDelegation{}},
+			expectedError: ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "should return error - rejects MsgCreateValidator post-genesis",
+			blockHeight:   1,
+			msgs:          []sdk.Msg{&stakingtypes.MsgCreateValidator{}},
+			expectedError: ErrTxTypeNotAllowed,
+		},
+		{
+			name:        "pass - allows MsgEditValidator post-genesis",
+			blockHeight: 1,
+			msgs:        []sdk.Msg{&stakingtypes.MsgEditValidator{}},
+		},
+		{
+			name:        "pass - allows MsgCreateValidator at genesis",
+			blockHeight: 0,
+			msgs:        []sdk.Msg{&stakingtypes.MsgCreateValidator{}},
 		},
 	}
 
 	for _, tc := range tt {
-		pd, ctx := setupPoaDecorator(t)
+		t.Run(tc.name, func(t *testing.T) {
+			pd, ctx := setupPoaDecorator(t)
+			ctx = ctx.WithBlockHeight(tc.blockHeight)
 
-		ctrl := gomock.NewController(t)
-		txMock := testutil.NewMockTx(ctrl)
-		txMock.EXPECT().GetMsgs().Return(tc.msgs).AnyTimes()
+			ctrl := gomock.NewController(t)
+			txMock := testutil.NewMockTx(ctrl)
+			txMock.EXPECT().GetMsgs().Return(tc.msgs).AnyTimes()
 
-		mockNext := func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
-			return ctx, nil
-		}
+			mockNext := func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
+				return ctx, nil
+			}
 
-		_, err := pd.AnteHandle(ctx, txMock, false, mockNext)
-		if tc.expectedError != nil {
-			require.Error(t, err)
-			require.Equal(t, tc.expectedError, err)
-		} else {
-			require.NoError(t, err)
-		}
+			_, err := pd.AnteHandle(ctx, txMock, false, mockNext)
+			if tc.expectedError != nil {
+				require.ErrorIs(t, err, tc.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }

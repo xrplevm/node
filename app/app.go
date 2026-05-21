@@ -1125,6 +1125,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govv1.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(poatypes.ModuleName)
 
 	keyTable := ibcclienttypes.ParamKeyTable()
 	keyTable.RegisterParamSet(&ibcconnectiontypes.Params{})
