@@ -76,7 +76,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	testdata_pulsar "github.com/cosmos/cosmos-sdk/testutil/testdata/testpb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -458,6 +457,29 @@ func New(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	govConfig := govtypes.DefaultConfig()
+	govKeeper := govkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[govtypes.StoreKey]),
+		app.AccountKeeper,
+		app.BankKeeper,
+		stakingKeeper,
+		app.DistrKeeper,
+		app.MsgServiceRouter(),
+		govConfig,
+		authAddress,
+	)
+	govRouter := govv1beta1.NewRouter()
+	govRouter.
+		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
+		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper))
+	// Set legacy router for backwards compatibility with gov v1beta1
+	govKeeper.SetLegacyRouter(govRouter)
+
+	app.GovKeeper = *govKeeper.SetHooks(
+		govtypes.NewMultiGovHooks(),
+	)
+
 	// Ethermint keepers
 
 	// Feemarket Keeper
@@ -505,17 +527,6 @@ func New(
 		&app.TransferKeeper,
 	)
 
-	// Create the rate limit keeper
-	app.RateLimitKeeper = *ratelimitkeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[ratelimittypes.StoreKey]),
-		app.GetSubspace(ratelimittypes.ModuleName),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		app.BankKeeper,
-		app.IBCKeeper.ChannelKeeper,
-		app.IBCKeeper.ClientKeeper,
-		app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
-	)
 	// Create Transfer Keepers
 	app.TransferKeeper = transferkeeper.NewKeeper(
 		appCodec,
@@ -529,6 +540,20 @@ func New(
 		authAddress,
 	)
 	app.TransferKeeper.SetAddressCodec(evmaddress.NewEvmCodec(sdk.GetConfig().GetBech32AccountAddrPrefix()))
+
+	// Create the rate limit keeper
+	app.RateLimitKeeper = *ratelimitkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[ratelimittypes.StoreKey]),
+		app.GetSubspace(ratelimittypes.ModuleName),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.BankKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		app.IBCKeeper.ClientKeeper,
+		app.IBCKeeper.ChannelKeeper, // ICS4Wrapper
+	)
+
+	app.TransferKeeper.WithICS4Wrapper(&app.RateLimitKeeper)
 
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	// Create the app.ICAHostKeeper
@@ -557,29 +582,6 @@ func New(
 	// If evidence needs to be handled for the app, set routes in router here and seal
 	app.EvidenceKeeper = *evidenceKeeper
 
-	govConfig := govtypes.DefaultConfig()
-	govKeeper := govkeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[govtypes.StoreKey]),
-		app.AccountKeeper,
-		app.BankKeeper,
-		stakingKeeper,
-		app.DistrKeeper,
-		app.MsgServiceRouter(),
-		govConfig,
-		authAddress,
-	)
-	govRouter := govv1beta1.NewRouter()
-	govRouter.
-		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
-		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper))
-	// Set legacy router for backwards compatibility with gov v1beta1
-	govKeeper.SetLegacyRouter(govRouter)
-
-	app.GovKeeper = *govKeeper.SetHooks(
-		govtypes.NewMultiGovHooks(),
-	)
-
 	/**** IBC Routing ****/
 
 	// Sealing prevents other modules from creating scoped sub-keepers
@@ -587,16 +589,15 @@ func New(
 		Create Transfer Stack
 
 		transfer stack contains (from bottom to top):
-			- ERC-20 Middleware
-		 	- Recovery Middleware
-		 	- Airdrop Claims Middleware
 			- IBC Transfer
+			- Rate Limit Middleware
+			- ERC-20 Middleware
 
 		SendPacket, since it is originating from the application to core IBC:
-		 	transferKeeper.SendPacket -> claim.SendPacket -> recovery.SendPacket -> erc20.SendPacket -> channel.SendPacket
+			transferKeeper.SendPacket -> rateLimitKeeper.SendPacket -> channel.SendPacket
 
 		RecvPacket, message that originates from core IBC and goes down to app, the flow is the other way
-			channel.RecvPacket -> erc20.OnRecvPacket -> recovery.OnRecvPacket -> claim.OnRecvPacket -> transfer.OnRecvPacket
+			channel.RecvPacket -> erc20.OnRecvPacket -> rateLimit.OnRecvPacket -> transfer.OnRecvPacket
 	*/
 
 	// create IBC module from top to bottom of stack
@@ -751,7 +752,6 @@ func New(
 		feegrant.ModuleName,
 		upgradetypes.ModuleName,
 		// Evmos
-		erc20types.ModuleName,
 		poatypes.ModuleName,
 		crisistypes.ModuleName,
 		ratelimittypes.ModuleName,
@@ -782,8 +782,6 @@ func New(
 		panic(err)
 	}
 	reflectionv1.RegisterReflectionServiceServer(app.GRPCQueryRouter(), reflectionSvc)
-	// add test gRPC service for testing gRPC queries in isolation
-	testdata_pulsar.RegisterQueryServer(app.GRPCQueryRouter(), testdata_pulsar.QueryImpl{})
 
 	// create the simulation manager and define the order of the modules for deterministic simulations
 	//
@@ -1127,6 +1125,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govv1.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(poatypes.ModuleName)
 
 	keyTable := ibcclienttypes.ParamKeyTable()
 	keyTable.RegisterParamSet(&ibcconnectiontypes.Params{})

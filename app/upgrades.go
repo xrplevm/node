@@ -6,6 +6,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	v10 "github.com/xrplevm/node/v10/app/upgrades/v10"
+	v11 "github.com/xrplevm/node/v10/app/upgrades/v11"
 	v9 "github.com/xrplevm/node/v10/app/upgrades/v9"
 
 	v5 "github.com/xrplevm/node/v10/app/upgrades/v5"
@@ -63,6 +64,14 @@ func (app *App) setupUpgradeHandlers() {
 			app.EvmKeeper,
 		),
 	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v11.UpgradeName,
+		v11.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+			app.ICAHostKeeper,
+		),
+	)
 
 	// When a planned update height is reached, the old binary will panic
 	// writing on disk the height and name of the update that triggered it
@@ -79,8 +88,12 @@ func (app *App) setupUpgradeHandlers() {
 	var storeUpgrades *storetypes.StoreUpgrades
 
 	switch upgradeInfo.Name {
-	case v5.UpgradeName, v6.UpgradeName:
-		// No store upgrades for v5
+	case v5.UpgradeName,
+		v6.UpgradeName,
+		v7.UpgradeName,
+		v8.UpgradeName,
+		v9.UpgradeName,
+		v10.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{}
 	}
 

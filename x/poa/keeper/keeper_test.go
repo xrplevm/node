@@ -9,59 +9,11 @@ import (
 	types1 "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/x/poa/testutil"
 	"github.com/xrplevm/node/v10/x/poa/types"
+	"go.uber.org/mock/gomock"
 )
-
-func poaKeeperTestSetup(t *testing.T) (*Keeper, sdk.Context) {
-	stakingExpectations := func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-		stakingHooks := testutil.NewMockStakingHooks(gomock.NewController(t))
-		stakingHooks.EXPECT().BeforeValidatorModified(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		stakingHooks.EXPECT().BeforeValidatorSlashed(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
-		stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-			BondDenom:     "XRP",
-			MaxValidators: 32,
-		}, nil).AnyTimes()
-		stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).AnyTimes()
-		stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil).AnyTimes()
-		stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil).AnyTimes()
-		stakingKeeper.EXPECT().SlashUnbondingDelegation(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
-		stakingKeeper.EXPECT().RemoveDelegation(ctx, gomock.Any()).Return(nil).AnyTimes()
-		stakingKeeper.EXPECT().RemoveValidatorTokensAndShares(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, math.ZeroInt(), nil).AnyTimes()
-		stakingKeeper.EXPECT().RemoveValidatorTokens(ctx, gomock.Any(), gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0), Status: stakingtypes.Bonded}, nil).AnyTimes()
-		stakingKeeper.EXPECT().BondDenom(ctx).Return("XRP", nil).AnyTimes()
-		stakingKeeper.EXPECT().Unbond(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(math.ZeroInt(), nil).AnyTimes()
-		stakingKeeper.EXPECT().Hooks().Return(stakingHooks).AnyTimes()
-		stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil).AnyTimes()
-	}
-
-	bankExpectations := func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
-		bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
-			Amount: math.NewInt(0),
-		}).AnyTimes()
-		bankKeeper.EXPECT().MintCoins(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		bankKeeper.EXPECT().SendCoinsFromModuleToAccount(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		bankKeeper.EXPECT().BurnCoins(ctx, stakingtypes.BondedPoolName, gomock.Any()).Return(nil).AnyTimes()
-		bankKeeper.EXPECT().SendCoinsFromAccountToModule(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	}
-
-	return setupPoaKeeper(t, stakingExpectations, bankExpectations)
-}
-
-func successfulAddValidatorStakingMocks(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-	stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
-		BondDenom:     "BND",
-		MaxValidators: 2,
-	}, nil)
-	stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
-	stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil).Times(1)
-	stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-	stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
-	stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: sdk.DefaultPowerReduction}, nil).Times(1)
-}
 
 // Define here Keeper methods to be unit tested
 func TestKeeper_ExecuteAddValidator(t *testing.T) {
