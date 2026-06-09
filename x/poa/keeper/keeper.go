@@ -192,18 +192,12 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	if err != nil {
 		return err
 	}
-	// Fetch the validator after creation so the event reports the post-create tokens.
-	newValidator, err := k.sk.GetValidator(ctx, valAddress)
-	if err != nil {
-		return err
-	}
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			types.EventTypeAddValidator,
 			sdk.NewAttribute(types.AttributeValidator, accAddress.String()),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
-			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", newValidator.Tokens)),
 			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
