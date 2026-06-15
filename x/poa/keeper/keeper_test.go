@@ -408,7 +408,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on GetParams",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking params error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{}, errors.New("staking params error"))
@@ -418,7 +418,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		{
 			name:             "should fail - staking keeper returns error on GetValidator",
 			expectedError:    types.ErrAddressIsNotAValidator,
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -429,7 +429,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on call GetUnbondingDelegationsFromValidator",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking keeper get unbonding delegations from validator error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -446,7 +446,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on call SlashUnbondingDelegation",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking keeper slash unbonding delegation error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -471,7 +471,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on RemoveValidatorTokens call",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking keeper remove validator tokens error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -498,7 +498,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		//nolint:dupl
 		{
 			name:             "should fail - bank keeper returns error on call BurnCoins for status bonded",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -529,7 +529,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		//nolint:dupl
 		{
 			name:             "should fail - bank keeper returns error on call BurnCoins for status unbonding/unbonded",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("bank keeper burn coins error"),
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -559,7 +559,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - bank keeper returns error for invalid validator status",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    types.ErrInvalidValidatorStatus,
 			//nolint:dupl
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -587,7 +587,7 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 		},
 		{
 			name:             "should fail - staking keeper returns error on call Unbond",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking keeper unbond error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
@@ -630,6 +630,65 @@ func TestKeeper_ExecuteRemoveValidator(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestParseValidatorAddress(t *testing.T) {
+	setupSdkConfig()
+
+	// accAddr and valAddr are the account and validator-operator encodings of the
+	// same underlying key (same 20 bytes, different bech32 prefix).
+	const (
+		accAddr = "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp"
+		valAddr = "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu"
+	)
+
+	tt := []struct {
+		name        string
+		input       string
+		expectedErr string
+	}{
+		{
+			name:  "should pass - account address yields matching account and validator keys",
+			input: accAddr,
+		},
+		{
+			name:        "should fail - validator operator address is not a valid account address",
+			input:       valAddr,
+			expectedErr: "invalid Bech32 prefix",
+		},
+		{
+			name:        "should fail - invalid bech32 string",
+			input:       "invalidvalidatoraddress",
+			expectedErr: "decoding bech32 failed",
+		},
+		{
+			name:        "should fail - empty address",
+			input:       "",
+			expectedErr: "empty address string is not allowed",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			acc, val, err := parseValidatorAddress(tc.input)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectedErr)
+				require.Nil(t, acc)
+				require.Nil(t, val)
+				return
+			}
+
+			require.NoError(t, err)
+			// The account address is returned exactly as provided.
+			require.Equal(t, accAddr, acc.String())
+			// The validator operator address is derived from the same key.
+			require.Equal(t, valAddr, val.String())
+			// Both encodings share the exact same underlying bytes.
+			require.Equal(t, acc.Bytes(), val.Bytes())
 		})
 	}
 }

@@ -10,10 +10,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/x/poa/testutil"
 	"github.com/xrplevm/node/v10/x/poa/types"
+	"go.uber.org/mock/gomock"
 )
 
 func TestMsgServer_RemoveValidator(t *testing.T) {
@@ -31,7 +31,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should fail - invalid authority address",
 			authority:        "invalidauthority",
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			stakingMocks:     func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
 			bankMocks:        func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 			expectedErr:      govtypes.ErrInvalidSigner,
@@ -47,7 +47,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass",
 			authority:        poaAuthority,
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -73,7 +73,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass - BeforeValidatorModified hook error is swallowed and logged",
 			authority:        poaAuthority,
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			stakingMocks: func(_ sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				// gomock.Any() for ctx because the test swaps the logger after
 				// setup, producing a different sdk.Context value.
@@ -102,7 +102,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass - BeforeValidatorSlashed hook error is swallowed and logged",
 			authority:        poaAuthority,
-			validatorAddress: "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu",
+			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			stakingMocks: func(_ sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(gomock.Any()).Return(stakingtypes.Params{
 					BondDenom: "BND",

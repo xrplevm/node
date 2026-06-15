@@ -82,10 +82,20 @@ func (k Keeper) GetAuthority() string {
 	return k.authority
 }
 
+// parseValidatorAddress parses a validator's account address (the cosmos.AddressString
+// format declared by both MsgAddValidator and MsgRemoveValidator) and derives the
+// matching validator operator address from it.
+func parseValidatorAddress(validatorAddress string) (sdk.AccAddress, sdk.ValAddress, error) {
+	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	if err != nil {
+		return nil, nil, err
+	}
+	return accAddress, sdk.ValAddress(accAddress), nil
+}
+
 func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator) error {
 	// Check if the new validator already has staking power in the bank account
-	accAddress, err := sdk.AccAddressFromBech32(msg.ValidatorAddress)
-	valAddress := sdk.ValAddress(accAddress)
+	accAddress, valAddress, err := parseValidatorAddress(msg.ValidatorAddress)
 	if err != nil {
 		return err
 	}
@@ -207,7 +217,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	valAddress, err := sdk.ValAddressFromBech32(validatorAddress)
+	_, valAddress, err := parseValidatorAddress(validatorAddress)
 	if err != nil {
 		return err
 	}
