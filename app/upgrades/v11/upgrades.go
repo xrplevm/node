@@ -2,6 +2,7 @@ package v11
 
 import (
 	"context"
+	"time"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,6 +14,7 @@ func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
 	icaHostKeeper ICAHostKeeper,
+	stakingKeeper StakingKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
@@ -22,6 +24,17 @@ func CreateUpgradeHandler(
 		// Run migrations first so no module migration can restore ICA host defaults.
 		vm, err := mm.RunMigrations(ctx, configurator, vm)
 		if err != nil {
+			return nil, err
+		}
+
+		stakingParams, err := stakingKeeper.GetParams(c)
+		if err != nil {
+			return nil, err
+		}
+
+		stakingParams.UnbondingTime = 7 * 24 * time.Hour
+
+		if err := stakingKeeper.SetParams(c, stakingParams); err != nil {
 			return nil, err
 		}
 
