@@ -609,7 +609,7 @@ func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	}{
 		{
 			name:          "remove unexisting validator - random address - with balance",
-			valAddress:    randomAccs[0].Address.String(),
+			valAddress:    sdktypes.AccAddress(randomValAddr).String(),
 			expectedError: poatypes.ErrAddressIsNotAValidator,
 			beforeRun: func() {
 				_, err := s.Network().GetStakingClient().Validator(

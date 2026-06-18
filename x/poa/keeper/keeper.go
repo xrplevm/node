@@ -82,23 +82,13 @@ func (k Keeper) GetAuthority() string {
 	return k.authority
 }
 
-// parseValidatorAddress parses a validator's account address (the cosmos.AddressString
-// format declared by both MsgAddValidator and MsgRemoveValidator) and derives the
-// matching validator operator address from it.
-func parseValidatorAddress(validatorAddress string) (sdk.AccAddress, sdk.ValAddress, error) {
-	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
-	if err != nil {
-		return nil, nil, err
-	}
-	return accAddress, sdk.ValAddress(accAddress), nil
-}
-
 func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator) error {
 	// Check if the new validator already has staking power in the bank account
-	accAddress, valAddress, err := parseValidatorAddress(msg.ValidatorAddress)
+	accAddress, err := sdk.AccAddressFromBech32(msg.ValidatorAddress)
 	if err != nil {
 		return err
 	}
+	valAddress := sdk.ValAddress(accAddress)
 	params, err := k.sk.GetParams(ctx)
 	if err != nil {
 		return err
@@ -217,10 +207,11 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	_, valAddress, err := parseValidatorAddress(validatorAddress)
+	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
 	}
+	valAddress := sdk.ValAddress(accAddress)
 	params, err := k.sk.GetParams(ctx)
 	if err != nil {
 		return err
@@ -282,7 +273,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 
 	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, changedVal.DelegatorShares)
+	_, err = k.sk.Unbond(ctx, accAddress, valAddress, changedVal.DelegatorShares)
 	if err != nil {
 		return err
 	}
