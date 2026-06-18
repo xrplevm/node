@@ -298,6 +298,7 @@ func (k Keeper) ExecuteRemoveValidatorSelf(ctx sdk.Context, validatorAddress str
 
 	validator, err := k.sk.GetValidator(ctx, valAddress)
 	if err != nil {
+		ctx.Logger().Warn("Error getting validator", "error", err)
 		return types.ErrAddressIsNotAValidator
 	}
 
