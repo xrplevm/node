@@ -47,10 +47,10 @@ func CreateUpgradeHandler(
 // withdrawElysEscrow moves the XRP stranded in the Elys transfer-channel
 // escrow to the recovery address and updates the total-escrow accounting.
 func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeeper, transferKeeper TransferKeeper) error {
-	escrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, ElysChannelID)
-	if escrowAddr.String() != ElysEscrowAddress {
+	elysEscrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, ElysChannelID)
+	if elysEscrowAddr.String() != ElysEscrowAddress {
 		return fmt.Errorf("elys escrow mismatch: derived %s for %s/%s, expected %s",
-			escrowAddr, transfertypes.PortID, ElysChannelID, ElysEscrowAddress)
+			elysEscrowAddr, transfertypes.PortID, ElysChannelID, ElysEscrowAddress)
 	}
 
 	destAddr, err := sdk.AccAddressFromBech32(WithdrawalAddress)
@@ -60,19 +60,23 @@ func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeepe
 
 	// XRP base denom from the canonical EVM coin config.
 	xrpDenom := evmtypes.GetEVMCoinDenom()
-	escrowBalance := bankKeeper.GetBalance(ctx, escrowAddr, xrpDenom)
-	if escrowBalance.IsZero() {
-		logger.Info("Elys escrow already empty, nothing to withdraw", "escrow", escrowAddr.String())
+	elysEscrowBalance := bankKeeper.GetBalance(ctx, elysEscrowAddr, xrpDenom)
+	if elysEscrowBalance.IsZero() {
+		logger.Info("Elys escrow already empty, nothing to withdraw", "escrow", elysEscrowAddr.String())
 		return nil
 	}
 
-	if err := bankKeeper.SendCoins(ctx, escrowAddr, destAddr, sdk.NewCoins(escrowBalance)); err != nil {
+	if err := bankKeeper.SendCoins(ctx, elysEscrowAddr, destAddr, sdk.NewCoins(elysEscrowBalance)); err != nil {
 		return fmt.Errorf("failed to withdraw elys escrow: %w", err)
 	}
 
 	totalEscrow := transferKeeper.GetTotalEscrowForDenom(ctx, xrpDenom)
-	transferKeeper.SetTotalEscrowForDenom(ctx, totalEscrow.Sub(escrowBalance))
+	if totalEscrow.IsLT(elysEscrowBalance) {
+		return fmt.Errorf("invalid balances: elys balance %s is above the total escrow amount %s for denom %s",
+			elysEscrowBalance, totalEscrow, xrpDenom)
+	}
+	transferKeeper.SetTotalEscrowForDenom(ctx, totalEscrow.Sub(elysEscrowBalance))
 
-	logger.Info("Withdrew stranded Elys XRP", "amount", escrowBalance.String(), "from", escrowAddr.String(), "to", destAddr.String())
+	logger.Info("Withdrew stranded Elys XRP", "amount", elysEscrowBalance.String(), "from", elysEscrowAddr.String(), "to", destAddr.String())
 	return nil
 }
