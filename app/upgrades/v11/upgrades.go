@@ -8,7 +8,6 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	evmtypes "github.com/cosmos/evm/x/vm/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 )
@@ -44,39 +43,45 @@ func CreateUpgradeHandler(
 	}
 }
 
-// withdrawElysEscrow moves the XRP stranded in the Elys transfer-channel
-// escrow to the recovery address and updates the total-escrow accounting.
+// withdrawElysEscrow moves every coin stranded in the Elys transfer-channel
+// escrow to the recovery address and updates the total-escrow accounting. It
+// selects the channel and destination for the running network.
 func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeeper, transferKeeper TransferKeeper) error {
-	elysEscrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, ElysChannelID)
-	if elysEscrowAddr.String() != ElysEscrowAddress {
-		return fmt.Errorf("elys escrow mismatch: derived %s for %s/%s, expected %s",
-			elysEscrowAddr, transfertypes.PortID, ElysChannelID, ElysEscrowAddress)
-	}
-
-	destAddr, err := sdk.AccAddressFromBech32(WithdrawalAddress)
-	if err != nil {
-		return fmt.Errorf("invalid withdrawal address %q: %w", WithdrawalAddress, err)
-	}
-
-	// XRP base denom from the canonical EVM coin config.
-	xrpDenom := evmtypes.GetEVMCoinDenom()
-	elysEscrowBalance := bankKeeper.GetBalance(ctx, elysEscrowAddr, xrpDenom)
-	if elysEscrowBalance.IsZero() {
-		logger.Info("Elys escrow already empty, nothing to withdraw", "escrow", elysEscrowAddr.String())
+	recovery, ok := ElysRecoveryByNetwork[ctx.ChainID()]
+	if !ok || recovery.ChannelID == "" {
+		logger.Info("no Elys escrow recovery configured for this network, skipping", "chainID", ctx.ChainID())
 		return nil
 	}
 
-	if err := bankKeeper.SendCoins(ctx, elysEscrowAddr, destAddr, sdk.NewCoins(elysEscrowBalance)); err != nil {
+	escrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, recovery.ChannelID)
+
+	destAddr, err := sdk.AccAddressFromBech32(recovery.WithdrawalAddress)
+	if err != nil {
+		return fmt.Errorf("invalid withdrawal address %q: %w", recovery.WithdrawalAddress, err)
+	}
+
+	balances := bankKeeper.GetAllBalances(ctx, escrowAddr)
+	if balances.Empty() {
+		logger.Info("Elys escrow already empty, nothing to withdraw", "escrow", escrowAddr.String())
+		return nil
+	}
+
+	if err := bankKeeper.SendCoins(ctx, escrowAddr, destAddr, balances); err != nil {
 		return fmt.Errorf("failed to withdraw elys escrow: %w", err)
 	}
 
-	totalEscrow := transferKeeper.GetTotalEscrowForDenom(ctx, xrpDenom)
-	if totalEscrow.IsLT(elysEscrowBalance) {
-		return fmt.Errorf("invalid balances: elys balance %s is above the total escrow amount %s for denom %s",
-			elysEscrowBalance, totalEscrow, xrpDenom)
+	// SendCoins bypasses UnescrowCoin, so decrement the per-denom escrow counter
+	// ourselves.
+	for _, coin := range balances {
+		totalEscrow := transferKeeper.GetTotalEscrowForDenom(ctx, coin.Denom)
+		// Escrow may hold untracked coins and Sub panics on underflow.
+		decrement := coin
+		if totalEscrow.IsLT(coin) {
+			decrement = totalEscrow
+		}
+		transferKeeper.SetTotalEscrowForDenom(ctx, totalEscrow.Sub(decrement))
 	}
-	transferKeeper.SetTotalEscrowForDenom(ctx, totalEscrow.Sub(elysEscrowBalance))
 
-	logger.Info("Withdrew stranded Elys XRP", "amount", elysEscrowBalance.String(), "from", elysEscrowAddr.String(), "to", destAddr.String())
+	logger.Info("Withdrew stranded Elys escrow", "amount", balances.String(), "from", escrowAddr.String(), "to", destAddr.String())
 	return nil
 }

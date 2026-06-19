@@ -16,7 +16,7 @@ type ICAHostKeeper interface {
 // BankKeeper is the narrow interface required by the v11 upgrade
 // handler. It matches a subset of bankkeeper.Keeper.
 type BankKeeper interface {
-	GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
+	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins
 	SendCoins(ctx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error
 }
 
