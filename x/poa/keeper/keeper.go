@@ -289,7 +289,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	return nil
 }
 
-func (k Keeper) ExecuteRemoveValidatorSelf(ctx sdk.Context, validatorAddress string) error {
+func (k Keeper) ExecuteSelfRemoveValidator(ctx sdk.Context, validatorAddress string) error {
 	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
@@ -302,28 +302,6 @@ func (k Keeper) ExecuteRemoveValidatorSelf(ctx sdk.Context, validatorAddress str
 		return types.ErrAddressIsNotAValidator
 	}
 
-	// Prevent the last bonded validator from removing itself. If it is not bonded, the
-	// set will not be left empty by its removal.
-	if validator.IsBonded() {
-		validators, err := k.sk.GetAllValidators(ctx)
-		if err != nil {
-			return err
-		}
-
-		bondedValidators := 0
-		for _, v := range validators {
-			if v.IsBonded() {
-				bondedValidators++
-			}
-			if bondedValidators > 1 {
-				break
-			}
-		}
-		if bondedValidators <= 1 {
-			return types.ErrCannotRemoveLastValidator
-		}
-	}
-
 	err = k.ExecuteRemoveValidator(ctx, valAddress.String())
 	if err != nil {
 		return err
@@ -331,7 +309,7 @@ func (k Keeper) ExecuteRemoveValidatorSelf(ctx sdk.Context, validatorAddress str
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
-			types.EventTypeRemoveValidatorSelf,
+			types.EventTypeSelfRemoveValidator,
 			sdk.NewAttribute(types.AttributeValidator, valAddress.String()),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
 			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),

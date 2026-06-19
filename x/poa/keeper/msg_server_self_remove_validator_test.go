@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestMsgServer_RemoveValidatorSelf(t *testing.T) {
+func TestMsgServer_SelfRemoveValidator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	const validatorAddress = "ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq"
@@ -43,21 +43,10 @@ func TestMsgServer_RemoveValidatorSelf(t *testing.T) {
 			expectedErr: types.ErrAddressIsNotAValidator,
 		},
 		{
-			name:             "should fail - last bonded validator cannot self-remove",
-			validatorAddress: validatorAddress,
-			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
-				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(bondedValidator, nil)
-				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{bondedValidator}, nil)
-			},
-			bankMocks:   func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
-			expectedErr: types.ErrCannotRemoveLastValidator,
-		},
-		{
 			name:             "should pass - reuses the RemoveValidator logic",
 			validatorAddress: validatorAddress,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(bondedValidator, nil).Times(2)
-				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{bondedValidator, bondedValidator}, nil)
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{BondDenom: "BND"}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 
@@ -82,11 +71,11 @@ func TestMsgServer_RemoveValidatorSelf(t *testing.T) {
 
 			msgServer := NewMsgServerImpl(*poaKeeper)
 
-			msg := &types.MsgRemoveValidatorSelf{
-				ValidatorAddress: tc.validatorAddress,
+			msg := &types.MsgSelfRemoveValidator{
+				Address: tc.validatorAddress,
 			}
 
-			_, err := msgServer.RemoveValidatorSelf(ctx, msg)
+			_, err := msgServer.SelfRemoveValidator(ctx, msg)
 			if tc.expectedErr != nil {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.expectedErr.Error())

@@ -15,5 +15,4 @@ var (
 	ErrInvalidValidatorStatus    = sdkerrors.Register(ModuleName, 5, "invalid validator status")
 	ErrAddressIsNotAValidator    = sdkerrors.Register(ModuleName, 6, "address is not a validator")
 	ErrMaxValidatorsReached      = sdkerrors.Register(ModuleName, 7, "maximum number of validators reached")
-	ErrCannotRemoveLastValidator = sdkerrors.Register(ModuleName, 8, "cannot remove the last bonded validator")
 )
