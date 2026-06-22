@@ -213,7 +213,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 			},
 		},
 		{
-			name:             "should fail - GetUnbondingDelegationsFromValidator returns error",
+			name:             "should fail - GetUnbondingDelegations returns error",
 			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
 			expectedError:    errors.New("staking unbonding delegations error"),
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
@@ -224,7 +224,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, errors.New("staking unbonding delegations error"))
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, errors.New("staking unbonding delegations error"))
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -245,7 +245,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{
 					{
 						Entries: []stakingtypes.UnbondingDelegationEntry{
 							{
@@ -274,7 +274,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -296,7 +296,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -319,7 +319,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{
@@ -349,7 +349,7 @@ func TestKeeper_ExecuteAddValidator(t *testing.T) {
 						Shares:           sdk.DefaultPowerReduction.ToLegacyDec(),
 					},
 				}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{

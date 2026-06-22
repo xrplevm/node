@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	gomath "math"
 
 	"cosmossdk.io/math"
 
@@ -147,7 +148,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	// Check if address has unbonding delegations with balance
 	// If so, return error since the account already has staking power
 	unbondingBalance := math.ZeroInt()
-	ubds, err := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
+	ubds, err := k.sk.GetUnbondingDelegations(ctx, accAddress, gomath.MaxUint16)
 	if err != nil {
 		return err
 	}
