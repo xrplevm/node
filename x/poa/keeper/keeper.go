@@ -198,7 +198,6 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 			types.EventTypeAddValidator,
 			sdk.NewAttribute(types.AttributeValidator, accAddress.String()),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
-			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
 			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
