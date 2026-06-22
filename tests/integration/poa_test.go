@@ -14,6 +14,7 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/evm/testutil/integration/base/factory"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v10/testutil/integration/exrp/utils"
 	poatypes "github.com/xrplevm/node/v10/x/poa/types"
@@ -584,6 +585,89 @@ func (s *TestSuite) TestAddValidator_MaximumValidators() {
 			} else {
 				require.NoError(s.T(), err)
 			}
+
+			if tc.afterRun != nil {
+				tc.afterRun()
+			}
+		})
+	}
+}
+
+func (s *TestSuite) TestSelfRemoveValidator_ExistingValidator_StatusBonded() {
+	validators := s.Network().GetValidators()
+	require.NotZero(s.T(), len(validators))
+
+	valIndex := 0
+	validator := validators[valIndex]
+	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
+	require.NoError(s.T(), err)
+
+	valKey := s.keyring.GetKey(valIndex)
+	require.Equal(s.T(), valAddr, sdktypes.ValAddress(valKey.AccAddr))
+
+	tt := []struct {
+		name      string
+		beforeRun func()
+		afterRun  func()
+	}{
+		{
+			name: "self remove existing validator - status bonded",
+			beforeRun: func() {
+				resVal, err := s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				require.Equal(s.T(), resVal.Validator.Status, stakingtypes.Bonded)
+				require.Equal(s.T(), sdktypes.DefaultPowerReduction.ToLegacyDec(), resVal.Validator.DelegatorShares)
+				require.NotZero(s.T(), resVal.Validator.Tokens)
+			},
+			afterRun: func() {
+				resVal, err := s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				require.True(s.T(),
+					resVal.Validator.DelegatorShares.IsZero(),
+					"delegator shares should be zero, got %s",
+					resVal.Validator.DelegatorShares,
+				)
+				require.True(s.T(), resVal.Validator.Tokens.IsZero())
+				require.Equal(s.T(), resVal.Validator.Status, stakingtypes.Unbonding)
+
+				require.NoError(s.T(), s.Network().NextBlockAfter(stakingtypes.DefaultUnbondingTime))
+
+				_, err = s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.Contains(s.T(), err.Error(), fmt.Sprintf("validator %s not found", valAddr.String()))
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		s.Run(tc.name, func() {
+			if tc.beforeRun != nil {
+				tc.beforeRun()
+			}
+
+			msg := poatypes.NewMsgSelfRemoveValidator(valKey.AccAddr.String())
+
+			res, err := s.factory.CommitCosmosTx(valKey.Priv, factory.CosmosTxArgs{
+				Msgs: []sdktypes.Msg{msg},
+			})
+			require.NoError(s.T(), err)
+			require.Equal(s.T(), uint32(0), res.Code, res.Log)
 
 			if tc.afterRun != nil {
 				tc.afterRun()
