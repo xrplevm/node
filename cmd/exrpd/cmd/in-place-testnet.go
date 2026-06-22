@@ -38,6 +38,9 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	commitmenttypes "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	xrplevm "github.com/xrplevm/node/v10/app"
 )
@@ -57,6 +60,8 @@ var (
 	flagReplacedConsensusAddress = "replaced-consensus-address"
 	flagXrpOwnerAddress          = "xrp-owner-address"
 	flagUpgradeVersion           = "upgrade-version"
+	flagIBCUpgrade               = "ibc"
+	flagIBCUpgradeUnbondingTime  = "ibc-upgrade-unbonding-time"
 )
 
 type valArgs struct {
@@ -70,6 +75,8 @@ type valArgs struct {
 	replacedConsensusAddress string         // consensus address of the validator to be replaced
 	xrpOwnerAddress          sdk.AccAddress // new XRP owner address
 	upgradeVersion           string         // upgrade version that will be applied
+	ibcUpgrade               bool           // if set, schedules upgrade through IBC client upgrade path
+	ibcUpgradeUnbondingTime  string         // post-upgrade unbonding time used for the upgraded client state
 }
 
 func testnetUnsafeStartLocalValidatorCmd(ac appCreator) *cobra.Command {
@@ -96,6 +103,8 @@ Example:
 	cmd.Flags().String(flagReplacedConsensusAddress, "", "Consensus address of the validator to be replaced")
 	cmd.Flags().String(flagXrpOwnerAddress, "", "New XRP owner address")
 	cmd.Flags().String(flagUpgradeVersion, "", "If set, the upgrade version that will be applied right just after the chain starts")
+	cmd.Flags().Bool(flagIBCUpgrade, false, "If set with --upgrade-version, schedules the local upgrade as an IBC software upgrade")
+	cmd.Flags().String(flagIBCUpgradeUnbondingTime, "", "Post-upgrade unbonding period for the generated IBC upgraded client state, e.g. 168h")
 
 	return cmd
 }
@@ -182,6 +191,9 @@ func getCommandArgs(appOpts servertypes.AppOptions) (valArgs, error) {
 	if upgradeVersion != "" {
 		args.upgradeVersion = upgradeVersion
 	}
+
+	args.ibcUpgrade = cast.ToBool(appOpts.Get(flagIBCUpgrade))
+	args.ibcUpgradeUnbondingTime = cast.ToString(appOpts.Get(flagIBCUpgradeUnbondingTime))
 
 	// home dir
 	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
@@ -393,17 +405,69 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 			Name:   args.upgradeVersion,
 			Info:   "Testnet upgrade to " + args.upgradeVersion,
 		}
-		if err := app.UpgradeKeeper.ScheduleUpgrade(appCtx, upgradePlan); err != nil {
-			panic(
-				fmt.Errorf(
-					"failed to schedule upgrade %s during BeginBlock at height %d: %w",
+		if args.ibcUpgrade {
+			upgradedClientState, err := newIBCUpgradedClientState(app, upgradeHeight, args)
+			if err != nil {
+				return err
+			}
+			if err := app.IBCKeeper.ClientKeeper.ScheduleIBCSoftwareUpgrade(appCtx, upgradePlan, upgradedClientState); err != nil {
+				return fmt.Errorf(
+					"failed to schedule IBC software upgrade %s at height %d: %w",
 					upgradePlan.Name, upgradeHeight, err,
-				),
-			)
+				)
+			}
+		} else {
+			if err := app.UpgradeKeeper.ScheduleUpgrade(appCtx, upgradePlan); err != nil {
+				return fmt.Errorf(
+					"failed to schedule upgrade %s at height %d: %w",
+					upgradePlan.Name, upgradeHeight, err,
+				)
+			}
 		}
 	}
 
 	return nil
+}
+
+func newIBCUpgradedClientState(app *xrplevm.App, upgradeHeight int64, args valArgs) (*ibctm.ClientState, error) {
+	chainID := app.ChainID()
+	if chainID == "" {
+		return nil, errors.New("cannot generate IBC upgraded client state without chain ID")
+	}
+	if upgradeHeight <= 0 {
+		return nil, fmt.Errorf("invalid IBC upgrade height %d", upgradeHeight)
+	}
+
+	unbondingTime, err := getIBCUpgradeUnbondingTime(args)
+	if err != nil {
+		return nil, err
+	}
+	if unbondingTime <= 0 {
+		return nil, fmt.Errorf("invalid IBC upgrade unbonding time %s", unbondingTime)
+	}
+
+	return ibctm.NewClientState(
+		chainID,
+		ibctm.DefaultTrustLevel,
+		unbondingTime/2,
+		unbondingTime,
+		time.Second,
+		clienttypes.NewHeight(clienttypes.ParseChainID(chainID), uint64(upgradeHeight)),
+		commitmenttypes.GetSDKSpecs(),
+		[]string{upgradetypes.ModuleName, upgradetypes.KeyUpgradedIBCState},
+	), nil
+}
+
+func getIBCUpgradeUnbondingTime(args valArgs) (time.Duration, error) {
+	if args.ibcUpgradeUnbondingTime == "" {
+		return 0, fmt.Errorf("--%s is required when scheduling an IBC software upgrade", flagIBCUpgradeUnbondingTime)
+	}
+
+	unbondingTime, err := time.ParseDuration(args.ibcUpgradeUnbondingTime)
+	if err != nil {
+		return 0, fmt.Errorf("invalid --%s value %q: %w", flagIBCUpgradeUnbondingTime, args.ibcUpgradeUnbondingTime, err)
+	}
+	return unbondingTime, nil
 }
 
 func updateConsensusState(logger log.Logger, appOpts servertypes.AppOptions, appHeight int64, args valArgs) error {

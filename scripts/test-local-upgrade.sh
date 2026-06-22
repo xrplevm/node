@@ -10,6 +10,9 @@ for arg in "$@"; do
     --snapshotPath=*) SNAPSHOT_PATH="${arg#*=}" ;;
     --genesisUrl=*) GENESIS_URL="${arg#*=}" ;;
     --version=*) VERSION="${arg#*=}" ;;
+    --binary=*) BINARY="${arg#*=}" ;;
+    --ibc) IBC="--ibc" ;;
+    --ibc-upgrade-unbonding-time=*) IBC_UPGRADE_UNBONDING_TIME="--ibc-upgrade-unbonding-time=${arg#*=}" ;;
     *) echo "⚠️  Unknown argument: $arg" ;;
   esac
 done
@@ -20,10 +23,13 @@ done
 : "${SNAPSHOT_PATH:=${SNAPSHOT_PATH_ENV:-}}"
 : "${GENESIS_URL:=${GENESIS_URL_ENV:-}}"
 : "${VERSION:=${VERSION_ENV:-}}"
+: "${BINARY:=${BINARY_ENV:-exrpd}}"
+: "${IBC:=${IBC_ENV:+--ibc}}"
+: "${IBC_UPGRADE_UNBONDING_TIME:=${IBC_UPGRADE_UNBONDING_TIME_ENV:+--ibc-upgrade-unbonding-time=$IBC_UPGRADE_UNBONDING_TIME_ENV}}"
 
 # ========== Validate dependencies ==========
 echo "ℹ️   Checking required tools..."
-for cmd in exrpd jq lz4; do
+for cmd in "$BINARY" jq lz4; do
   if ! command -v "$cmd" &> /dev/null; then
     echo "❌ Error: Required tool '$cmd' not found. Please install it before running this script."
     exit 1
@@ -52,6 +58,9 @@ if [ ${#missing_vars[@]} -ne 0 ]; then
   echo "  --snapshotPath=\"./exrpd.tar.lz4\" \\"
   echo "  --genesisUrl=\"https://raw.githubusercontent.com/xrplevm/networks/refs/heads/main/testnet/genesis.json\" \\"
   echo "  --version=\"9.0.0\" \\"
+  echo "  --binary=\"./bin/exrpd\" \\"
+  echo "  --ibc \\"
+  echo "  --ibc-upgrade-unbonding-time=\"168h\""
   echo
   echo "Or set them as environment variables before running:"
   echo "export CHAIN_ID=... && ./test-upgrade.sh"
@@ -59,10 +68,10 @@ if [ ${#missing_vars[@]} -ne 0 ]; then
 fi
 
 echo "ℹ️  Initializing node home in $NODE_HOME..."
-exrpd config set client chain-id "$CHAIN_ID" --home "$NODE_HOME" --chain-id "$CHAIN_ID"
-exrpd config set client keyring-backend test --home "$NODE_HOME"
-echo "$MNEMONIC" | exrpd --home "$NODE_HOME" keys add key --recover --keyring-backend test --algo eth_secp256k1
-exrpd init localnode --chain-id "$CHAIN_ID" --home "$NODE_HOME" > /dev/null 2>&1
+"$BINARY" config set client chain-id "$CHAIN_ID" --home "$NODE_HOME" --chain-id "$CHAIN_ID"
+"$BINARY" config set client keyring-backend test --home "$NODE_HOME"
+echo "$MNEMONIC" | "$BINARY" --home "$NODE_HOME" keys add key --recover --keyring-backend test --algo eth_secp256k1
+"$BINARY" init localnode --chain-id "$CHAIN_ID" --home "$NODE_HOME" > /dev/null 2>&1
 echo "✅   Node home initialized "
 
 echo "ℹ️  Downloading genesis..."
@@ -75,11 +84,13 @@ echo "✅   Snapshot restored "
 
 echo "ℹ️  Starting the local validator..."
 
-exrpd unsafe-start-local-validator \
+"$BINARY" unsafe-start-local-validator \
   --home "$NODE_HOME" \
-  --validator-operator="$(exrpd --home "$NODE_HOME" keys show key --keyring-backend test --bech val -a)" \
+  --validator-operator="$("$BINARY" --home "$NODE_HOME" keys show key --keyring-backend test --bech val -a)" \
   --validator-pubkey="$(jq -r '.pub_key.value' "$NODE_HOME/config/priv_validator_key.json")" \
   --validator-privkey="$(jq -r '.priv_key.value' "$NODE_HOME/config/priv_validator_key.json")" \
-  --accounts-to-fund="$(exrpd --home "$NODE_HOME" keys show key --keyring-backend test --bech acc -a),ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2" \
-  --xrp-owner-address="$(exrpd --home "$NODE_HOME" keys show key --keyring-backend test --bech acc -a)" \
+  --accounts-to-fund="$("$BINARY" --home "$NODE_HOME" keys show key --keyring-backend test --bech acc -a),ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2" \
+  --xrp-owner-address="$("$BINARY" --home "$NODE_HOME" keys show key --keyring-backend test --bech acc -a)" \
+  $IBC \
+  $IBC_UPGRADE_UNBONDING_TIME \
   --upgrade-version="$VERSION"
