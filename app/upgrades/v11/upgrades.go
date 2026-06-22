@@ -3,6 +3,7 @@ package v11
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
@@ -17,6 +18,7 @@ func CreateUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
 	icaHostKeeper ICAHostKeeper,
+	stakingKeeper StakingKeeper,
 	bankKeeper BankKeeper,
 	transferKeeper TransferKeeper,
 ) upgradetypes.UpgradeHandler {
@@ -28,6 +30,17 @@ func CreateUpgradeHandler(
 		// Run migrations first so no module migration can restore ICA host defaults.
 		vm, err := mm.RunMigrations(ctx, configurator, vm)
 		if err != nil {
+			return nil, err
+		}
+
+		stakingParams, err := stakingKeeper.GetParams(c)
+		if err != nil {
+			return nil, err
+		}
+
+		stakingParams.UnbondingTime = 7 * 24 * time.Hour
+
+		if err := stakingKeeper.SetParams(c, stakingParams); err != nil {
 			return nil, err
 		}
 
