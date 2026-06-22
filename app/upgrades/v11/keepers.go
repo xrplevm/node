@@ -16,13 +16,12 @@ type ICAHostKeeper interface {
 // BankKeeper is the narrow interface required by the v11 upgrade
 // handler. It matches a subset of bankkeeper.Keeper.
 type BankKeeper interface {
-	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins
-	SendCoins(ctx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error
+	GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
 }
 
 // TransferKeeper is the narrow interface required by the v11 upgrade
 // handler. It matches a subset of transferkeeper.Keeper.
 type TransferKeeper interface {
-	GetTotalEscrowForDenom(ctx sdk.Context, denom string) sdk.Coin
-	SetTotalEscrowForDenom(ctx sdk.Context, coin sdk.Coin)
+	IterateTokensInEscrow(ctx sdk.Context, storeprefix []byte, cb func(denomEscrow sdk.Coin) bool)
+	UnescrowCoin(ctx sdk.Context, escrowAddress, receiver sdk.AccAddress, coin sdk.Coin) error
 }

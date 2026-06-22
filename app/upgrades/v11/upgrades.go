@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -43,45 +44,49 @@ func CreateUpgradeHandler(
 	}
 }
 
-// withdrawElysEscrow moves every coin stranded in the Elys transfer-channel
-// escrow to the recovery address and updates the total-escrow accounting. It
-// selects the channel and destination for the running network.
+// withdrawElysEscrow releases the Elys channel escrow to the recovery address
+// configured for the running network.
 func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeeper, transferKeeper TransferKeeper) error {
-	recovery, ok := ElysRecoveryByNetwork[ctx.ChainID()]
-	if !ok || recovery.ChannelID == "" {
+	recoveryCfg, ok := ElysRecoveryByNetwork[ctx.ChainID()]
+	if !ok || recoveryCfg.ChannelID == "" {
 		logger.Info("no Elys escrow recovery configured for this network, skipping", "chainID", ctx.ChainID())
 		return nil
 	}
 
-	escrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, recovery.ChannelID)
+	escrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, recoveryCfg.ChannelID)
 
-	destAddr, err := sdk.AccAddressFromBech32(recovery.WithdrawalAddress)
+	destAddr, err := sdk.AccAddressFromBech32(recoveryCfg.WithdrawalAddress)
 	if err != nil {
-		return fmt.Errorf("invalid withdrawal address %q: %w", recovery.WithdrawalAddress, err)
+		return fmt.Errorf("invalid withdrawal address %q: %w", recoveryCfg.WithdrawalAddress, err)
 	}
 
-	balances := bankKeeper.GetAllBalances(ctx, escrowAddr)
-	if balances.Empty() {
+	var released sdk.Coins
+	var iterErr error
+	transferKeeper.IterateTokensInEscrow(ctx, []byte(transfertypes.KeyTotalEscrowPrefix), func(totalEscrowed sdk.Coin) bool {
+		// Cap at the Elys escrow balance so UnescrowCoin's subtraction can't
+		// underflow the all-channel total.
+		escrowBalance := bankKeeper.GetBalance(ctx, escrowAddr, totalEscrowed.Denom)
+		coin := sdk.NewCoin(totalEscrowed.Denom, sdkmath.MinInt(totalEscrowed.Amount, escrowBalance.Amount))
+		if !coin.IsPositive() {
+			return false
+		}
+
+		if err := transferKeeper.UnescrowCoin(ctx, escrowAddr, destAddr, coin); err != nil {
+			iterErr = fmt.Errorf("failed to unescrow %s from elys escrow: %w", coin, err)
+			return true
+		}
+		released = released.Add(coin)
+		return false
+	})
+	if iterErr != nil {
+		return iterErr
+	}
+
+	if released.Empty() {
 		logger.Info("Elys escrow already empty, nothing to withdraw", "escrow", escrowAddr.String())
 		return nil
 	}
 
-	if err := bankKeeper.SendCoins(ctx, escrowAddr, destAddr, balances); err != nil {
-		return fmt.Errorf("failed to withdraw elys escrow: %w", err)
-	}
-
-	// SendCoins bypasses UnescrowCoin, so decrement the per-denom escrow counter
-	// ourselves.
-	for _, coin := range balances {
-		totalEscrow := transferKeeper.GetTotalEscrowForDenom(ctx, coin.Denom)
-		// Escrow may hold untracked coins and Sub panics on underflow.
-		decrement := coin
-		if totalEscrow.IsLT(coin) {
-			decrement = totalEscrow
-		}
-		transferKeeper.SetTotalEscrowForDenom(ctx, totalEscrow.Sub(decrement))
-	}
-
-	logger.Info("Withdrew stranded Elys escrow", "amount", balances.String(), "from", escrowAddr.String(), "to", destAddr.String())
+	logger.Info("Withdrew stranded Elys escrow", "amount", released.String(), "from", escrowAddr.String(), "to", destAddr.String())
 	return nil
 }
