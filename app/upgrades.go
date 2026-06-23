@@ -71,7 +71,6 @@ func (app *App) setupUpgradeHandlers() {
 			app.configurator,
 			app.ICAHostKeeper,
 			app.StakingKeeper,
-			app.BankKeeper,
 			app.TransferKeeper,
 		),
 	)

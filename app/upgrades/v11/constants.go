@@ -25,9 +25,11 @@ const (
 	DevnetWithdrawalAddress = "ethm16gt28px9q0fp48eatecp7j032lm5vaxs2t29pa"
 )
 
-var devnetAmount, _ = sdkmath.NewIntFromString("2000000000000000000")
-var testnetAmount, _ = sdkmath.NewIntFromString("2000000000000000000")
-var mainnetElysAmount, _ = sdkmath.NewIntFromString("6955539034646993768414")
+var (
+	devnetAmount, _      = sdkmath.NewIntFromString("2000000000000000000")
+	testnetAmount, _     = sdkmath.NewIntFromString("2000000000000000000")
+	mainnetElysAmount, _ = sdkmath.NewIntFromString("6955539034646993768414")
+)
 
 // ElysRecovery holds, for a single network, the Elys transfer channel whose
 // escrow holds the stranded XRP, the address that should receive it, and the

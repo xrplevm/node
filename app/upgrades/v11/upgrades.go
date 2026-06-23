@@ -18,7 +18,6 @@ func CreateUpgradeHandler(
 	configurator module.Configurator,
 	icaHostKeeper ICAHostKeeper,
 	stakingKeeper StakingKeeper,
-	bankKeeper BankKeeper,
 	transferKeeper TransferKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
@@ -47,7 +46,7 @@ func CreateUpgradeHandler(
 		icaHostKeeper.SetParams(ctx, icahosttypes.NewParams(false, nil))
 
 		logger.Info("Withdrawing Elys escrow to provided address...")
-		if err := withdrawElysEscrow(ctx, logger, bankKeeper, transferKeeper); err != nil {
+		if err := withdrawElysEscrow(ctx, logger, transferKeeper); err != nil {
 			return nil, err
 		}
 
@@ -58,7 +57,7 @@ func CreateUpgradeHandler(
 
 // withdrawElysEscrow releases the configured amount of XRP from the Elys channel
 // escrow to the recovery address configured for the running network.
-func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeeper, transferKeeper TransferKeeper) error {
+func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, transferKeeper TransferKeeper) error {
 	recoveryCfg, ok := ElysRecoveryByNetwork[ctx.ChainID()]
 	if !ok || recoveryCfg.ChannelID == "" {
 		logger.Info("no Elys escrow recovery configured for this network, skipping", "chainID", ctx.ChainID())
