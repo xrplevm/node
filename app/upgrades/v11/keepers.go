@@ -30,6 +30,5 @@ type BankKeeper interface {
 // TransferKeeper is the narrow interface required by the v11 upgrade
 // handler. It matches a subset of transferkeeper.Keeper.
 type TransferKeeper interface {
-	IterateTokensInEscrow(ctx sdk.Context, storeprefix []byte, cb func(denomEscrow sdk.Coin) bool)
 	UnescrowCoin(ctx sdk.Context, escrowAddress, receiver sdk.AccAddress, coin sdk.Coin) error
 }
