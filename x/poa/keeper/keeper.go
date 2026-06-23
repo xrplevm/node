@@ -303,7 +303,7 @@ func (k Keeper) ExecuteSelfRemoveValidator(ctx sdk.Context, validatorAddress str
 		return types.ErrAddressIsNotAValidator
 	}
 
-	err = k.ExecuteRemoveValidator(ctx, valAddress.String())
+	err = k.ExecuteRemoveValidator(ctx, accAddress.String())
 	if err != nil {
 		return err
 	}
