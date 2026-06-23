@@ -2,12 +2,15 @@ package v11
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 )
 
 func CreateUpgradeHandler(
@@ -15,6 +18,8 @@ func CreateUpgradeHandler(
 	configurator module.Configurator,
 	icaHostKeeper ICAHostKeeper,
 	stakingKeeper StakingKeeper,
+	bankKeeper BankKeeper,
+	transferKeeper TransferKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
@@ -40,7 +45,42 @@ func CreateUpgradeHandler(
 
 		logger.Info("Disabling ICA host module...")
 		icaHostKeeper.SetParams(ctx, icahosttypes.NewParams(false, nil))
+
+		logger.Info("Withdrawing Elys escrow to provided address...")
+		if err := withdrawElysEscrow(ctx, logger, bankKeeper, transferKeeper); err != nil {
+			return nil, err
+		}
+
 		logger.Info("Finished v11 upgrade handler")
 		return vm, nil
 	}
+}
+
+// withdrawElysEscrow releases the configured amount of XRP from the Elys channel
+// escrow to the recovery address configured for the running network.
+func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeeper, transferKeeper TransferKeeper) error {
+	recoveryCfg, ok := ElysRecoveryByNetwork[ctx.ChainID()]
+	if !ok || recoveryCfg.ChannelID == "" {
+		logger.Info("no Elys escrow recovery configured for this network, skipping", "chainID", ctx.ChainID())
+		return nil
+	}
+
+	if !recoveryCfg.Coin.IsPositive() {
+		logger.Info("Elys escrow recovery amount is zero, nothing to withdraw", "chainID", ctx.ChainID())
+		return nil
+	}
+
+	escrowAddr := transfertypes.GetEscrowAddress(transfertypes.PortID, recoveryCfg.ChannelID)
+
+	destAddr, err := sdk.AccAddressFromBech32(recoveryCfg.WithdrawalAddress)
+	if err != nil {
+		return fmt.Errorf("invalid withdrawal address %q: %w", recoveryCfg.WithdrawalAddress, err)
+	}
+
+	if err := transferKeeper.UnescrowCoin(ctx, escrowAddr, destAddr, recoveryCfg.Coin); err != nil {
+		return fmt.Errorf("failed to unescrow %s from elys escrow: %w", recoveryCfg.Coin, err)
+	}
+
+	logger.Info("Withdrew stranded Elys escrow", "amount", recoveryCfg.Coin.String(), "from", escrowAddr.String(), "to", destAddr.String())
+	return nil
 }

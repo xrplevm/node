@@ -20,3 +20,15 @@ type StakingKeeper interface {
 	GetParams(ctx context.Context) (params stakingtypes.Params, err error)
 	SetParams(ctx context.Context, params stakingtypes.Params) error
 }
+
+// BankKeeper is the narrow interface required by the v11 upgrade
+// handler. It matches a subset of bankkeeper.Keeper.
+type BankKeeper interface {
+	GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
+}
+
+// TransferKeeper is the narrow interface required by the v11 upgrade
+// handler. It matches a subset of transferkeeper.Keeper.
+type TransferKeeper interface {
+	UnescrowCoin(ctx sdk.Context, escrowAddress, receiver sdk.AccAddress, coin sdk.Coin) error
+}
