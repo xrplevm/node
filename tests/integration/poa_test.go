@@ -872,7 +872,7 @@ func (s *TestSuite) TestRemoveValidator_UnexistingValidator() {
 	}{
 		{
 			name:          "remove unexisting validator - random address - with balance",
-			valAddress:    randomValAddr.String(),
+			valAddress:    sdktypes.AccAddress(randomValAddr).String(),
 			expectedError: poatypes.ErrAddressIsNotAValidator,
 			beforeRun: func() {
 				_, err := s.Network().GetStakingClient().Validator(
@@ -1021,7 +1021,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_StatusBonded() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAddr.String(),
+				sdktypes.AccAddress(valAddr).String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
@@ -1134,7 +1134,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Jailed() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAddr.String(),
+				sdktypes.AccAddress(valAddr).String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
@@ -1277,7 +1277,7 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 			authority := sdktypes.AccAddress(address.Module("gov"))
 			msg := poatypes.NewMsgRemoveValidator(
 				authority.String(),
-				valAddr.String(),
+				sdktypes.AccAddress(valAddr).String(),
 			)
 
 			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)

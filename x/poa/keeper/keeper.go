@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	gomath "math"
 
 	"cosmossdk.io/math"
 
@@ -85,10 +86,10 @@ func (k Keeper) GetAuthority() string {
 func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator) error {
 	// Check if the new validator already has staking power in the bank account
 	accAddress, err := sdk.AccAddressFromBech32(msg.ValidatorAddress)
-	valAddress := sdk.ValAddress(accAddress)
 	if err != nil {
 		return err
 	}
+	valAddress := sdk.ValAddress(accAddress)
 	params, err := k.sk.GetParams(ctx)
 	if err != nil {
 		return err
@@ -147,7 +148,7 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 	// Check if address has unbonding delegations with balance
 	// If so, return error since the account already has staking power
 	unbondingBalance := math.ZeroInt()
-	ubds, err := k.sk.GetUnbondingDelegationsFromValidator(ctx, valAddress)
+	ubds, err := k.sk.GetUnbondingDelegations(ctx, accAddress, gomath.MaxUint16)
 	if err != nil {
 		return err
 	}
@@ -198,7 +199,6 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 			types.EventTypeAddValidator,
 			sdk.NewAttribute(types.AttributeValidator, accAddress.String()),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
-			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
 			sdk.NewAttribute(types.AttributeBankTokens, balance.String()),
 		),
 	)
@@ -207,10 +207,11 @@ func (k Keeper) ExecuteAddValidator(ctx sdk.Context, msg *types.MsgAddValidator)
 }
 
 func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string) error {
-	valAddress, err := sdk.ValAddressFromBech32(validatorAddress)
+	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
 	if err != nil {
 		return err
 	}
+	valAddress := sdk.ValAddress(accAddress)
 	params, err := k.sk.GetParams(ctx)
 	if err != nil {
 		return err
@@ -272,7 +273,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 	}
 
 	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, sdk.AccAddress(valAddress), valAddress, changedVal.DelegatorShares)
+	_, err = k.sk.Unbond(ctx, accAddress, valAddress, changedVal.DelegatorShares)
 	if err != nil {
 		return err
 	}
