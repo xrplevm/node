@@ -1,9 +1,13 @@
 package v11
 
-import sdkmath "cosmossdk.io/math"
+import (
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
 
 const (
-	UpgradeName = "v11.0.0"
+	UpgradeName  = "v11.0.0"
+	EVMCoinDenom = "axrp"
 
 	// mainnet
 	MainnetChainID    = "xrplevm_1440000-1"
@@ -13,27 +17,25 @@ const (
 	// testnet
 	TestnetChainID           = "xrplevm_1449000-1"
 	TestnetElysChannelID     = "channel-17"
-	TestnetWithdrawalAddress = "ethm1p95fctckyrxuxu6t47e2uuckjl9tfuxynuawsc"
+	TestnetWithdrawalAddress = "ethm16gt28px9q0fp48eatecp7j032lm5vaxs2t29pa"
 
 	// devnet
 	DevnetChainID           = "xrplevm_1449900-1"
 	DevnetElysChannelID     = "channel-4"
-	DevnetWithdrawalAddress = "ethm1p95fctckyrxuxu6t47e2uuckjl9tfuxynuawsc"
+	DevnetWithdrawalAddress = "ethm16gt28px9q0fp48eatecp7j032lm5vaxs2t29pa"
 )
 
-// twoXRP expresses 2 XRP in axrp base units (axrp is atto-XRP — 18 decimals).
-var twoXRP = sdkmath.NewIntWithDecimal(2, 18)
-
-// mainnetElysAmount is the exact XRP stranded in the mainnet Elys channel escrow.
+var devnetAmount, _ = sdkmath.NewIntFromString("2000000000000000000")
+var testnetAmount, _ = sdkmath.NewIntFromString("2000000000000000000")
 var mainnetElysAmount, _ = sdkmath.NewIntFromString("6955539034646993768414")
 
 // ElysRecovery holds, for a single network, the Elys transfer channel whose
 // escrow holds the stranded XRP, the address that should receive it, and the
-// amount of XRP (in axrp base units) to unescrow.
+// coin (denom + amount of XRP in axrp base units) to unescrow.
 type ElysRecovery struct {
 	ChannelID         string
 	WithdrawalAddress string
-	Amount            sdkmath.Int
+	Coin              sdk.Coin
 }
 
 // ElysRecoveryByNetwork maps each network's Cosmos chain ID to its Elys recovery
@@ -42,16 +44,16 @@ var ElysRecoveryByNetwork = map[string]ElysRecovery{
 	MainnetChainID: {
 		ChannelID:         ElysChannelID,
 		WithdrawalAddress: WithdrawalAddress,
-		Amount:            mainnetElysAmount,
+		Coin:              sdk.NewCoin(EVMCoinDenom, mainnetElysAmount),
 	},
 	TestnetChainID: {
 		ChannelID:         TestnetElysChannelID,
 		WithdrawalAddress: TestnetWithdrawalAddress,
-		Amount:            twoXRP,
+		Coin:              sdk.NewCoin(EVMCoinDenom, testnetAmount),
 	},
 	DevnetChainID: {
 		ChannelID:         DevnetElysChannelID,
 		WithdrawalAddress: DevnetWithdrawalAddress,
-		Amount:            twoXRP,
+		Coin:              sdk.NewCoin(EVMCoinDenom, devnetAmount),
 	},
 }

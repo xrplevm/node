@@ -9,7 +9,6 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	evmtypes "github.com/cosmos/evm/x/vm/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 )
@@ -66,7 +65,7 @@ func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeepe
 		return nil
 	}
 
-	if !recoveryCfg.Amount.IsPositive() {
+	if !recoveryCfg.Coin.IsPositive() {
 		logger.Info("Elys escrow recovery amount is zero, nothing to withdraw", "chainID", ctx.ChainID())
 		return nil
 	}
@@ -78,12 +77,10 @@ func withdrawElysEscrow(ctx sdk.Context, logger log.Logger, bankKeeper BankKeepe
 		return fmt.Errorf("invalid withdrawal address %q: %w", recoveryCfg.WithdrawalAddress, err)
 	}
 
-	coin := sdk.NewCoin(evmtypes.GetEVMCoinDenom(), recoveryCfg.Amount)
-
-	if err := transferKeeper.UnescrowCoin(ctx, escrowAddr, destAddr, coin); err != nil {
-		return fmt.Errorf("failed to unescrow %s from elys escrow: %w", coin, err)
+	if err := transferKeeper.UnescrowCoin(ctx, escrowAddr, destAddr, recoveryCfg.Coin); err != nil {
+		return fmt.Errorf("failed to unescrow %s from elys escrow: %w", recoveryCfg.Coin, err)
 	}
 
-	logger.Info("Withdrew stranded Elys escrow", "amount", coin.String(), "from", escrowAddr.String(), "to", destAddr.String())
+	logger.Info("Withdrew stranded Elys escrow", "amount", recoveryCfg.Coin.String(), "from", escrowAddr.String(), "to", destAddr.String())
 	return nil
 }
