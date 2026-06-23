@@ -289,3 +289,33 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 
 	return nil
 }
+
+func (k Keeper) ExecuteSelfRemoveValidator(ctx sdk.Context, validatorAddress string) error {
+	accAddress, err := sdk.AccAddressFromBech32(validatorAddress)
+	if err != nil {
+		return err
+	}
+	valAddress := sdk.ValAddress(accAddress)
+
+	validator, err := k.sk.GetValidator(ctx, valAddress)
+	if err != nil {
+		ctx.Logger().Warn("Error getting validator", "error", err)
+		return types.ErrAddressIsNotAValidator
+	}
+
+	err = k.ExecuteRemoveValidator(ctx, accAddress.String())
+	if err != nil {
+		return err
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			types.EventTypeSelfRemoveValidator,
+			sdk.NewAttribute(types.AttributeValidator, valAddress.String()),
+			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
+			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
+		),
+	)
+
+	return nil
+}

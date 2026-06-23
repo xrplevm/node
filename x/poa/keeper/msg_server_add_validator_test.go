@@ -56,7 +56,7 @@ func TestMsgServer_AddValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetAllValidators(ctx).Return([]stakingtypes.Validator{}, nil)
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(stakingtypes.Validator{Tokens: math.NewInt(0)}, nil)
 				stakingKeeper.EXPECT().GetAllDelegatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{}, nil)
-				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetUnbondingDelegations(ctx, gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
 			},
 			bankMocks: func(ctx sdk.Context, bankKeeper *testutil.MockBankKeeper) {
 				bankKeeper.EXPECT().GetBalance(ctx, gomock.Any(), gomock.Any()).Return(sdk.Coin{

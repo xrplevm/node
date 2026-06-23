@@ -18,6 +18,8 @@ service Msg {
   rpc AddValidator(MsgAddValidator) returns (MsgAddValidatorResponse);
   // Removes an existing validator from the authority
   rpc RemoveValidator(MsgRemoveValidator) returns (MsgRemoveValidatorResponse);
+  // Allows a validator to remove itself from the authority
+  rpc SelfRemoveValidator(MsgSelfRemoveValidator) returns (MsgSelfRemoveValidatorResponse);
 }
 
 // MsgAddValidator defines a message for adding a new validator
@@ -46,3 +48,14 @@ message MsgRemoveValidator {
 // MsgRemoveValidatorResponse defines the response for removing an existing
 // validator
 message MsgRemoveValidatorResponse {}
+
+// MsgSelfRemoveValidator defines a message for a validator to remove itself
+message MsgSelfRemoveValidator {
+  option (cosmos.msg.v1.signer) = "address";
+
+  string address = 1
+      [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+}
+// MsgSelfRemoveValidatorResponse defines the response for a validator
+// removing itself
+message MsgSelfRemoveValidatorResponse {}
