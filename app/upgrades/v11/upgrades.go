@@ -3,14 +3,18 @@ package v11
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"cosmossdk.io/log"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	"github.com/ethereum/go-ethereum/common"
+	ethparams "github.com/ethereum/go-ethereum/params"
 )
 
 func CreateUpgradeHandler(
@@ -19,6 +23,7 @@ func CreateUpgradeHandler(
 	icaHostKeeper ICAHostKeeper,
 	stakingKeeper StakingKeeper,
 	transferKeeper TransferKeeper,
+	evmKeeper EvmKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
@@ -50,9 +55,33 @@ func CreateUpgradeHandler(
 			return nil, err
 		}
 
+		logger.Info("Installing EIP-2935 history-storage contract...")
+		if err := installHistoryStorageContract(ctx, logger, evmKeeper); err != nil {
+			return nil, err
+		}
+
 		logger.Info("Finished v11 upgrade handler")
 		return vm, nil
 	}
+}
+
+// installHistoryStorageContract installs the EIP-2935 history-storage contract if
+// missing.
+func installHistoryStorageContract(ctx sdk.Context, logger log.Logger, evmKeeper EvmKeeper) error {
+	if evmKeeper.IsContract(ctx, ethparams.HistoryStorageAddress) {
+		logger.Info("EIP-2935 history-storage contract already present, skipping")
+		return nil
+	}
+
+	idxContractPreinstall := slices.IndexFunc(evmtypes.DefaultPreinstalls, func(p evmtypes.Preinstall) bool {
+		return common.HexToAddress(p.Address) == ethparams.HistoryStorageAddress
+	})
+	if idxContractPreinstall < 0 {
+		return fmt.Errorf("EIP-2935 preinstall not found in DefaultPreinstalls")
+	}
+
+	logger.Info("Installing EIP-2935 history-storage contract", "address", ethparams.HistoryStorageAddress.Hex())
+	return evmKeeper.AddPreinstalls(ctx, []evmtypes.Preinstall{evmtypes.DefaultPreinstalls[idxContractPreinstall]})
 }
 
 // withdrawElysEscrow releases the configured amount of XRP from the Elys channel

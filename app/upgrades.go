@@ -72,6 +72,7 @@ func (app *App) setupUpgradeHandlers() {
 			app.ICAHostKeeper,
 			app.StakingKeeper,
 			app.TransferKeeper,
+			app.EvmKeeper,
 		),
 	)
 
