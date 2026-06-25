@@ -283,7 +283,7 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 			types.EventTypeRemoveValidator,
 			sdk.NewAttribute(types.AttributeValidator, validatorAddress),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
-			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
+			sdk.NewAttribute(types.AttributeStakingTokens, validator.Tokens.String()),
 		),
 	)
 
@@ -313,7 +313,7 @@ func (k Keeper) ExecuteSelfRemoveValidator(ctx sdk.Context, validatorAddress str
 			types.EventTypeSelfRemoveValidator,
 			sdk.NewAttribute(types.AttributeValidator, valAddress.String()),
 			sdk.NewAttribute(types.AttributeHeight, fmt.Sprintf("%d", ctx.BlockHeight())),
-			sdk.NewAttribute(types.AttributeStakingTokens, fmt.Sprintf("%d", validator.Tokens)),
+			sdk.NewAttribute(types.AttributeStakingTokens, validator.Tokens.String()),
 		),
 	)
 
