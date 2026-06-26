@@ -3,7 +3,6 @@ package v11
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"cosmossdk.io/log"
@@ -14,7 +13,6 @@ import (
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/ethereum/go-ethereum/common"
-	ethparams "github.com/ethereum/go-ethereum/params"
 )
 
 func CreateUpgradeHandler(
@@ -55,8 +53,8 @@ func CreateUpgradeHandler(
 			return nil, err
 		}
 
-		logger.Info("Installing EIP-2935 history-storage contract...")
-		if err := installHistoryStorageContract(ctx, logger, evmKeeper); err != nil {
+		logger.Info("Installing missing default preinstalls...")
+		if err := installMissingPreinstalls(ctx, logger, evmKeeper); err != nil {
 			return nil, err
 		}
 
@@ -65,23 +63,20 @@ func CreateUpgradeHandler(
 	}
 }
 
-// installHistoryStorageContract installs the EIP-2935 history-storage contract if
-// missing.
-func installHistoryStorageContract(ctx sdk.Context, logger log.Logger, evmKeeper EvmKeeper) error {
-	if evmKeeper.IsContract(ctx, ethparams.HistoryStorageAddress) {
-		logger.Info("EIP-2935 history-storage contract already present, skipping")
+// installMissingPreinstalls deploys any default preinstall that is absent.
+func installMissingPreinstalls(ctx sdk.Context, logger log.Logger, evmKeeper EvmKeeper) error {
+	var missingPreinstalls []evmtypes.Preinstall
+	for _, aDefaultPreinstall := range evmtypes.DefaultPreinstalls {
+		if evmKeeper.IsContract(ctx, common.HexToAddress(aDefaultPreinstall.Address)) {
+			continue
+		}
+		logger.Info("installing missing preinstall", "name", aDefaultPreinstall.Name, "address", aDefaultPreinstall.Address)
+		missingPreinstalls = append(missingPreinstalls, aDefaultPreinstall)
+	}
+	if len(missingPreinstalls) == 0 {
 		return nil
 	}
-
-	idxContractPreinstall := slices.IndexFunc(evmtypes.DefaultPreinstalls, func(p evmtypes.Preinstall) bool {
-		return common.HexToAddress(p.Address) == ethparams.HistoryStorageAddress
-	})
-	if idxContractPreinstall < 0 {
-		return fmt.Errorf("EIP-2935 preinstall not found in DefaultPreinstalls")
-	}
-
-	logger.Info("Installing EIP-2935 history-storage contract", "address", ethparams.HistoryStorageAddress.Hex())
-	return evmKeeper.AddPreinstalls(ctx, []evmtypes.Preinstall{evmtypes.DefaultPreinstalls[idxContractPreinstall]})
+	return evmKeeper.AddPreinstalls(ctx, missingPreinstalls)
 }
 
 // withdrawElysEscrow releases the configured amount of XRP from the Elys channel
