@@ -5,7 +5,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // ICAHostKeeper is the narrow interface required by the v11 upgrade
@@ -25,4 +27,11 @@ type StakingKeeper interface {
 // handler. It matches a subset of transferkeeper.Keeper.
 type TransferKeeper interface {
 	UnescrowCoin(ctx sdk.Context, escrowAddress, receiver sdk.AccAddress, coin sdk.Coin) error
+}
+
+// EvmKeeper is the narrow interface required by the v11 upgrade
+// handler. It matches a subset of evmkeeper.Keeper.
+type EvmKeeper interface {
+	IsContract(ctx sdk.Context, addr common.Address) bool
+	AddPreinstalls(ctx sdk.Context, preinstalls []evmtypes.Preinstall) error
 }

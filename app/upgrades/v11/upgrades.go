@@ -9,8 +9,10 @@ import (
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func CreateUpgradeHandler(
@@ -19,6 +21,7 @@ func CreateUpgradeHandler(
 	icaHostKeeper ICAHostKeeper,
 	stakingKeeper StakingKeeper,
 	transferKeeper TransferKeeper,
+	evmKeeper EvmKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
@@ -50,9 +53,30 @@ func CreateUpgradeHandler(
 			return nil, err
 		}
 
+		logger.Info("Installing missing default preinstalls...")
+		if err := installMissingPreinstalls(ctx, logger, evmKeeper); err != nil {
+			return nil, err
+		}
+
 		logger.Info("Finished v11 upgrade handler")
 		return vm, nil
 	}
+}
+
+// installMissingPreinstalls deploys any default preinstall that is absent.
+func installMissingPreinstalls(ctx sdk.Context, logger log.Logger, evmKeeper EvmKeeper) error {
+	var missingPreinstalls []evmtypes.Preinstall
+	for _, aDefaultPreinstall := range evmtypes.DefaultPreinstalls {
+		if evmKeeper.IsContract(ctx, common.HexToAddress(aDefaultPreinstall.Address)) {
+			continue
+		}
+		logger.Info("installing missing preinstall", "name", aDefaultPreinstall.Name, "address", aDefaultPreinstall.Address)
+		missingPreinstalls = append(missingPreinstalls, aDefaultPreinstall)
+	}
+	if len(missingPreinstalls) == 0 {
+		return nil
+	}
+	return evmKeeper.AddPreinstalls(ctx, missingPreinstalls)
 }
 
 // withdrawElysEscrow releases the configured amount of XRP from the Elys channel
