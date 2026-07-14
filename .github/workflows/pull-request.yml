@@ -11,17 +11,22 @@ concurrency:
 
 jobs:
     integration:
+        # Only run private-dependent builds for branches in this repo, not forks
+        if: github.event.pull_request.head.repo.full_name == github.repository
         runs-on: ubuntu-latest
         steps:
             -   uses: actions/checkout@v2
             -   uses: docker/setup-qemu-action@v2
             -   uses: docker/setup-buildx-action@v2
+            -   name: Configure private EVM access
+                uses: ./.github/actions/private-evm-ssh
+                with:
+                    ssh-key: ${{ secrets.EVM_FORK_SSH_KEY }}
             # Build docker image
-            - name: Build docker image
-              uses: docker/build-push-action@v4
-              with:
-                  context: .
-                  target: integration
-                  push: false
-                  secrets: |
-                      ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
+            -   name: Build docker image
+                uses: docker/build-push-action@v4
+                with:
+                    context: .
+                    target: integration
+                    push: false
+                    ssh: default=${{ env.SSH_AUTH_SOCK }}

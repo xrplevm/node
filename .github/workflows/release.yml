@@ -35,6 +35,10 @@ jobs:
       - run: |
           TAG=${{ github.event.inputs.tag }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+      - name: Configure private EVM access
+        uses: ./.github/actions/private-evm-ssh
+        with:
+          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY }}
       # Build and push docker image
       - name: Build docker image
         uses: docker/build-push-action@v4
@@ -46,8 +50,7 @@ jobs:
           tags: |
             peersyst/exrp:${{ github.event.inputs.tag }}
             ${{ fromJSON('["", "peersyst/exrp:latest"]')[github.event.inputs.is_latest_release == 'true'] }}
-          secrets: |
-            ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
+          ssh: default=${{ env.SSH_AUTH_SOCK }}
       - name: Publish the Release
         uses: softprops/action-gh-release@v1
         with:

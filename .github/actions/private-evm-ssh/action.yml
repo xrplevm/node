@@ -1,0 +1,35 @@
+name: "Private EVM SSH access"
+description: "Start an ssh-agent holding the read-only EVM deploy key, and optionally configure Go for direct private-module access."
+
+inputs:
+  ssh-key:
+    description: "Private key of the read-only deploy key for github.com/xrplevm/evm-priv-jul2026."
+    required: true
+  configure-go:
+    description: "Also set GOPRIVATE and git insteadOf on the runner (for jobs that run go directly instead of in Docker)."
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Start ssh-agent with the EVM deploy key
+      shell: bash
+      env:
+        EVM_FORK_SSH_KEY: ${{ inputs.ssh-key }}
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        eval "$(ssh-agent -s)"
+        printf '%s\n' "$EVM_FORK_SSH_KEY" | ssh-add -
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+    - name: Configure Go for the private module
+      if: inputs.configure-go == 'true'
+      shell: bash
+      run: |
+        echo "GOPRIVATE=github.com/xrplevm/evm-priv-jul2026" >> "$GITHUB_ENV"
+        git config --global \
+          url."ssh://git@github.com/xrplevm/evm-priv-jul2026".insteadOf \
+          "https://github.com/xrplevm/evm-priv-jul2026"

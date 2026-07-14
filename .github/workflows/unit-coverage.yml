@@ -7,11 +7,19 @@ on:
 jobs:
   build:
     name: Unit test
+    # Skip private-dependent runs for pull requests from forks
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
-      
+
+      - name: Configure private EVM access
+        uses: ./.github/actions/private-evm-ssh
+        with:
+          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY }}
+          configure-go: "true"
+
       - name: Generate unit test coverage
         run: make coverage-unit
 

@@ -23,6 +23,10 @@ jobs:
               with:
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PUSH_TOKEN }}
+            - name: Configure private EVM access
+              uses: ./.github/actions/private-evm-ssh
+              with:
+                  ssh-key: ${{ secrets.EVM_FORK_SSH_KEY }}
             # Build and push docker image
             - name: Build docker image
               uses: docker/build-push-action@v4
@@ -30,5 +34,4 @@ jobs:
                   target: release
                   push: true
                   tags: peersyst/exrp:${{ env.BRANCH }}
-                  secrets: |
-                    ssh_key_b64=${{ secrets.SSH_KEY_B64 }}
+                  ssh: default=${{ env.SSH_AUTH_SOCK }}
