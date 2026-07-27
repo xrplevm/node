@@ -1,4 +1,4 @@
-package v11
+package v111
 
 import (
 	sdkmath "cosmossdk.io/math"
@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	UpgradeName  = "v11.0.0"
+	UpgradeName  = "v11.1.0"
 	EVMCoinDenom = "axrp"
 
 	// mainnet
