@@ -1,4 +1,4 @@
-package v11
+package v111
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func CreateUpgradeHandler(
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
 		logger := ctx.Logger().With("upgrade", UpgradeName)
-		logger.Info("Running v11 upgrade handler...")
+		logger.Info("Running v11.1 upgrade handler...")
 
 		// Run migrations first so no module migration can restore ICA host defaults.
 		vm, err := mm.RunMigrations(ctx, configurator, vm)
@@ -50,7 +50,7 @@ func CreateUpgradeHandler(
 			return nil, err
 		}
 
-		logger.Info("Finished v11 upgrade handler")
+		logger.Info("Finished v11.1 upgrade handler")
 		return vm, nil
 	}
 }
