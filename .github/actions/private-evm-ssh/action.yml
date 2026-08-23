@@ -3,7 +3,7 @@ description: "Start an ssh-agent holding the read-only EVM deploy key, and optio
 
 inputs:
   ssh-key:
-    description: "Private key of the read-only deploy key for github.com/xrplevm/evm-priv-jul2026."
+    description: "Private key of the read-only deploy key for github.com/xrplevm/evm-ghsa-aug-2026."
     required: true
   configure-go:
     description: "Also set GOPRIVATE and git insteadOf on the runner (for jobs that run go directly instead of in Docker)."
@@ -29,7 +29,7 @@ runs:
       if: inputs.configure-go == 'true'
       shell: bash
       run: |
-        echo "GOPRIVATE=github.com/xrplevm/evm-priv-jul2026" >> "$GITHUB_ENV"
+        echo "GOPRIVATE=github.com/xrplevm/evm-ghsa-aug-2026" >> "$GITHUB_ENV"
         git config --global \
-          url."ssh://git@github.com/xrplevm/evm-priv-jul2026".insteadOf \
-          "https://github.com/xrplevm/evm-priv-jul2026"
+          url."ssh://git@github.com/xrplevm/evm-ghsa-aug-2026".insteadOf \
+          "https://github.com/xrplevm/evm-ghsa-aug-2026"
