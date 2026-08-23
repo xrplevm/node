@@ -35,7 +35,7 @@ jobs:
           docker run --rm \
             -e CGO_ENABLED \
             -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e GOPRIVATE=github.com/xrplevm/evm-priv-jul2026 \
+            -e GOPRIVATE=github.com/xrplevm/evm-ghsa-aug-2026 \
             -e SSH_AUTH_SOCK=/ssh-agent \
             -v "$SSH_AUTH_SOCK:/ssh-agent" \
             -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
@@ -45,5 +45,5 @@ jobs:
             --entrypoint /bin/sh \
             goreleaser/goreleaser-cross:v1.22 -c \
             'git config --global --add safe.directory /go/src/exrp && \
-             git config --global url."ssh://git@github.com/xrplevm/evm-priv-jul2026".insteadOf "https://github.com/xrplevm/evm-priv-jul2026" && \
+             git config --global url."ssh://git@github.com/xrplevm/evm-ghsa-aug-2026".insteadOf "https://github.com/xrplevm/evm-ghsa-aug-2026" && \
              goreleaser release --clean --skip validate'
