@@ -56,7 +56,7 @@ jobs:
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ github.event.inputs.tag }}
-          prerelease: steps.check-prerelease.outputs.match == 'true'
+          prerelease: ${{ github.event.inputs.is_latest_release != 'true' }}
           target_commitish: ${{ github.event.inputs.commit_branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
