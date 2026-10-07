@@ -223,7 +223,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	}
 
 	// TODO - this might not be the best way to initilize the context
-	n.ctx = exrpApp.BaseApp.NewContextLegacy(false, header)
+	n.ctx = exrpApp.NewContextLegacy(false, header)
 
 	// Commit genesis changes
 	if _, err := exrpApp.Commit(); err != nil {
@@ -342,7 +342,7 @@ func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxRe
 	// NextBlock or NextBlockAfter functions
 	req.DecidedLastCommit = abcitypes.CommitInfo{}
 
-	blockRes, err := n.app.BaseApp.FinalizeBlock(req)
+	blockRes, err := n.app.FinalizeBlock(req)
 	if err != nil {
 		return abcitypes.ExecTxResult{}, err
 	}
@@ -355,7 +355,7 @@ func (n *IntegrationNetwork) BroadcastTxSync(txBytes []byte) (abcitypes.ExecTxRe
 // Simulate simulates the given txBytes to the network and returns the simulated response.
 // TODO - this should be change to gRPC
 func (n *IntegrationNetwork) Simulate(txBytes []byte) (*txtypes.SimulateResponse, error) {
-	gas, result, err := n.app.BaseApp.Simulate(txBytes)
+	gas, result, err := n.app.Simulate(txBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func (n *IntegrationNetwork) Simulate(txBytes []byte) (*txtypes.SimulateResponse
 // CheckTx calls the BaseApp's CheckTx method with the given txBytes to the network and returns the response.
 func (n *IntegrationNetwork) CheckTx(txBytes []byte) (*abcitypes.ResponseCheckTx, error) {
 	req := &abcitypes.RequestCheckTx{Tx: txBytes}
-	res, err := n.app.BaseApp.CheckTx(req)
+	res, err := n.app.CheckTx(req)
 	if err != nil {
 		return nil, err
 	}
