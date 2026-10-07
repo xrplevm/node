@@ -116,6 +116,7 @@ build-rocksdb:
 ###                                Linting                                  ###
 ###############################################################################
 golangci_lint_cmd=golangci-lint
+# Keep in sync with the golangci-lint-action version in .github/workflows/pull-request.yml
 golangci_version=v1.62.0
 
 lint:
