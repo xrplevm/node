@@ -3,6 +3,10 @@ name: "Pull Request"
 on:
     pull_request:
         types: [opened, synchronize]
+    # Runs on main only to seed the Go and lint caches that PR runs restore from
+    push:
+        branches:
+            - "main"
 
 permissions: {}
 
@@ -12,20 +16,41 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    lint:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+                    # Separate cache key from the integration job so both jobs save their own cache
+                    cache-dependency-path: |
+                        go.sum
+                        .golangci.yml
+            -   uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+                with:
+                    # Keep in sync with golangci_version in the Makefile
+                    version: v1.62.0
+                    args: --timeout=10m
+                    # make lint does not verify the config, and .golangci.yml still has options removed in v1.62
+                    verify: false
+
     integration:
         runs-on: ubuntu-latest
         permissions:
             contents: read
         steps:
             -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-            -   uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-            -   uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-            # Build docker image
-            - name: Build docker image
-              uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-              with:
-                  context: .
-                  target: integration
-                  push: false
-                  provenance: false
-                  sbom: false
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+            -   name: Unit tests
+                run: make test-poa
+            -   name: Integration tests
+                run: make test-integration
