@@ -20,8 +20,8 @@ import (
 	"github.com/cosmos/evm/testutil/integration/base/factory"
 	"github.com/cosmos/evm/testutil/keyring"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v10/testutil/integration/exrp/utils"
-	poatypes "github.com/xrplevm/node/v10/x/poa/types"
+	"github.com/xrplevm/node/v12/testutil/integration/exrp/utils"
+	poatypes "github.com/xrplevm/node/v12/x/poa/types"
 )
 
 // AddValidator tests

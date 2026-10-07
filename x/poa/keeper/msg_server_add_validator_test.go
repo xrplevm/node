@@ -10,8 +10,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v10/x/poa/testutil"
-	"github.com/xrplevm/node/v10/x/poa/types"
+	"github.com/xrplevm/node/v12/x/poa/testutil"
+	"github.com/xrplevm/node/v12/x/poa/types"
 	"go.uber.org/mock/gomock"
 )
 
