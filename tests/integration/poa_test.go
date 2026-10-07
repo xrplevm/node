@@ -112,6 +112,8 @@ func (s *TestSuite) TestAddValidator_InvalidMsgAddValidator() {
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
+	valPubKey, err := validator.ConsPubKey()
+	require.NoError(s.T(), err)
 
 	tt := []struct {
 		name          string
@@ -124,7 +126,7 @@ func (s *TestSuite) TestAddValidator_InvalidMsgAddValidator() {
 		{
 			name:          "add validator - already used pubkey",
 			valAddress:    randomAcc.Address.String(),
-			valPubKey:     validator.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey),
+			valPubKey:     valPubKey,
 			expectedError: stakingtypes.ErrValidatorPubKeyExists,
 		},
 		{
@@ -188,6 +190,8 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_StatusBonded() {
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
+	valPubKey, err := validator.ConsPubKey()
+	require.NoError(s.T(), err)
 
 	tt := []struct {
 		name          string
@@ -200,7 +204,7 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_StatusBonded() {
 		{
 			name:          "add existing validator - status bonded",
 			valAddress:    valAccAddr.String(),
-			valPubKey:     validator.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey),
+			valPubKey:     valPubKey,
 			expectedError: poatypes.ErrAddressHasBondedTokens,
 			beforeRun: func() {
 				resVal, err := s.Network().GetStakingClient().Validator(
@@ -273,6 +277,8 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Jailed() {
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
+	valPubKey, err := validator.ConsPubKey()
+	require.NoError(s.T(), err)
 
 	tt := []struct {
 		name          string
@@ -285,7 +291,7 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Jailed() {
 		{
 			name:          "add existing validator - status jailed",
 			valAddress:    valAccAddr.String(),
-			valPubKey:     validator.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey),
+			valPubKey:     valPubKey,
 			expectedError: poatypes.ErrAddressHasBondedTokens,
 			beforeRun: func() {
 				// Force jail validator
@@ -389,6 +395,8 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Tombstoned() {
 	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
 	require.NoError(s.T(), err)
 	valAccAddr := sdktypes.AccAddress(valAddr)
+	valPubKey, err := validator.ConsPubKey()
+	require.NoError(s.T(), err)
 
 	tt := []struct {
 		name          string
@@ -401,7 +409,7 @@ func (s *TestSuite) TestAddValidator_ExistingValidator_Tombstoned() {
 		{
 			name:          "add existing validator - status tombstoned",
 			valAddress:    valAccAddr.String(),
-			valPubKey:     validator.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey),
+			valPubKey:     valPubKey,
 			expectedError: poatypes.ErrAddressHasBondedTokens,
 			beforeRun: func() {
 				// Force validator to be tombstoned
