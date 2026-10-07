@@ -237,7 +237,7 @@ func updateApplicationState(app *xrplevm.App, args valArgs) error {
 		return err
 	}
 
-	appCtx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+	appCtx := app.NewUncachedContext(true, tmproto.Header{})
 
 	// STAKING
 	// Create Validator struct for our new validator.

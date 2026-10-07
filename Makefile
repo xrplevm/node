@@ -115,19 +115,18 @@ build-rocksdb:
 ###############################################################################
 ###                                Linting                                  ###
 ###############################################################################
-golangci_lint_cmd=golangci-lint
-# Keep in sync with the golangci-lint-action version in .github/workflows/pull-request.yml
-golangci_version=v1.62.0
+golangci_lint_cmd=$(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)/golangci-lint
+golangci_version=$(shell cat .golangci-lint-version)
 
 lint:
 	@echo "--> Running linter"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(golangci_version)
 	@$(golangci_lint_cmd) run --timeout=10m
 
 lint-fix:
 	@echo "--> Running linter"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(golangci_version)
-	@$(golangci_lint_cmd) run --fix --out-format=tab --issues-exit-code=0
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(golangci_version)
+	@$(golangci_lint_cmd) run --fix --output.tab.path=stdout --issues-exit-code=0
 
 ###############################################################################
 ###                                Testing                                  ###
