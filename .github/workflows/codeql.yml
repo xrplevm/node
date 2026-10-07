@@ -1,0 +1,50 @@
+name: "CodeQL"
+
+on:
+    push:
+        branches:
+            - "main"
+    pull_request:
+        types: [opened, synchronize]
+    schedule:
+        # Weekly, same slot the default setup used
+        - cron: "52 20 * * 2"
+
+permissions: {}
+
+concurrency:
+    # Cancel old runs if there is a new commit in the same branch
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    analyze:
+        name: Analyze (${{ matrix.language }})
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            security-events: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    -   language: actions
+                        build-mode: none
+                    -   language: go
+                        build-mode: autobuild
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+                with:
+                    languages: ${{ matrix.language }}
+                    build-mode: ${{ matrix.build-mode }}
+            -   if: matrix.build-mode == 'autobuild'
+                uses: github/codeql-action/autobuild@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+                env:
+                    # Without this the Go autobuilder runs `make` (install and lint), which the extractor never uses
+                    CODEQL_EXTRACTOR_GO_BUILD_COMMAND: go mod download
+            -   uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+                with:
+                    category: "/language:${{ matrix.language }}"
