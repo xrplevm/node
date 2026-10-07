@@ -39,7 +39,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 
-	xrplevm "github.com/xrplevm/node/v10/app"
+	xrplevm "github.com/xrplevm/node/v12/app"
 )
 
 const (

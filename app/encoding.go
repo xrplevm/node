@@ -5,7 +5,7 @@ import (
 
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
-	legacytypes "github.com/xrplevm/node/v10/types/legacy/ethermint/types"
+	legacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/types"
 
 	amino "github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -21,9 +21,9 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	feemarketlegacytypes "github.com/xrplevm/node/v10/types/legacy/ethermint/feemarket"
-	erc20legacytypes "github.com/xrplevm/node/v10/types/legacy/evmos/erc20"
-	poalegacytypes "github.com/xrplevm/node/v10/x/poa/types/legacy"
+	feemarketlegacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/feemarket"
+	erc20legacytypes "github.com/xrplevm/node/v12/types/legacy/evmos/erc20"
+	poalegacytypes "github.com/xrplevm/node/v12/x/poa/types/legacy"
 )
 
 func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {

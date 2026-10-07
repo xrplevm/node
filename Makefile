@@ -111,6 +111,23 @@ build-rocksdb:
 	CGO_LDFLAGS="-L/usr/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd -ldl" \
 	COSMOS_BUILD_OPTIONS=rocksdb $(MAKE) build
 
+# Bump the Go module major version, e.g. `make bump-module MAJOR=12`
+bump-module: export MAJOR := $(MAJOR)
+bump-module:
+	@test -n "$$MAJOR" || (echo "usage: make bump-module MAJOR=<n>" && exit 1)
+	@printf '%s\n' "$$MAJOR" | grep -qE '^([2-9]|[1-9][0-9]+)$$' || (echo "MAJOR must be an integer >= 2, got '$$MAJOR'" && exit 1)
+	@set -e; \
+	OLD=$$(awk '/^module/{print $$2}' go.mod); NEW="github.com/xrplevm/node/v$$MAJOR"; \
+	if [ "$$OLD" = "$$NEW" ]; then \
+		echo "module already $$NEW, verifying build"; \
+	else \
+		echo "--> $$OLD -> $$NEW"; \
+		FILES=$$(git grep -lF "$$OLD" -- '*.go' '*.proto') || [ $$? -eq 1 ]; \
+		if [ -n "$$FILES" ]; then echo "$$FILES" | xargs perl -Mwarnings=FATAL,inplace -pi -e "s#\Q$$OLD\E(?![0-9])#$$NEW#g"; fi; \
+		go mod edit -module $$NEW; \
+	fi; \
+	go build ./...
+
 
 ###############################################################################
 ###                                Linting                                  ###
@@ -211,4 +228,4 @@ proto-update-deps:
 	@echo "Updating Protobuf dependencies"
 	$(DOCKER) run --rm -v $(CURDIR)/proto:/workspace --workdir /workspace $(protoImageName) buf mod update
 
-.PHONY: proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking proto-update-deps
+.PHONY: bump-module proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking proto-update-deps

@@ -46,7 +46,7 @@ import (
 	ethermintservercfg "github.com/cosmos/evm/server/config"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	"github.com/xrplevm/node/v10/app"
+	"github.com/xrplevm/node/v12/app"
 )
 
 type tmpAppOptions struct{}

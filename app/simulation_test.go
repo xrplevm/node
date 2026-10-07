@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"cosmossdk.io/log"
-	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
+	"github.com/xrplevm/node/v12/cmd/exrpd/cmd"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	evmante "github.com/cosmos/evm/ante"
 	antetypes "github.com/cosmos/evm/ante/types"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
-	"github.com/xrplevm/node/v10/app"
-	"github.com/xrplevm/node/v10/app/ante"
+	"github.com/xrplevm/node/v12/app"
+	"github.com/xrplevm/node/v12/app/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
