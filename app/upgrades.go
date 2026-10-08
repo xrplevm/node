@@ -5,81 +5,17 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	v10 "github.com/xrplevm/node/v10/app/upgrades/v10"
-	v101 "github.com/xrplevm/node/v10/app/upgrades/v101"
-	v112 "github.com/xrplevm/node/v10/app/upgrades/v112"
-	v9 "github.com/xrplevm/node/v10/app/upgrades/v9"
-
-	v5 "github.com/xrplevm/node/v10/app/upgrades/v5"
-	v6 "github.com/xrplevm/node/v10/app/upgrades/v6"
-	v7 "github.com/xrplevm/node/v10/app/upgrades/v7"
-	v8 "github.com/xrplevm/node/v10/app/upgrades/v8"
+	v12 "github.com/xrplevm/node/v10/app/upgrades/v12"
 )
 
+// setupUpgradeHandlers registers only the current upgrade. Delete the previous
+// app/upgrades/v<version>/ when adding a new one: its release tag keeps it.
 func (app *App) setupUpgradeHandlers() {
 	app.UpgradeKeeper.SetUpgradeHandler(
-		v5.UpgradeName,
-		v5.CreateUpgradeHandler(
+		v12.UpgradeName,
+		v12.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v6.UpgradeName,
-		v6.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v7.UpgradeName,
-		v7.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v8.UpgradeName,
-		v8.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v9.UpgradeName,
-		v9.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-			app.keys,
-			app.appCodec,
-			app.AccountKeeper,
-			app.EvmKeeper,
-			app.Erc20Keeper,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v10.UpgradeName,
-		v10.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-			app.EvmKeeper,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v101.UpgradeName,
-		v101.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-		),
-	)
-	app.UpgradeKeeper.SetUpgradeHandler(
-		v112.UpgradeName,
-		v112.CreateUpgradeHandler(
-			app.mm,
-			app.configurator,
-			app.ICAHostKeeper,
-			app.StakingKeeper,
-			app.TransferKeeper,
 		),
 	)
 
@@ -95,21 +31,9 @@ func (app *App) setupUpgradeHandlers() {
 		return
 	}
 
-	var storeUpgrades *storetypes.StoreUpgrades
+	if upgradeInfo.Name == v12.UpgradeName {
+		storeUpgrades := &storetypes.StoreUpgrades{}
 
-	switch upgradeInfo.Name {
-	case v5.UpgradeName,
-		v6.UpgradeName,
-		v7.UpgradeName,
-		v8.UpgradeName,
-		v9.UpgradeName,
-		v10.UpgradeName,
-		v101.UpgradeName,
-		v112.UpgradeName:
-		storeUpgrades = &storetypes.StoreUpgrades{}
-	}
-
-	if storeUpgrades != nil {
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
 	}
