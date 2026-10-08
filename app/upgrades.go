@@ -16,6 +16,7 @@ func (app *App) setupUpgradeHandlers() {
 		v12.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
+			app.EvmKeeper,
 		),
 	)
 
