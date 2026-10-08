@@ -162,14 +162,14 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 - Stale upgrade handlers from previous versions executing unexpectedly
 - Upgrade handler accessing or modifying state outside its intended scope
 
-**Key files**: `app/upgrades/v5/` through `app/upgrades/v10/`, upgrade registration in `app/app.go`
+**Key files**: `app/upgrades/v<version>/` and upgrade registration in `app/upgrades.go`. The repository keeps only the current upgrade. The release tags contain the earlier handlers.
 
 **What to check**:
 - Each upgrade handler is registered exactly once with the correct version name
 - Migration logic is deterministic (no maps iterated for state, no goroutines, no time-dependent logic)
 - Upgrade handlers only modify state relevant to their version
 - No upgrade handler can be re-executed after completion
-- Keeper references in upgrade handlers (`app/upgrades/v9/keepers.go`, `app/upgrades/v10/keepers.go`) only expose necessary keepers
+- Keeper references in upgrade handlers (`app/upgrades/v<version>/keepers.go`, when present) only expose necessary keepers
 
 ### 8. Governance
 
