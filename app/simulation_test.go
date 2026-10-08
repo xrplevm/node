@@ -3,6 +3,7 @@ package app_test
 import (
 	"math/rand"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -86,7 +87,7 @@ func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
 
 // simAppStateFn builds the simulation genesis.
 // Simulated txs pay random fees, so the feemarket base fee is removed.
-// Bank's RandomizedGenState drops the EVM denom metadata, so it is restored.
+// Bank's RandomizedGenState drops the EVM denom metadata, so it is added back when missing.
 func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 	genesis := app.NewDefaultGenesisState(bApp)
 	feemarketGenState := app.NewFeeMarketGenesisState()
@@ -99,8 +100,15 @@ func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 		bApp.SimulationManager(),
 		genesis,
 		func(moduleName string, genesisState any) {
-			if moduleName == banktypes.ModuleName {
-				genesisState.(*banktypes.GenesisState).DenomMetadata = app.NewBankGenesisState().DenomMetadata
+			if moduleName != banktypes.ModuleName {
+				return
+			}
+			bankGenState := genesisState.(*banktypes.GenesisState)
+			hasEvmDenom := slices.ContainsFunc(bankGenState.DenomMetadata, func(m banktypes.Metadata) bool {
+				return m.Base == app.BaseDenom
+			})
+			if !hasEvmDenom {
+				bankGenState.DenomMetadata = append(bankGenState.DenomMetadata, app.NewBankGenesisState().DenomMetadata...)
 			}
 		},
 		nil,
