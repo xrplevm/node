@@ -22,9 +22,8 @@ RUN make test-poa
 # Integration tests
 RUN make test-integration
 # Simulation tests
-# TODO: Restore simulation tests if possible
-# RUN make test-sim-benchmark-simulation
-# RUN make test-sim-full-app-fast
+RUN make test-sim-benchmark-simulation
+RUN make test-sim-full-app-fast
 
 RUN touch /test.lock
 
