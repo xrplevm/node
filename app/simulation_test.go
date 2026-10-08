@@ -9,13 +9,12 @@ import (
 	"cosmossdk.io/log"
 	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	evmante "github.com/cosmos/evm/ante"
-	antetypes "github.com/cosmos/evm/ante/types"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	"github.com/xrplevm/node/v10/app"
-	"github.com/xrplevm/node/v10/app/ante"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -23,6 +22,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/stretchr/testify/require"
@@ -37,7 +37,7 @@ const (
 	SimAppEVMChainID = 777
 )
 
-// NewSimApp disable feemarket on native tx, otherwise the cosmos-sdk simulation tests will fail.
+// NewSimApp creates the app used by the simulation tests.
 func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*app.App, error) {
 	appOptions := make(simtestutil.AppOptionsMap, 0)
 	appOptions[flags.FlagHome] = app.DefaultNodeHome
@@ -59,29 +59,6 @@ func NewSimApp(logger log.Logger, db dbm.DB, config simulationtypes.Config) (*ap
 		appOptions,
 		baseapp.SetChainID(config.ChainID),
 	)
-	handlerOpts := &evmante.HandlerOptions{
-		Cdc:                    bApp.AppCodec(),
-		AccountKeeper:          bApp.AccountKeeper,
-		BankKeeper:             bApp.BankKeeper,
-		ExtensionOptionChecker: antetypes.HasDynamicFeeExtensionOption,
-		EvmKeeper:              bApp.EvmKeeper,
-		FeegrantKeeper:         bApp.FeeGrantKeeper,
-		// TODO: Update when migrating to v10
-		IBCKeeper:         bApp.IBCKeeper,
-		FeeMarketKeeper:   bApp.FeeMarketKeeper,
-		SignModeHandler:   bApp.GetTxConfig().SignModeHandler(),
-		SigGasConsumer:    evmante.SigVerificationGasConsumer,
-		MaxTxGasWanted:    0,
-		DynamicFeeChecker: true,
-		PendingTxListener: bApp.OnPendingTx,
-	}
-	if err := handlerOpts.Validate(); err != nil {
-		panic(err)
-	}
-	handler := ante.NewAnteHandler(*handlerOpts)
-
-	bApp.SetAnteHandler(handler)
-
 	if err := bApp.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
@@ -105,6 +82,29 @@ func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
 	}
 
 	return accs
+}
+
+// simAppStateFn builds the simulation genesis.
+// Simulated txs pay random fees, so the feemarket base fee is removed.
+// Bank's RandomizedGenState drops the EVM denom metadata, so it is restored.
+func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
+	genesis := app.NewDefaultGenesisState(bApp)
+	feemarketGenState := app.NewFeeMarketGenesisState()
+	feemarketGenState.Params.NoBaseFee = true
+	feemarketGenState.Params.BaseFee = sdkmath.LegacyZeroDec()
+	genesis[feemarkettypes.ModuleName] = bApp.AppCodec().MustMarshalJSON(feemarketGenState)
+
+	return simtestutil.AppStateFnWithExtendedCbs(
+		bApp.AppCodec(),
+		bApp.SimulationManager(),
+		genesis,
+		func(moduleName string, genesisState any) {
+			if moduleName == banktypes.ModuleName {
+				genesisState.(*banktypes.GenesisState).DenomMetadata = app.NewBankGenesisState().DenomMetadata
+			}
+		},
+		nil,
+	)
 }
 
 // BenchmarkSimulation run the chain simulation
@@ -146,11 +146,7 @@ func BenchmarkSimulation(b *testing.B) {
 		b,
 		os.Stdout,
 		bApp.BaseApp,
-		simtestutil.AppStateFn(
-			bApp.AppCodec(),
-			bApp.SimulationManager(),
-			app.NewDefaultGenesisState(bApp),
-		),
+		simAppStateFn(bApp),
 		RandomAccounts,
 		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
 		bApp.ModuleAccountAddrs(),
@@ -201,11 +197,7 @@ func TestFullAppSimulation(t *testing.T) {
 		t,
 		os.Stdout,
 		bApp.BaseApp,
-		simtestutil.AppStateFn(
-			bApp.AppCodec(),
-			bApp.SimulationManager(),
-			app.NewDefaultGenesisState(bApp),
-		),
+		simAppStateFn(bApp),
 		RandomAccounts,
 		simtestutil.SimulationOperations(bApp, bApp.AppCodec(), config),
 		bApp.ModuleAccountAddrs(),
