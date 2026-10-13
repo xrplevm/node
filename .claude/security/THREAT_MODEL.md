@@ -23,7 +23,6 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 | Supply chain attacker | Compromises a Go module dependency | Backdoor node binary |
 | Rogue insider | Has access to authority key or CI | Add malicious validators, push bad builds |
 | Cross-chain attacker | Controls an IBC-connected chain | Forge IBC messages, drain bridge |
-| ICA controller | Controls an interchain account on a remote chain | Execute arbitrary messages on this chain via ICA host |
 
 ## Attack Surfaces
 
@@ -197,4 +196,4 @@ These are common vulnerability patterns in Cosmos SDK chains that should be chec
 - **Keeper exposure**: Verify keepers are not passed beyond their intended module boundaries. Check `app/app.go` for keepers passed to modules that shouldn't have them. POA receives BankKeeper and StakingKeeper — verify these are the correct scoped interfaces (`x/poa/types/expected_keepers.go`), not the full keeper implementations.
 - **Parameter changes**: Check if on-chain parameter changes can lead to unsafe states (e.g., `MaxValidators` to 0 in staking params, unbonding time to 0, bond denom change breaking POA).
 - **Non-determinism**: Any use of maps iterated for state, goroutines, or `time.Now()` in state machine code causes consensus failures. Check all code paths in `x/poa/`, `app/ante/`, and `app/upgrades/`.
-- **ICA host allow list**: Verify which message types the ICA host module is allowed to execute. An open allow list lets remote chains execute arbitrary messages on this chain.
+- **ICA host**: removed in v12. The IBC router must not route the `icahost` port, and gov must reject `/ibc.applications.interchain_accounts.host.v1.MsgUpdateParams` at proposal submission. ICS-27 types decode only so that historical txs and existing interchain accounts stay readable (`app/encoding.go`). Reintroducing ICA host, or any IBC app that executes messages, lets remote chains call x/staking and bypass the POA ante handler.

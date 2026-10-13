@@ -20,6 +20,7 @@ import (
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	vmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/cosmos/gogoproto/proto"
+	ica "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	feemarketlegacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/feemarket"
@@ -73,6 +74,9 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 
 	// x/authz was removed in v12. Keep its types so historical txs still decode.
 	authz.RegisterInterfaces(interfaceRegistry)
+	// ICA host was removed in v12. Keep the ICS-27 types so historical txs and
+	// interchain accounts in the auth store still decode.
+	ica.AppModuleBasic{}.RegisterInterfaces(interfaceRegistry)
 
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	enccodec.RegisterLegacyAminoCodec(cdc)
