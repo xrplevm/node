@@ -943,7 +943,7 @@ func (app *App) DefaultGenesis() map[string]json.RawMessage {
 	genesis := app.BasicModuleManager.DefaultGenesis(app.appCodec)
 
 	evmGenState := evmtypes.DefaultGenesisState()
-	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
+	evmGenState.Params.ActiveStaticPrecompiles = activeStaticPrecompiles()
 	genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenState)
 
 	erc20GenState := erc20types.DefaultGenesisState()
