@@ -36,7 +36,7 @@ func TestCreateUpgradeHandlerDisablesGovPrecompile(t *testing.T) {
 	)
 	keeper := &mockEvmKeeper{params: evmtypes.Params{
 		ActiveStaticPrecompiles: []string{
-			evmtypes.StakingPrecompileAddress,
+			evmtypes.Bech32PrecompileAddress,
 			evmtypes.GovPrecompileAddress,
 			evmtypes.BankPrecompileAddress,
 		},
@@ -50,7 +50,7 @@ func TestCreateUpgradeHandlerDisablesGovPrecompile(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t,
-		[]string{evmtypes.StakingPrecompileAddress, evmtypes.BankPrecompileAddress},
+		[]string{evmtypes.Bech32PrecompileAddress, evmtypes.BankPrecompileAddress},
 		keeper.params.ActiveStaticPrecompiles,
 	)
 }

@@ -79,12 +79,14 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 - Incorrect gas accounting between Cosmos and EVM layers
 - State inconsistency between EVM and Cosmos views
 - Precompile vulnerabilities
+- Precompiles that call Cosmos msg servers directly and skip the POA ante handler, for example the staking precompile (`0x...0800`)
 
 **Key files**: Upstream `cosmos/evm` module (out of scope for deep audit, but check integration points in `app/app.go`)
 
 **What to check**:
 - EVM module is wired with correct ante handlers
 - Custom precompiles (if any) are registered correctly
+- The staking precompile is not registered (`app/app.go`). Activating its address in the EVM params must only make calls to it fail, and no other registered precompile may create validators or change delegations
 - Gas limit configurations are sane
 
 ### 4. IBC (Inter-Blockchain Communication)
