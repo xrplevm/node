@@ -474,6 +474,22 @@ func New(
 		tkeys[feemarkettypes.TransientKey],
 	)
 	// EVM Keeper
+	staticPrecompiles := precompiletypes.DefaultStaticPrecompiles(
+		*app.StakingKeeper,
+		app.DistrKeeper,
+		app.BankKeeper,
+		&app.Erc20Keeper,
+		&app.TransferKeeper,
+		app.IBCKeeper.ChannelKeeper,
+		app.GovKeeper,
+		app.SlashingKeeper,
+		appCodec,
+	)
+	// x/poa owns the validator set. The staking precompile calls the staking msg
+	// server directly and skips the POA ante handler, so it is never registered.
+	// Activating its address in the EVM params then only makes calls to it fail.
+	delete(staticPrecompiles, common.HexToAddress(evmtypes.StakingPrecompileAddress))
+
 	tracer := cast.ToString(appOpts.Get(srvflags.EVMTracer))
 	app.EvmKeeper = evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], keys,
@@ -485,19 +501,7 @@ func New(
 		&app.Erc20Keeper,
 		evmChainID,
 		tracer,
-	).WithStaticPrecompiles(
-		precompiletypes.DefaultStaticPrecompiles(
-			*app.StakingKeeper,
-			app.DistrKeeper,
-			app.BankKeeper,
-			&app.Erc20Keeper,
-			&app.TransferKeeper,
-			app.IBCKeeper.ChannelKeeper,
-			app.GovKeeper,
-			app.SlashingKeeper,
-			appCodec,
-		),
-	).WithDefaultEvmCoinInfo(evmtypes.EvmCoinInfo{
+	).WithStaticPrecompiles(staticPrecompiles).WithDefaultEvmCoinInfo(evmtypes.EvmCoinInfo{
 		Denom:         BaseDenom,
 		ExtendedDenom: BaseDenom,
 		DisplayDenom:  Denom,
