@@ -6,7 +6,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 
 `exrpd` is the node software of the XRPL EVM Sidechain. It is a Cosmos SDK chain with an EVM (`cosmos/evm`). Validators are managed by Proof of Authority (`x/poa`), not by open staking. The chain holds real value: the native `axrp` token, ERC-20 tokens, and IBC assets.
 
-- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, authz, feegrant, upgrade, evidence, consensus, params, crisis), IBC (transfer, ICA host, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
+- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, feegrant, upgrade, evidence, consensus, params, crisis), IBC (transfer, ICA host, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
 - `app/ante/`: the ante handler. It routes each transaction by its first extension option:
   - `/cosmos.evm.vm.v1.ExtensionOptionsEthereumTx` -> EVM ante chain (`evm_handler.go`)
   - `/cosmos.evm.ante.v1.ExtensionOptionDynamicFeeTx` -> Cosmos ante chain (`cosmos_handler.go`)
@@ -23,7 +23,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 
 Treat all of these as attacker-controlled:
 
-- Any transaction from any account, Cosmos or Ethereum format, sent through CometBFT RPC, gRPC, REST, or Ethereum JSON-RPC. This includes `authz.MsgExec` with nested messages and EVM calls to precompiles.
+- Any transaction from any account, Cosmos or Ethereum format, sent through CometBFT RPC, gRPC, REST, or Ethereum JSON-RPC. This includes EVM calls to precompiles.
 - EVM bytecode and calldata, including contracts that call the static precompiles (for example staking, distribution, bank, erc20, ics20, gov, slashing).
 - IBC packets and acknowledgements from a counterparty chain, which may be malicious.
 - Queries to the public gRPC, REST and JSON-RPC endpoints.
@@ -224,7 +224,7 @@ These must always hold. Verify them in every audit.
 **Threats**:
 - Governance proposal executing arbitrary module messages (parameter changes, software upgrades, community spend)
 - Parameter changes that put the chain in an unsafe state (e.g., unbonding time to 0, max validators to 0)
-- Governance bypass via `authz` grants to the gov module account
+- Delegation of gov authority to an account, for example through a reintroduced `authz` module (removed in v12)
 - POA module exposes `GovKeeper.SubmitProposal` — verify it cannot be abused to self-authorize
 
 **Key files**: Gov module wiring in `app/app.go`, `x/poa/types/expected_keepers.go` (GovKeeper interface)
@@ -232,7 +232,7 @@ These must always hold. Verify them in every audit.
 **What to check**:
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
-- `authz` grants cannot escalate to gov-level authority
+- `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns

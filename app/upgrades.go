@@ -5,6 +5,7 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 )
 
@@ -33,7 +34,9 @@ func (app *App) setupUpgradeHandlers() {
 	}
 
 	if upgradeInfo.Name == v12.UpgradeName {
-		storeUpgrades := &storetypes.StoreUpgrades{}
+		storeUpgrades := &storetypes.StoreUpgrades{
+			Deleted: []string{authz.ModuleName},
+		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))

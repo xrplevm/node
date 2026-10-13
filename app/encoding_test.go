@@ -2,8 +2,11 @@ package app_test
 
 import (
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	legacytypes "github.com/cosmos/evm/rpc/types/legacy"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v12/app"
@@ -47,4 +50,28 @@ func TestMakeEncodingConfig_DecodesLegacyTxWithAccessList(t *testing.T) {
 	txData, err := legacytypes.UnpackTxData(msg.Data)
 	require.NoError(t, err)
 	require.Equal(t, *accessList.ToEthAccessList(), txData.GetAccessList())
+}
+
+// x/authz was removed in v12. Blocks from before v12 can contain authz txs, and
+// RPC queries must still decode them.
+func TestMakeEncodingConfig_DecodesRemovedAuthzMsgs(t *testing.T) {
+	granter := sdk.AccAddress("granter_____________")
+	grantee := sdk.AccAddress("grantee_____________")
+	expiration := time.Unix(2_000_000_000, 0).UTC()
+	grant, err := authz.NewMsgGrant(granter, grantee, authz.NewGenericAuthorization("/cosmos.bank.v1beta1.MsgSend"), &expiration)
+	require.NoError(t, err)
+	revoke := authz.NewMsgRevoke(granter, grantee, "/cosmos.bank.v1beta1.MsgSend")
+	exec := authz.NewMsgExec(grantee, []sdk.Msg{&revoke})
+
+	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
+	for _, msg := range []sdk.Msg{grant, &revoke, &exec} {
+		txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+		require.NoError(t, txBuilder.SetMsgs(msg))
+		bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+		require.NoError(t, err)
+
+		tx, err := encodingConfig.TxConfig.TxDecoder()(bz)
+		require.NoError(t, err, sdk.MsgTypeURL(msg))
+		require.Equal(t, []sdk.Msg{msg}, tx.GetMsgs())
+	}
 }
