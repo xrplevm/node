@@ -6,6 +6,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 )
 
@@ -35,7 +36,7 @@ func (app *App) setupUpgradeHandlers() {
 
 	if upgradeInfo.Name == v12.UpgradeName {
 		storeUpgrades := &storetypes.StoreUpgrades{
-			Deleted: []string{authz.ModuleName},
+			Deleted: []string{authz.ModuleName, icahosttypes.StoreKey},
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades

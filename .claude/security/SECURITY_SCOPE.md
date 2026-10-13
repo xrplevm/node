@@ -92,7 +92,7 @@ These are the points where untrusted input enters the system. Every audit should
                     |
        +------------+------------+
        |     IBC Middleware       |  <-- IBC relayer messages
-       |  transfer, ica/host,    |
+       |  transfer,              |
        |  rate-limiting          |
        +-------------------------+
 ```
@@ -119,7 +119,6 @@ These are the points where untrusted input enters the system. Every audit should
    | `params` | `ParamsKeeper` | Legacy parameter changes — verify migration to consensus params |
    | `consensus` | `ConsensusParamsKeeper` | Block size, gas limits, validator set changes |
    | `transfer` | `TransferKeeper` | IBC token transfers |
-   | `ica/host` | `ICAHostKeeper` | Interchain accounts — remote chains can execute messages on this chain |
    | `rate-limiting` | `RateLimitKeeper` | IBC rate limiting — misconfiguration can allow or block transfers |
 
 ## Audit Focus Areas
@@ -132,7 +131,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
 | **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention |
 | **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration |
-| **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, ICA host permissions |
+| **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, reintroduction of ICA host (removed in v12) or any IBC app that executes messages |
 | **Upgrade handlers** | Upgrade handlers | State migration correctness, non-determinism, missing or stale upgrade handlers |
 | **Configuration & secrets** | CLI entry point, App configuration, Encoding config | Hardcoded secrets, insecure defaults, TLS config, env var handling |
 | **Consensus & state machine** | App wiring, POA module, Type definitions | Non-determinism (map iteration, goroutines, `time.Now()`), module account permissions (Minter/Burner scoping), genesis state validation, address prefix correctness |
