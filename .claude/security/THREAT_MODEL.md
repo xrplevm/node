@@ -178,7 +178,7 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 **Threats**:
 - Governance proposal executing arbitrary module messages (parameter changes, software upgrades, community spend)
 - Parameter changes that put the chain in an unsafe state (e.g., unbonding time to 0, max validators to 0)
-- Governance bypass via `authz` grants to the gov module account
+- Delegation of gov authority to an account, for example through a reintroduced `authz` module (removed in v12)
 - POA module exposes `GovKeeper.SubmitProposal` — verify it cannot be abused to self-authorize
 
 **Key files**: Gov module wiring in `app/app.go`, `x/poa/types/expected_keepers.go` (GovKeeper interface)
@@ -186,7 +186,7 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 **What to check**:
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
-- `authz` grants cannot escalate to gov-level authority
+- `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns
