@@ -74,7 +74,7 @@ These are the points where untrusted input enters the system. Every audit should
        |   Cosmos SDK Modules    |         |     EVM Execution       |
        |                         |         |                         |
        |  auth, bank, staking,   |         |  Smart contract calls   |
-       |  gov, authz, slashing,  |         |  via go-ethereum        |
+       |  gov, slashing,         |         |  via go-ethereum        |
        |  distribution, crisis,  |         +------------+------------+
        |  feegrant, params,      |                      |
        |  consensus, upgrade     |                      |
@@ -113,7 +113,6 @@ These are the points where untrusted input enters the system. Every audit should
    | `distribution` | `DistrKeeper` | Reward distribution — incorrect wiring can leak or lock funds |
    | `gov` | `GovKeeper` | On-chain governance proposals — can trigger arbitrary module changes |
    | `crisis` | `CrisisKeeper` | Invariant checking — verify invariants are registered |
-   | `authz` | `AuthzKeeper` | Grant-based authorization — overly broad grants can escalate privileges |
    | `feegrant` | `FeeGrantKeeper` | Fee delegation — potential for fee exhaustion attacks |
    | `evidence` | `EvidenceKeeper` | Double-sign evidence handling |
    | `upgrade` | `UpgradeKeeper` | Chain upgrade coordination — ties into `app/upgrades/` |
@@ -130,7 +129,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | Area | Components | What to look for |
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
-| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `authz`/`gov`, keeper exposure across module boundaries |
+| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
 | **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention |
 | **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration |
 | **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, ICA host permissions |

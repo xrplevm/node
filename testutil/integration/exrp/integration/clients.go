@@ -65,9 +65,10 @@ func (n *IntegrationNetwork) GetAuthClient() authtypes.QueryClient {
 	return authtypes.NewQueryClient(queryHelper)
 }
 
+// GetAuthzClient satisfies the cosmos/evm test network interface. The app does
+// not register the authz query service, so every call returns an error.
 func (n *IntegrationNetwork) GetAuthzClient() authz.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	authz.RegisterQueryServer(queryHelper, n.app.AuthzKeeper)
 	return authz.NewQueryClient(queryHelper)
 }
 
