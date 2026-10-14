@@ -42,8 +42,10 @@ linters:
       # A switch with a default case already handles every enum value
       default-signifies-exhaustive: true
     forbidigo:
+      analyze-types: true
       forbid:
         - pattern: ^time\.(Now|Since|Until)$
+          pkg: ^time$
           msg: wall-clock time is non-deterministic, use the block time from sdk.Context instead
     govet:
       enable:
