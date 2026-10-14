@@ -1,11 +1,11 @@
 package app_test
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"slices"
 	"testing"
-	"time"
 
 	"cosmossdk.io/log"
 	"github.com/xrplevm/node/v12/cmd/exrpd/cmd"
@@ -103,7 +103,10 @@ func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 			if moduleName != banktypes.ModuleName {
 				return
 			}
-			bankGenState := genesisState.(*banktypes.GenesisState)
+			bankGenState, ok := genesisState.(*banktypes.GenesisState)
+			if !ok {
+				panic(fmt.Sprintf("unexpected bank genesis type %T", genesisState))
+			}
 			hasEvmDenom := slices.ContainsFunc(bankGenState.DenomMetadata, func(m banktypes.Metadata) bool {
 				return m.Base == app.BaseDenom
 			})
@@ -123,7 +126,6 @@ func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 //
 //nolint:dupl
 func BenchmarkSimulation(b *testing.B) {
-	simcli.FlagSeedValue = time.Now().Unix()
 	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
 	simcli.FlagEnabledValue = true
@@ -174,7 +176,6 @@ func BenchmarkSimulation(b *testing.B) {
 
 //nolint:dupl
 func TestFullAppSimulation(t *testing.T) {
-	simcli.FlagSeedValue = time.Now().Unix()
 	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
 	simcli.FlagEnabledValue = true
