@@ -1020,14 +1020,14 @@ func (app *App) RegisterAPIRoutes(apiSvr *api.Server, _ config.APIConfig) {
 
 // RegisterTxService implements the Application.RegisterTxService method.
 func (app *App) RegisterTxService(clientCtx client.Context) {
-	authtx.RegisterTxService(app.GRPCQueryRouter(), clientCtx, app.BaseApp.Simulate, app.interfaceRegistry)
+	authtx.RegisterTxService(app.GRPCQueryRouter(), clientCtx, app.Simulate, app.interfaceRegistry)
 }
 
 // RegisterTendermintService implements the Application.RegisterTendermintService method.
 func (app *App) RegisterTendermintService(clientCtx client.Context) {
 	cmtservice.RegisterTendermintService(
 		clientCtx,
-		app.BaseApp.GRPCQueryRouter(),
+		app.GRPCQueryRouter(),
 		app.interfaceRegistry,
 		app.Query,
 	)
@@ -1056,7 +1056,7 @@ func (app *App) GetStakingKeeperSDK() *stakingkeeper.Keeper {
 }
 
 func (app *App) GetAnteHandler() sdk.AnteHandler {
-	return app.BaseApp.AnteHandler()
+	return app.AnteHandler()
 }
 
 // GetIBCKeeper implements the TestingApp interface.
