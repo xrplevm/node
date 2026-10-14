@@ -7,12 +7,12 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
+	"github.com/xrplevm/node/v12/cmd/exrpd/cmd"
 
 	dbm "github.com/cosmos/cosmos-db"
 	simutils "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/gogoproto/proto"
-	"github.com/xrplevm/node/v10/app"
+	"github.com/xrplevm/node/v12/app"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"

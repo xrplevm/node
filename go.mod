@@ -1,4 +1,4 @@
-module github.com/xrplevm/node/v10
+module github.com/xrplevm/node/v12
 
 go 1.23.8
 

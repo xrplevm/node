@@ -4,7 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/xrplevm/node/v10/x/poa/types"
+	"github.com/xrplevm/node/v12/x/poa/types"
 )
 
 func (k msgServer) SelfRemoveValidator(goCtx context.Context, msg *types.MsgSelfRemoveValidator) (*types.MsgSelfRemoveValidatorResponse, error) {
