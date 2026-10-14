@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"cosmossdk.io/log"
-	"github.com/xrplevm/node/v10/cmd/exrpd/cmd"
+	"github.com/xrplevm/node/v12/cmd/exrpd/cmd"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
-	"github.com/xrplevm/node/v10/app"
+	"github.com/xrplevm/node/v12/app"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
