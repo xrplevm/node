@@ -6,6 +6,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	storetypes "cosmossdk.io/store/types"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -1263,6 +1264,149 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 
 				// Check if the validator is tombstoned
 				require.True(s.T(), info.ValSigningInfo.Tombstoned)
+			},
+		},
+	}
+
+	//nolint:dupl
+	for _, tc := range tt {
+		s.Run(tc.name, func() {
+			if tc.beforeRun != nil {
+				tc.beforeRun()
+			}
+
+			authority := sdktypes.AccAddress(address.Module("gov"))
+			msg := poatypes.NewMsgRemoveValidator(
+				authority.String(),
+				sdktypes.AccAddress(valAddr).String(),
+			)
+
+			proposal, err := utils.SubmitAndAwaitProposalResolution(s.factory, s.Network(), s.keyring.GetKeys(), "test", msg)
+			require.NoError(s.T(), err)
+
+			require.Equal(s.T(), govv1.ProposalStatus_PROPOSAL_STATUS_PASSED, proposal.Status)
+
+			if tc.expectedError != nil && err != nil {
+				require.Error(s.T(), err)
+				require.ErrorIs(s.T(), err, tc.expectedError)
+			} else {
+				require.NoError(s.T(), err)
+			}
+
+			if tc.afterRun != nil {
+				tc.afterRun()
+			}
+		})
+	}
+}
+
+func (s *TestSuite) TestRemoveValidator_ExistingValidator_WithForeignDelegation() {
+	// Validators
+	validators := s.Network().GetValidators()
+	require.NotZero(s.T(), len(validators))
+
+	validator := validators[0]
+	valAddr, err := sdktypes.ValAddressFromBech32(validator.OperatorAddress)
+	require.NoError(s.T(), err)
+
+	// Delegator that is not the validator operator
+	delegator := s.keyring.GetKey(1).AccAddr
+	delegated := sdkmath.NewInt(1_000_000)
+
+	tt := []struct {
+		name          string
+		valAddress    string
+		expectedError error
+		beforeRun     func()
+		afterRun      func()
+	}{
+		{
+			name:       "remove existing validator - with foreign delegation",
+			valAddress: valAddr.String(),
+			beforeRun: func() {
+				ctx := s.Network().GetContext()
+				sk, bk := s.Network().StakingKeeper(), s.Network().BankKeeper()
+
+				val, err := sk.GetValidator(ctx, valAddr)
+				require.NoError(s.T(), err)
+
+				// Set the min self delegation MsgAddValidator sets on live validators
+				val.MinSelfDelegation = sdkmath.OneInt()
+				require.NoError(s.T(), sk.SetValidator(ctx, val))
+
+				// Fund the delegator and delegate to the validator
+				coins := sdktypes.NewCoins(sdktypes.NewCoin(s.Network().GetBondDenom(), delegated))
+				require.NoError(s.T(), bk.MintCoins(ctx, poatypes.ModuleName, coins))
+				require.NoError(s.T(), bk.SendCoinsFromModuleToAccount(ctx, poatypes.ModuleName, delegator, coins))
+				_, err = sk.Delegate(ctx, delegator, delegated, stakingtypes.Unbonded, val, true)
+				require.NoError(s.T(), err)
+
+				// Persist the keeper writes, which are dropped at the next block otherwise
+				ctx.MultiStore().(storetypes.CacheMultiStore).Write()
+				require.NoError(s.T(), s.Network().NextBlock())
+
+				resDels, err := s.Network().GetStakingClient().ValidatorDelegations(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorDelegationsRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				// Check if the validator has the self and the foreign delegation
+				require.Len(s.T(), resDels.DelegationResponses, 2)
+			},
+			afterRun: func() {
+				resVal, err := s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				// Check if the validator has delegator shares
+				require.True(s.T(),
+					resVal.Validator.DelegatorShares.IsZero(),
+					"delegator shares should be zero, got %s",
+					resVal.Validator.DelegatorShares,
+				)
+
+				// Check if the validator has no tokens
+				require.True(s.T(), resVal.Validator.Tokens.IsZero())
+
+				resDels, err := s.Network().GetStakingClient().ValidatorDelegations(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorDelegationsRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				// Check if the validator has no delegations
+				require.Empty(s.T(), resDels.DelegationResponses)
+
+				require.NoError(s.T(), s.Network().NextBlockAfter(stakingtypes.DefaultUnbondingTime))
+
+				_, err = s.Network().GetStakingClient().Validator(
+					s.Network().GetContext(),
+					&stakingtypes.QueryValidatorRequest{
+						ValidatorAddr: valAddr.String(),
+					},
+				)
+				require.Contains(s.T(), err.Error(), fmt.Sprintf("validator %s not found", valAddr.String()))
+
+				resBal, err := s.Network().GetBankClient().Balance(
+					s.Network().GetContext(),
+					&banktypes.QueryBalanceRequest{
+						Address: delegator.String(),
+						Denom:   s.Network().GetBondDenom(),
+					},
+				)
+				require.NoError(s.T(), err)
+
+				// Check if the delegated tokens were burned, not returned
+				require.True(s.T(), resBal.Balance.IsZero())
 			},
 		},
 	}

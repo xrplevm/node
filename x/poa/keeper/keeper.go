@@ -224,6 +224,14 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		ctx.Logger().Warn("Error getting validator", "error", err)
 		return types.ErrAddressIsNotAValidator
 	}
+	// A removed validator has no delegations left while staking finishes unbonding it.
+	delegations, err := k.sk.GetValidatorDelegations(ctx, valAddress)
+	if err != nil {
+		return err
+	}
+	if len(delegations) == 0 {
+		return stakingtypes.ErrNoDelegatorForAddress
+	}
 
 	if err := k.sk.Hooks().BeforeValidatorModified(ctx, valAddress); err != nil {
 		k.Logger(ctx).Error("failed to call before validator modified hook", "error", err)
@@ -272,10 +280,17 @@ func (k Keeper) ExecuteRemoveValidator(ctx sdk.Context, validatorAddress string)
 		return types.ErrInvalidValidatorStatus
 	}
 
-	// Unbond self-delegation so the validator is removed after being unbonded
-	_, err = k.sk.Unbond(ctx, accAddress, valAddress, changedVal.DelegatorShares)
-	if err != nil {
-		return err
+	// Unbond every delegation, not only the self-delegation, so the validator's shares reach
+	// zero and staking deletes it. The tokens are already burned, so nothing is returned.
+	// Must run after RemoveValidatorTokens, which saves the validator read above.
+	for _, del := range delegations {
+		delAddr, err := sdk.AccAddressFromBech32(del.DelegatorAddress)
+		if err != nil {
+			return err
+		}
+		if _, err := k.sk.Unbond(ctx, delAddr, valAddress, del.Shares); err != nil {
+			return err
+		}
 	}
 
 	ctx.EventManager().EmitEvent(

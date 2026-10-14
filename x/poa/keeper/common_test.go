@@ -23,6 +23,8 @@ const (
 	accountAddressPrefix = "ethm"
 	bip44CoinType        = 60
 	poaAuthority         = "ethm1wunfhl05vc8r8xxnnp8gt62wa54r6y52pg03zq"
+	validatorAccAddress  = "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp"
+	validatorValAddress  = "ethmvaloper1a0pd5cyew47pvgf7rd7axxy3humv9ev0urudmu"
 )
 
 func setupSdkConfig() {
