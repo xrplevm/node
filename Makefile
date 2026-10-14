@@ -118,15 +118,14 @@ bump-module:
 	@printf '%s\n' "$$MAJOR" | grep -qE '^([2-9]|[1-9][0-9]+)$$' || (echo "MAJOR must be an integer >= 2, got '$$MAJOR'" && exit 1)
 	@set -e; \
 	OLD=$$(awk '/^module/{print $$2}' go.mod); NEW="github.com/xrplevm/node/v$$MAJOR"; \
-	if [ "$$OLD" = "$$NEW" ]; then \
-		echo "module already $$NEW, verifying build"; \
-	else \
-		echo "--> $$OLD -> $$NEW"; \
-		FILES=$$(git grep -lF "$$OLD" -- '*.go' '*.proto') || [ $$? -eq 1 ]; \
-		if [ -n "$$FILES" ]; then echo "$$FILES" | xargs perl -Mwarnings=FATAL,inplace -pi -e "s#\Q$$OLD\E(?![0-9])#$$NEW#g"; fi; \
-		go mod edit -module $$NEW; \
-	fi; \
-	go build ./...
+	CUR=$$(printf '%s\n' "$$OLD" | sed -n 's#.*/v\([0-9][0-9]*\)$$#\1#p'); CUR=$${CUR:-1}; \
+	if [ "$$MAJOR" -le "$$CUR" ]; then echo "MAJOR=$$MAJOR must be greater than the current major v$$CUR ($$OLD)"; exit 1; fi; \
+	echo "--> $$OLD -> $$NEW"; \
+	FILES=$$(git grep --untracked -lF "$$OLD" -- '*.go' '*.proto') || [ $$? -eq 1 ]; \
+	if [ -n "$$FILES" ]; then echo "$$FILES" | xargs perl -Mwarnings=FATAL,inplace -pi -e "s#\Q$$OLD\E(?![0-9])#$$NEW#g"; fi; \
+	go mod edit -module $$NEW; \
+	$(MAKE) proto-gen || { echo "proto-gen failed: the .pb.go file descriptors still embed $$OLD. Fix the failure, then run 'make proto-gen && go vet ./...'"; exit 1; }; \
+	go vet ./...
 
 
 ###############################################################################
@@ -203,7 +202,9 @@ coverage-integration:
 
 protoVer=0.13.1
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
-protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+# Rootless Docker maps container root to the host user. The image's default user cannot write the mounted repo.
+protoUser=$(if $(findstring rootless,$(shell $(DOCKER) info --format '{{.SecurityOptions}}' 2>/dev/null)),--user 0)
+protoImage=$(DOCKER) run --rm $(protoUser) -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 
 proto-all: proto-format proto-lint proto-gen
 
@@ -226,6 +227,6 @@ proto-check-breaking:
 
 proto-update-deps:
 	@echo "Updating Protobuf dependencies"
-	$(DOCKER) run --rm -v $(CURDIR)/proto:/workspace --workdir /workspace $(protoImageName) buf mod update
+	$(DOCKER) run --rm $(protoUser) -v $(CURDIR)/proto:/workspace --workdir /workspace $(protoImageName) buf mod update
 
 .PHONY: bump-module proto-all proto-gen proto-swagger-gen proto-format proto-lint proto-check-breaking proto-update-deps
