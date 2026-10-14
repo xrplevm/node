@@ -128,17 +128,19 @@ func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 func BenchmarkSimulation(b *testing.B) {
 	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
-	simcli.FlagEnabledValue = true
 
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
-	db, dir, logger, _, err := simtestutil.SetupSimulation(
+	db, dir, logger, skip, err := simtestutil.SetupSimulation(
 		config,
 		"leveldb-bApp-sim",
 		"Simulation",
 		simcli.FlagVerboseValue,
 		simcli.FlagEnabledValue,
 	)
+	if skip {
+		b.Skip("skipping application simulation: pass -Enabled=true")
+	}
 
 	require.NoError(b, err, "simulation setup failed")
 
@@ -178,17 +180,19 @@ func BenchmarkSimulation(b *testing.B) {
 func TestFullAppSimulation(t *testing.T) {
 	simcli.FlagVerboseValue = false
 	simcli.FlagCommitValue = true
-	simcli.FlagEnabledValue = true
 
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = SimAppChainID
-	db, dir, logger, _, err := simtestutil.SetupSimulation(
+	db, dir, logger, skip, err := simtestutil.SetupSimulation(
 		config,
 		"leveldb-bApp-sim",
 		"Simulation",
 		simcli.FlagVerboseValue,
 		simcli.FlagEnabledValue,
 	)
+	if skip {
+		t.Skip("skipping application simulation: pass -Enabled=true")
+	}
 
 	require.NoError(t, err, "simulation setup failed")
 

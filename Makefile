@@ -175,7 +175,7 @@ SIM_GENESIS_TIME ?= 1735689600
 
 test-sim-benchmark-simulation:
 	@echo "Running simulation invariant benchmarks..."
-	cd ${CURDIR}/app && go test -mod=readonly -benchmem -bench=BenchmarkSimulation -run=^$ \
+	cd ${CURDIR}/app && go test -mod=readonly -benchmem -bench=BenchmarkSimulation -run='^$$' \
 	-Enabled=true -NumBlocks=100 -BlockSize=200 -Params=${CURDIR}/tests/sim/params.json \
 	-Period=1 -Commit=true -Seed=$(SIM_SEED) -GenesisTime=$(SIM_GENESIS_TIME) -v -timeout 24h
 
