@@ -35,6 +35,12 @@ func (app *App) setupUpgradeHandlers() {
 	}
 
 	if upgradeInfo.Name == v12.UpgradeName {
+		// Both stores are also unmounted from NewKVStoreKeys, and rootmulti
+		// only deletes mounted stores, so these entries do not wipe data at
+		// runtime. They document that authz and icahost were retired in v12.
+		// The old data stays on disk, unreachable. A future re-add needs an
+		// explicit cleanup first: a plain re-mount fails at startup, and an
+		// Added entry fails on the retained iavl versions.
 		storeUpgrades := &storetypes.StoreUpgrades{
 			Deleted: []string{authz.ModuleName, icahosttypes.StoreKey},
 		}
