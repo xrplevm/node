@@ -137,12 +137,12 @@ golangci_version=$(shell cat .golangci-lint-version)
 lint:
 	@echo "--> Running linter"
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(golangci_version)
-	@$(golangci_lint_cmd) run --timeout=10m
+	@"$(golangci_lint_cmd)" run --timeout=10m
 
 lint-fix:
 	@echo "--> Running linter"
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(golangci_version)
-	@$(golangci_lint_cmd) run --fix --output.tab.path=stdout --issues-exit-code=0
+	@"$(golangci_lint_cmd)" run --fix --output.tab.path=stdout --issues-exit-code=0
 
 ###############################################################################
 ###                                Testing                                  ###
