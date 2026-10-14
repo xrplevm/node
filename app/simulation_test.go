@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -85,20 +86,18 @@ func RandomAccounts(r *rand.Rand, n int) []simulationtypes.Account {
 	return accs
 }
 
-// simAppStateFn builds the simulation genesis.
-// Simulated txs pay random fees, so the feemarket base fee is removed.
-// Bank's RandomizedGenState drops the EVM denom metadata, so it is added back when missing.
+// simAppStateFn builds the simulation genesis from the app default genesis and adjusts it for the
+// simulator. The changes apply only to the simulation. The real node genesis does not change.
 func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
-	genesis := app.NewDefaultGenesisState(bApp)
-	feemarketGenState := app.NewFeeMarketGenesisState()
-	feemarketGenState.Params.NoBaseFee = true
-	feemarketGenState.Params.BaseFee = sdkmath.LegacyZeroDec()
-	genesis[feemarkettypes.ModuleName] = bApp.AppCodec().MustMarshalJSON(feemarketGenState)
-
+	cdc := bApp.AppCodec()
 	return simtestutil.AppStateFnWithExtendedCbs(
-		bApp.AppCodec(),
+		cdc,
 		bApp.SimulationManager(),
-		genesis,
+		app.NewDefaultGenesisState(bApp),
+		// The SDK bank RandomizedGenState replaces the full bank section and drops the axrp denom
+		// metadata. x/vm InitGenesis needs it to load the EVM coin info, else InitChain panics with
+		// "denom metadata axrp could not be found". Add it back only when it is missing, so metadata
+		// from a -Genesis file is kept.
 		func(moduleName string, genesisState any) {
 			if moduleName != banktypes.ModuleName {
 				return
@@ -114,7 +113,17 @@ func simAppStateFn(bApp *app.App) simulationtypes.AppStateFn {
 				bankGenState.DenomMetadata = append(bankGenState.DenomMetadata, app.NewBankGenesisState().DenomMetadata...)
 			}
 		},
-		nil,
+		// Simulated txs pay random fees, often 0. With the default 1 gwei base fee, the ante handler
+		// rejects them ("gas prices too low"). Both fields are necessary: the evm v0.5+ FeeChecker
+		// reads BaseFee directly and ignores NoBaseFee. This callback runs on the final app state,
+		// so it also applies to a -Genesis file, and the other feemarket params stay unchanged.
+		func(rawState map[string]json.RawMessage) {
+			var feemarketGenState feemarkettypes.GenesisState
+			cdc.MustUnmarshalJSON(rawState[feemarkettypes.ModuleName], &feemarketGenState)
+			feemarketGenState.Params.NoBaseFee = true
+			feemarketGenState.Params.BaseFee = sdkmath.LegacyZeroDec()
+			rawState[feemarkettypes.ModuleName] = cdc.MustMarshalJSON(&feemarketGenState)
+		},
 	)
 }
 
