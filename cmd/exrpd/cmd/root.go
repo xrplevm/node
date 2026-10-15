@@ -40,7 +40,6 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	evmclient "github.com/cosmos/evm/client"
 	ethermintservercfg "github.com/cosmos/evm/server/config"
@@ -69,7 +68,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
 		nil, true, nil,
-		0,
 		0,
 		tmpAppOptions{},
 	)
@@ -204,7 +202,7 @@ func initRootCmd(
 		rootCmd,
 		evmserver.NewDefaultStartOptions(a.newApp, defaultNodeHome),
 		a.appExport,
-		addModuleInitFlags,
+		func(*cobra.Command) {}, // No module adds start flags.
 	)
 
 	// add keybase, auxiliary RPC, query, and tx child commands
@@ -274,11 +272,6 @@ func txCommand() *cobra.Command {
 	cmd.PersistentFlags().Float64(flags.FlagGasAdjustment, ethermintservercfg.DefaultGasAdjustment, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
 
 	return cmd
-}
-
-func addModuleInitFlags(startCmd *cobra.Command) {
-	crisis.AddModuleInitFlags(startCmd)
-	// this line is used by starport scaffolding # root/arguments
 }
 
 type appCreator struct {
@@ -365,7 +358,6 @@ func (a appCreator) newApp(
 		traceStore,
 		true,
 		skipUpgradeHeights,
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		evmChainID,
 		appOpts,
 		baseappOptions...,
@@ -396,13 +388,13 @@ func (a appCreator) appExport(
 	}
 
 	if height != -1 {
-		newApp = app.New(logger, db, traceStore, false, map[int64]bool{}, uint(1), evmChainID, appOpts, baseapp.SetChainID(chainID))
+		newApp = app.New(logger, db, traceStore, false, map[int64]bool{}, evmChainID, appOpts, baseapp.SetChainID(chainID))
 
 		if err := newApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		newApp = app.New(logger, db, traceStore, true, map[int64]bool{}, uint(1), evmChainID, appOpts, baseapp.SetChainID(chainID))
+		newApp = app.New(logger, db, traceStore, true, map[int64]bool{}, evmChainID, appOpts, baseapp.SetChainID(chainID))
 	}
 
 	return newApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)

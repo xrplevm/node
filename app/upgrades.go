@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 )
@@ -38,12 +39,12 @@ func (app *App) setupUpgradeHandlers() {
 	if upgradeInfo.Name == v12.UpgradeName {
 		// These stores are also unmounted from NewKVStoreKeys, and rootmulti
 		// only deletes mounted stores, so these entries do not wipe data at
-		// runtime. They document that authz, icahost and feegrant were retired
-		// in v12. The old data stays on disk, unreachable. A future re-add needs
-		// an explicit cleanup first: a plain re-mount fails at startup, and an
-		// Added entry fails on the retained iavl versions.
+		// runtime. They document that authz, icahost, feegrant and crisis were
+		// retired in v12. The old data stays on disk, unreachable. A future
+		// re-add needs an explicit cleanup first: a plain re-mount fails at
+		// startup, and an Added entry fails on the retained iavl versions.
 		storeUpgrades := &storetypes.StoreUpgrades{
-			Deleted: []string{authz.ModuleName, icahosttypes.StoreKey, feegrant.StoreKey},
+			Deleted: []string{authz.ModuleName, icahosttypes.StoreKey, feegrant.StoreKey, crisistypes.StoreKey},
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades

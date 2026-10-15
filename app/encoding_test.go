@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	legacytypes "github.com/cosmos/evm/rpc/types/legacy"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/types"
@@ -133,6 +134,29 @@ func TestMakeEncodingConfig_DecodesRemovedFeegrantMsgs(t *testing.T) {
 
 	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
 	for _, msg := range []sdk.Msg{grant, &revoke, prune} {
+		txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+		require.NoError(t, txBuilder.SetMsgs(msg))
+		bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+		require.NoError(t, err)
+
+		tx, err := encodingConfig.TxConfig.TxDecoder()(bz)
+		require.NoError(t, err, sdk.MsgTypeURL(msg))
+		require.Equal(t, []sdk.Msg{msg}, tx.GetMsgs())
+	}
+}
+
+// x/crisis was removed in v12. Blocks from before v12 can contain crisis txs,
+// and RPC queries must still decode them.
+func TestMakeEncodingConfig_DecodesRemovedCrisisMsgs(t *testing.T) {
+	sender := sdk.AccAddress("sender______________")
+	verify := crisistypes.NewMsgVerifyInvariant(sender, "bank", "total-supply")
+	updateParams := &crisistypes.MsgUpdateParams{
+		Authority:   sender.String(),
+		ConstantFee: sdk.NewInt64Coin(app.BaseDenom, 1),
+	}
+
+	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
+	for _, msg := range []sdk.Msg{verify, updateParams} {
 		txBuilder := encodingConfig.TxConfig.NewTxBuilder()
 		require.NoError(t, txBuilder.SetMsgs(msg))
 		bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())

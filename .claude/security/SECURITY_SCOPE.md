@@ -75,8 +75,7 @@ These are the points where untrusted input enters the system. Every audit should
        |                         |         |                         |
        |  auth, bank, staking,   |         |  Smart contract calls   |
        |  gov, slashing,         |         |  via go-ethereum        |
-       |  distribution, crisis,  |         +------------+------------+
-       |  params,                |                      |
+       |  distribution, params,  |         +------------+------------+
        |  consensus, upgrade     |                      |
        +------------+------------+                      |
                     |                                   |
@@ -112,7 +111,6 @@ These are the points where untrusted input enters the system. Every audit should
    | `slashing` | `SlashingKeeper` | Validator penalties — misconfiguration can brick validators |
    | `distribution` | `DistrKeeper` | Reward distribution — incorrect wiring can leak or lock funds |
    | `gov` | `GovKeeper` | On-chain governance proposals — can trigger arbitrary module changes |
-   | `crisis` | `CrisisKeeper` | Invariant checking — verify invariants are registered |
    | `evidence` | `EvidenceKeeper` | Double-sign evidence handling |
    | `upgrade` | `UpgradeKeeper` | Chain upgrade coordination — ties into `app/upgrades/` |
    | `params` | `ParamsKeeper` | Legacy parameter changes — verify migration to consensus params |
