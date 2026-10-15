@@ -17,6 +17,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	paramsproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	enccodec "github.com/cosmos/evm/encoding/codec"
 	"github.com/cosmos/evm/ethereum/eip712"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
@@ -83,6 +84,11 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	feegrant.RegisterInterfaces(interfaceRegistry)
 	// x/crisis was removed in v12. Keep its types so historical txs still decode.
 	crisistypes.RegisterInterfaces(interfaceRegistry)
+	// x/params was removed in v12. Keep ParameterChangeProposal so historical
+	// txs and stored gov proposals still decode, and EIP-712 sign bytes of a
+	// tx that carries it do not change.
+	paramsproposal.RegisterInterfaces(interfaceRegistry)
+	paramsproposal.RegisterLegacyAminoCodec(cdc)
 
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	enccodec.RegisterLegacyAminoCodec(cdc)
