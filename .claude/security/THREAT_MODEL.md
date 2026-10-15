@@ -188,6 +188,7 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
 - `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
+- The legacy gov router routes only text proposals. `ParameterChangeProposal` is not routed (v12), so gov rejects it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns
@@ -201,3 +202,4 @@ These are common vulnerability patterns in Cosmos SDK chains that should be chec
 - **ICA host**: removed in v12. The IBC router must not route the `icahost` port, and gov must reject `/ibc.applications.interchain_accounts.host.v1.MsgUpdateParams` at proposal submission. ICS-27 types decode only so that historical txs and existing interchain accounts stay readable (`app/encoding.go`). Reintroducing ICA host, or any IBC app that executes messages, lets remote chains call x/staking and bypass the POA ante handler.
 - **feegrant**: removed in v12. The Cosmos ante handler passes a nil feegrant keeper to `DeductFeeDecorator`, so a tx that sets a fee granter fails with "fee grants are not enabled". Feegrant types decode only so that historical txs stay readable (`app/encoding.go`). Reintroducing feegrant lets an account pay fees for txs that it did not sign, so allowance checks in `UseGrantedFees` become part of the fee path.
 - **crisis**: removed in v12, as SDK v0.53 deprecates it. No invariant is checked at genesis, in EndBlock, or through `MsgVerifyInvariant`, so a broken invariant no longer halts the chain. Bank, staking and distribution state must be protected by the code that changes it, not by a later check. Crisis types decode only so that historical txs stay readable (`app/encoding.go`).
+- **x/params**: deprecated in SDK v0.53. No module reads its params from an x/params subspace: the subspaces are passed only for legacy migrations, which cannot run again. A change to a subspace has no effect, which is why `ParameterChangeProposal` is not routed.
