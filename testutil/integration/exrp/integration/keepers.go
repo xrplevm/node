@@ -11,6 +11,8 @@ import (
 	erc20keeper "github.com/cosmos/evm/x/erc20/keeper"
 	feemarketkeeper "github.com/cosmos/evm/x/feemarket/keeper"
 	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
+	transferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
+	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 	poakeeper "github.com/xrplevm/node/v12/x/poa/keeper"
 )
 
@@ -52,4 +54,12 @@ func (n *IntegrationNetwork) FeeMarketKeeper() feemarketkeeper.Keeper {
 
 func (n *IntegrationNetwork) PoaKeeper() poakeeper.Keeper {
 	return n.app.PoaKeeper
+}
+
+func (n *IntegrationNetwork) TransferKeeper() transferkeeper.Keeper {
+	return n.app.TransferKeeper
+}
+
+func (n *IntegrationNetwork) IBCKeeper() *ibckeeper.Keeper {
+	return n.app.IBCKeeper
 }
