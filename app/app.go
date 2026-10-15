@@ -455,7 +455,8 @@ func New(
 	)
 	// x/poa owns the validator set. The staking precompile calls the staking msg
 	// server directly and skips the POA ante handler, so it is never registered.
-	// Activating its address in the EVM params then only makes calls to it fail.
+	// If its address is activated in the EVM params, the EVM panics on any call to
+	// it. baseapp recovers the panic and the tx fails with ErrPanic.
 	delete(staticPrecompiles, common.HexToAddress(evmtypes.StakingPrecompileAddress))
 
 	tracer := cast.ToString(appOpts.Get(srvflags.EVMTracer))

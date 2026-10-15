@@ -132,7 +132,7 @@ These must always hold. Verify them in every audit.
 **What to check**:
 - EVM module is wired with correct ante handlers
 - Custom precompiles (if any) are registered correctly
-- The staking precompile is not registered (`app/app.go`). Activating its address in the EVM params must only make calls to it fail, and no other registered precompile may create validators or change delegations
+- The staking precompile is not registered (`app/app.go`). If its address is activated in the EVM params, the EVM panics on any call to it. baseapp recovers the panic and the tx fails with `ErrPanic`. No other registered precompile may create validators or change delegations
 - Gas limit configurations are sane
 
 ### 4. IBC (Inter-Blockchain Communication)
