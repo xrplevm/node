@@ -5,6 +5,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/x/feegrant"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -110,4 +111,35 @@ func TestMakeEncodingConfig_DecodesRemovedICAHostTypes(t *testing.T) {
 	var decoded sdk.AccountI
 	require.NoError(t, encodingConfig.Codec.UnmarshalInterface(accountBz, &decoded))
 	require.Equal(t, account, decoded)
+}
+
+// x/feegrant was removed in v12. Blocks from before v12 can contain feegrant
+// txs, and RPC queries must still decode them.
+func TestMakeEncodingConfig_DecodesRemovedFeegrantMsgs(t *testing.T) {
+	granter := sdk.AccAddress("granter_____________")
+	grantee := sdk.AccAddress("grantee_____________")
+	expiration := time.Unix(2_000_000_000, 0).UTC()
+	// AllowedMsgAllowance wraps a BasicAllowance, so decoding the grant resolves
+	// both FeeAllowanceI implementations.
+	allowance, err := feegrant.NewAllowedMsgAllowance(&feegrant.BasicAllowance{
+		SpendLimit: sdk.NewCoins(sdk.NewInt64Coin(app.BaseDenom, 1)),
+		Expiration: &expiration,
+	}, []string{"/cosmos.bank.v1beta1.MsgSend"})
+	require.NoError(t, err)
+	grant, err := feegrant.NewMsgGrantAllowance(allowance, granter, grantee)
+	require.NoError(t, err)
+	revoke := feegrant.NewMsgRevokeAllowance(granter, grantee)
+	prune := &feegrant.MsgPruneAllowances{Pruner: granter.String()}
+
+	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
+	for _, msg := range []sdk.Msg{grant, &revoke, prune} {
+		txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+		require.NoError(t, txBuilder.SetMsgs(msg))
+		bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+		require.NoError(t, err)
+
+		tx, err := encodingConfig.TxConfig.TxDecoder()(bz)
+		require.NoError(t, err, sdk.MsgTypeURL(msg))
+		require.Equal(t, []sdk.Msg{msg}, tx.GetMsgs())
+	}
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"cosmossdk.io/x/feegrant"
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	legacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/types"
@@ -77,6 +78,8 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	// ICA host was removed in v12. Keep the ICS-27 types so historical txs and
 	// interchain accounts in the auth store still decode.
 	ica.AppModuleBasic{}.RegisterInterfaces(interfaceRegistry)
+	// x/feegrant was removed in v12. Keep its types so historical txs still decode.
+	feegrant.RegisterInterfaces(interfaceRegistry)
 
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	enccodec.RegisterLegacyAminoCodec(cdc)
