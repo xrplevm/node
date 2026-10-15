@@ -80,7 +80,7 @@ These are the points where untrusted input enters the system. Every audit should
        |  auth, bank, staking,   |         |  Smart contract calls   |
        |  gov, slashing,         |         |  via go-ethereum        |
        |  distribution, crisis,  |         +------------+------------+
-       |  feegrant, params,      |                      |
+       |  params,                |                      |
        |  consensus, upgrade     |                      |
        +------------+------------+                      |
                     |                                   |
@@ -117,7 +117,6 @@ These are the points where untrusted input enters the system. Every audit should
    | `distribution` | `DistrKeeper` | Reward distribution — incorrect wiring can leak or lock funds |
    | `gov` | `GovKeeper` | On-chain governance proposals — can trigger arbitrary module changes |
    | `crisis` | `CrisisKeeper` | Invariant checking — verify invariants are registered |
-   | `feegrant` | `FeeGrantKeeper` | Fee delegation — potential for fee exhaustion attacks |
    | `evidence` | `EvidenceKeeper` | Double-sign evidence handling |
    | `upgrade` | `UpgradeKeeper` | Chain upgrade coordination — ties into `app/upgrades/` |
    | `params` | `ParamsKeeper` | Legacy parameter changes — verify migration to consensus params |
@@ -133,7 +132,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
 | **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
-| **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention |
+| **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention, a fee granter accepted by `DeductFeeDecorator` (x/feegrant removed in v12) |
 | **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, reintroduction of the staking precompile (removed in v12) or any precompile that calls x/staking |
 | **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, reintroduction of ICA host (removed in v12) or any IBC app that executes messages |
 | **Upgrade handlers** | Upgrade handlers | State migration correctness, non-determinism, missing or stale upgrade handlers |
