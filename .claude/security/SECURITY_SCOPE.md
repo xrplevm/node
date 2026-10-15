@@ -79,7 +79,7 @@ These are the points where untrusted input enters the system. Every audit should
        |                         |         |                         |
        |  auth, bank, staking,   |         |  Smart contract calls   |
        |  gov, slashing,         |         |  via go-ethereum        |
-       |  distribution, params,  |         +------------+------------+
+       |  distribution,          |         +------------+------------+
        |  consensus, upgrade     |                      |
        +------------+------------+                      |
                     |                                   |
@@ -117,7 +117,6 @@ These are the points where untrusted input enters the system. Every audit should
    | `gov` | `GovKeeper` | On-chain governance proposals — can trigger arbitrary module changes |
    | `evidence` | `EvidenceKeeper` | Double-sign evidence handling |
    | `upgrade` | `UpgradeKeeper` | Chain upgrade coordination — ties into `app/upgrades/` |
-   | `params` | `ParamsKeeper` | Legacy parameter changes — verify migration to consensus params |
    | `consensus` | `ConsensusParamsKeeper` | Block size, gas limits, validator set changes |
    | `transfer` | `TransferKeeper` | IBC token transfers |
    | `rate-limiting` | `RateLimitKeeper` | IBC rate limiting — misconfiguration can allow or block transfers |
