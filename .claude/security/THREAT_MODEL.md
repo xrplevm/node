@@ -6,7 +6,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 
 `exrpd` is the node software of the XRPL EVM Sidechain. It is a Cosmos SDK chain with an EVM (`cosmos/evm`). Validators are managed by Proof of Authority (`x/poa`), not by open staking. The chain holds real value: the native `axrp` token, ERC-20 tokens, and IBC assets.
 
-- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, upgrade, evidence, consensus, params, crisis), IBC (transfer, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
+- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, upgrade, evidence, consensus, params), IBC (transfer, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
 - `app/ante/`: the ante handler. It routes each transaction by its first extension option:
   - `/cosmos.evm.vm.v1.ExtensionOptionsEthereumTx` -> EVM ante chain (`evm_handler.go`)
   - `/cosmos.evm.ante.v1.ExtensionOptionDynamicFeeTx` -> Cosmos ante chain (`cosmos_handler.go`)
@@ -246,6 +246,7 @@ These are common vulnerability patterns in Cosmos SDK chains that should be chec
 - **Non-determinism**: Any use of maps iterated for state, goroutines, or `time.Now()` in state machine code causes consensus failures. Check all code paths in `x/poa/`, `app/ante/`, and `app/upgrades/`.
 - **ICA host**: removed in v12. The IBC router must not route the `icahost` port, and gov must reject `/ibc.applications.interchain_accounts.host.v1.MsgUpdateParams` at proposal submission. ICS-27 types decode only so that historical txs and existing interchain accounts stay readable (`app/encoding.go`). Reintroducing ICA host, or any IBC app that executes messages, lets remote chains call x/staking and bypass the POA ante handler.
 - **feegrant**: removed in v12. The Cosmos ante handler passes a nil feegrant keeper to `DeductFeeDecorator`, so a tx that sets a fee granter fails with "fee grants are not enabled". Feegrant types decode only so that historical txs stay readable (`app/encoding.go`). Reintroducing feegrant lets an account pay fees for txs that it did not sign, so allowance checks in `UseGrantedFees` become part of the fee path.
+- **crisis**: removed in v12, as SDK v0.53 deprecates it. No invariant is checked at genesis, in EndBlock, or through `MsgVerifyInvariant`, so a broken invariant no longer halts the chain. Bank, staking and distribution state must be protected by the code that changes it, not by a later check. Crisis types decode only so that historical txs stay readable (`app/encoding.go`).
 
 ## Out of Scope
 

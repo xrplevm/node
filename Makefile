@@ -178,15 +178,15 @@ SIM_SEED ?= 1
 SIM_GENESIS_TIME ?= 1735689600
 
 test-sim-benchmark-simulation:
-	@echo "Running simulation invariant benchmarks..."
+	@echo "Running simulation benchmarks..."
 	cd ${CURDIR}/app && go test -mod=readonly -benchmem -bench=BenchmarkSimulation -run='^$$' \
 	-Enabled=true -NumBlocks=100 -BlockSize=200 -Params=${CURDIR}/tests/sim/params.json \
-	-Period=1 -Commit=true -Seed=$(SIM_SEED) -GenesisTime=$(SIM_GENESIS_TIME) -v -timeout 24h
+	-Commit=true -Seed=$(SIM_SEED) -GenesisTime=$(SIM_GENESIS_TIME) -v -timeout 24h
 
 test-sim-full-app-fast:
 	@echo "Running custom genesis simulation..."
 	@cd ${CURDIR}/app && go test -mod=readonly -run TestFullAppSimulation \
-		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Period=5 -Seed=$(SIM_SEED) -GenesisTime=$(SIM_GENESIS_TIME) -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
+		-Enabled=true -NumBlocks=100 -BlockSize=200 -Commit=true -Seed=$(SIM_SEED) -GenesisTime=$(SIM_GENESIS_TIME) -Params=${CURDIR}/tests/sim/params.json -v -timeout 24h
 
 ###############################################################################
 ###                                Coverage                                 ###
