@@ -11,7 +11,6 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/xrplevm/node/v12/x/poa/testutil"
 	"github.com/xrplevm/node/v12/x/poa/types"
 	"go.uber.org/mock/gomock"
@@ -63,7 +62,7 @@ func getCtxMock(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.Tran
 	return ctx
 }
 
-func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storetypes.TransientStoreKey, ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper, bankKeeper *testutil.MockBankKeeper) *Keeper {
+func getMockedPoAKeeper(t *testing.T, stakingKeeper *testutil.MockStakingKeeper, bankKeeper *testutil.MockBankKeeper) *Keeper {
 	encCfg := moduletestutil.MakeTestEncodingConfig()
 
 	types.RegisterInterfaces(encCfg.InterfaceRegistry)
@@ -79,13 +78,11 @@ func getMockedPoAKeeper(t *testing.T, key *storetypes.KVStoreKey, tsKey *storety
 
 	poaKeeper := NewKeeper(
 		encCfg.Codec,
-		paramtypes.NewSubspace(encCfg.Codec, encCfg.Amino, key, tsKey, "poa"),
 		msr,
 		bankKeeper,
 		stakingKeeper,
 		poaAuthority,
 	)
-	poaKeeper.SetParams(ctx, types.DefaultParams())
 	types.RegisterMsgServer(msr, NewMsgServerImpl(*poaKeeper))
 	stakingtypes.RegisterMsgServer(msr, stakingMsr)
 
@@ -100,5 +97,5 @@ func setupPoaKeeper(t *testing.T, setStakingExpectations func(ctx sdk.Context, s
 	stakingKeeper := getStakingKeeperMock(t, ctx, setStakingExpectations)
 	bankKeeper := getBankKeeperMock(t, ctx, setBankExpectations)
 
-	return getMockedPoAKeeper(t, key, tsKey, ctx, stakingKeeper, bankKeeper), ctx
+	return getMockedPoAKeeper(t, stakingKeeper, bankKeeper), ctx
 }
