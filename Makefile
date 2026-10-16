@@ -223,9 +223,19 @@ proto-gen:
 	@echo "Generating Protobuf files"
 	@$(protoImage) sh ./proto/scripts/protocgen.sh
 
+# Proto roots of the dependencies, resolved from go.mod so the docs match the
+# pinned versions and never a local go.work checkout.
+swaggerModRoot=$(shell GOWORK=off go mod download $(1) && GOWORK=off go list -m -f '{{.Dir}}' $(1))/proto
+
 proto-swagger-gen:
 	@echo "Generating Protobuf Swagger"
-	@$(protoImage) sh ./proto/scripts/protoc-swagger-gen.sh
+	@$(DOCKER) run --rm $(protoUser) -v $(CURDIR):/workspace --workdir /workspace \
+		-v $(shell go env GOMODCACHE):$(shell go env GOMODCACHE):ro \
+		-e SDK_PROTO=$(call swaggerModRoot,github.com/cosmos/cosmos-sdk) \
+		-e EVM_PROTO=$(call swaggerModRoot,github.com/cosmos/evm) \
+		-e IBC_PROTO=$(call swaggerModRoot,github.com/cosmos/ibc-go/v10) \
+		-e RATELIMIT_PROTO=$(call swaggerModRoot,github.com/cosmos/ibc-apps/modules/rate-limiting/v10) \
+		$(protoImageName) sh ./proto/scripts/protoc-swagger-gen.sh
 
 proto-format:
 	@$(protoImage) find ./ -name "*.proto" -exec clang-format -i {} \;
