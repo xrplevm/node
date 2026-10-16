@@ -8,8 +8,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -43,7 +41,6 @@ type NetworkKeepers interface {
 	SlashingKeeper() slashingkeeper.Keeper
 	DistrKeeper() distrkeeper.Keeper
 	AccountKeeper() authkeeper.AccountKeeper
-	AuthzKeeper() authzkeeper.Keeper
 	FeeMarketKeeper() feemarketkeeper.Keeper
 	PoaKeeper() poakeeper.Keeper
 }
@@ -90,12 +87,6 @@ func GetAuthClient(n NetworkKeepers) authtypes.QueryClient {
 	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
 	authtypes.RegisterQueryServer(queryHelper, authkeeper.NewQueryServer(n.AccountKeeper()))
 	return authtypes.NewQueryClient(queryHelper)
-}
-
-func GetAuthzClient(n NetworkKeepers) authz.QueryClient {
-	queryHelper := getQueryHelper(n.GetContext(), n.GetEncodingConfig())
-	authz.RegisterQueryServer(queryHelper, n.AuthzKeeper())
-	return authz.NewQueryClient(queryHelper)
 }
 
 func GetStakingClient(n NetworkKeepers) stakingtypes.QueryClient {

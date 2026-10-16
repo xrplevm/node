@@ -78,9 +78,8 @@ These are the points where untrusted input enters the system. Every audit should
        |   Cosmos SDK Modules    |         |     EVM Execution       |
        |                         |         |                         |
        |  auth, bank, staking,   |         |  Smart contract calls   |
-       |  gov, authz, slashing,  |         |  via go-ethereum        |
-       |  distribution, crisis,  |         +------------+------------+
-       |  feegrant, params,      |                      |
+       |  gov, slashing,         |         |  via go-ethereum        |
+       |  distribution, params,  |         +------------+------------+
        |  consensus, upgrade     |                      |
        +------------+------------+                      |
                     |                                   |
@@ -96,7 +95,7 @@ These are the points where untrusted input enters the system. Every audit should
                     |
        +------------+------------+
        |     IBC Middleware       |  <-- IBC relayer messages
-       |  transfer, ica/host,    |
+       |  transfer,              |
        |  rate-limiting          |
        +-------------------------+
 ```
@@ -116,15 +115,11 @@ These are the points where untrusted input enters the system. Every audit should
    | `slashing` | `SlashingKeeper` | Validator penalties — misconfiguration can brick validators |
    | `distribution` | `DistrKeeper` | Reward distribution — incorrect wiring can leak or lock funds |
    | `gov` | `GovKeeper` | On-chain governance proposals — can trigger arbitrary module changes |
-   | `crisis` | `CrisisKeeper` | Invariant checking — verify invariants are registered |
-   | `authz` | `AuthzKeeper` | Grant-based authorization — overly broad grants can escalate privileges |
-   | `feegrant` | `FeeGrantKeeper` | Fee delegation — potential for fee exhaustion attacks |
    | `evidence` | `EvidenceKeeper` | Double-sign evidence handling |
    | `upgrade` | `UpgradeKeeper` | Chain upgrade coordination — ties into `app/upgrades/` |
    | `params` | `ParamsKeeper` | Legacy parameter changes — verify migration to consensus params |
    | `consensus` | `ConsensusParamsKeeper` | Block size, gas limits, validator set changes |
    | `transfer` | `TransferKeeper` | IBC token transfers |
-   | `ica/host` | `ICAHostKeeper` | Interchain accounts — remote chains can execute messages on this chain |
    | `rate-limiting` | `RateLimitKeeper` | IBC rate limiting — misconfiguration can allow or block transfers |
 
 ## Audit Focus Areas
@@ -134,10 +129,10 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | Area | Components | What to look for |
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
-| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `authz`/`gov`, keeper exposure across module boundaries |
-| **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention |
-| **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration |
-| **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, ICA host permissions |
+| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
+| **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention, a fee granter accepted by `DeductFeeDecorator` (x/feegrant removed in v12) |
+| **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, reintroduction of the staking precompile (removed in v12) or any precompile that calls x/staking |
+| **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, reintroduction of ICA host (removed in v12) or any IBC app that executes messages |
 | **Upgrade handlers** | Upgrade handlers | State migration correctness, non-determinism, missing or stale upgrade handlers |
 | **Configuration & secrets** | CLI entry point, App configuration, Encoding config | Hardcoded secrets, insecure defaults, TLS config, env var handling |
 | **Consensus & state machine** | App wiring, POA module, Type definitions | Non-determinism (map iteration, goroutines, `time.Now()`), module account permissions (Minter/Burner scoping), genesis state validation, address prefix correctness |
