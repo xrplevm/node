@@ -49,6 +49,8 @@ jobs:
                     go-version-file: go.mod
             -   name: Unit tests
                 run: make test-poa
+            -   name: App tests
+                run: make test-app
             -   name: Integration tests
                 run: make test-integration
 

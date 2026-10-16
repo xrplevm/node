@@ -19,6 +19,8 @@ FROM base AS integration
 RUN make lint
 # Unit tests
 RUN make test-poa
+# App tests
+RUN make test-app
 # Integration tests
 RUN make test-integration
 # Simulation tests
