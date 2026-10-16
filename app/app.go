@@ -24,7 +24,6 @@ import (
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	evmmempool "github.com/cosmos/evm/mempool"
@@ -410,13 +409,6 @@ func New(
 		govConfig,
 		authAddress,
 	)
-	govRouter := govv1beta1.NewRouter()
-	// ParameterChangeProposal is not routed: x/params was removed in v12. It only
-	// decodes so that historical txs and gov proposals stay readable (app/encoding.go).
-	govRouter.AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler)
-	// Set legacy router for backwards compatibility with gov v1beta1
-	govKeeper.SetLegacyRouter(govRouter)
-
 	app.GovKeeper = *govKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(),
 	)
@@ -679,9 +671,13 @@ func New(
 	// app.mm.SetOrderMigrations(custom order)
 
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err = app.mm.RegisterServices(app.configurator)
+	msgFilter := newMsgFilterConfigurator(app.configurator, unroutedMsgMethods)
+	err = app.mm.RegisterServices(msgFilter)
 	if err != nil {
 		panic(err)
+	}
+	if missing := msgFilter.unmatched(); len(missing) > 0 {
+		panic(fmt.Sprintf("unrouted msg methods not registered by any module: %v", missing))
 	}
 
 	autocliv1.RegisterQueryServer(app.GRPCQueryRouter(), runtimeservices.NewAutoCLIQueryService(app.mm.Modules))
@@ -696,7 +692,8 @@ func New(
 	// NOTE: this is not required apps that don't use the simulator for fuzz testing
 	// transactions
 	overrideModules := map[string]module.AppModuleSimulation{
-		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, RandomGenesisAccounts, nil), // legacy params Subspace: unused since x/params was removed
+		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, RandomGenesisAccounts, nil),                       // legacy params Subspace: unused since x/params was removed
+		govtypes.ModuleName:  govSimModule{gov.NewAppModule(app.appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, nil)}, // legacy params Subspace: unused since x/params was removed
 	}
 	app.sm = module.NewSimulationManagerFromAppModules(app.mm.Modules, overrideModules)
 	app.sm.RegisterStoreDecoders()

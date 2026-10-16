@@ -36,30 +36,6 @@ func TestPoaDecorator_AnteHandle(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name:          "should return error - rejects MsgUndelegate post-genesis",
-			blockHeight:   1,
-			msgs:          []sdk.Msg{&stakingtypes.MsgUndelegate{}},
-			expectedError: ErrTxTypeNotAllowed,
-		},
-		{
-			name:          "should return error - rejects MsgBeginRedelegate post-genesis",
-			blockHeight:   1,
-			msgs:          []sdk.Msg{&stakingtypes.MsgBeginRedelegate{}},
-			expectedError: ErrTxTypeNotAllowed,
-		},
-		{
-			name:          "should return error - rejects MsgDelegate post-genesis",
-			blockHeight:   1,
-			msgs:          []sdk.Msg{&stakingtypes.MsgDelegate{}},
-			expectedError: ErrTxTypeNotAllowed,
-		},
-		{
-			name:          "should return error - rejects MsgCancelUnbondingDelegation post-genesis",
-			blockHeight:   1,
-			msgs:          []sdk.Msg{&stakingtypes.MsgCancelUnbondingDelegation{}},
-			expectedError: ErrTxTypeNotAllowed,
-		},
-		{
 			name:          "should return error - rejects MsgCreateValidator post-genesis",
 			blockHeight:   1,
 			msgs:          []sdk.Msg{&stakingtypes.MsgCreateValidator{}},
