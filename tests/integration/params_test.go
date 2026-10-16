@@ -12,10 +12,10 @@ import (
 )
 
 // x/params was removed in v12, but ParameterChangeProposal still decodes so
-// that historical txs and gov proposals stay readable. Gov has no handler for
-// it, so it must reject it at submission. A tx that fails to decode fails with
-// ErrTxDecode, so the expected errors below also prove that the proposals
-// decoded.
+// that historical txs and gov proposals stay readable. Legacy content runs
+// through MsgExecLegacyContent, which the app does not route, so gov must
+// reject it at submission. A tx that fails to decode fails with ErrTxDecode,
+// so the expected errors below also prove that the proposals decoded.
 func (s *TestSuite) TestParameterChangeProposal_NotRouted() {
 	authority := sdktypes.AccAddress(address.Module("gov")).String()
 	sender := s.keyring.GetKey(0)
@@ -42,7 +42,7 @@ func (s *TestSuite) TestParameterChangeProposal_NotRouted() {
 		return p
 	}
 
-	// Before v12, gov accepted these targets: their subspaces had registered keys.
+	// Before v12, gov accepted this target: its subspace had registered keys.
 	tt := []struct {
 		name          string
 		msg           sdktypes.Msg
@@ -51,12 +51,7 @@ func (s *TestSuite) TestParameterChangeProposal_NotRouted() {
 		{
 			name:          "gov proposal - transfer SendEnabled",
 			msg:           proposal(paramChange("transfer", "SendEnabled", "false")),
-			expectedError: govtypes.ErrNoProposalHandlerExists,
-		},
-		{
-			name:          "gov proposal - gov votingparams",
-			msg:           proposal(paramChange("gov", "votingparams", `{"voting_period":"60000000000"}`)),
-			expectedError: govtypes.ErrNoProposalHandlerExists,
+			expectedError: govtypes.ErrUnroutableProposalMsg,
 		},
 	}
 

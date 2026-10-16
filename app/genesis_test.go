@@ -7,13 +7,11 @@ import (
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v12/app"
-	"github.com/xrplevm/node/v12/testutil/constants"
-	exrpcommon "github.com/xrplevm/node/v12/testutil/integration/exrp/common"
 )
 
 // Mainnet and testnet have the P256, Bech32 and Bank precompiles active.
 func TestGenesis_ActiveStaticPrecompiles(t *testing.T) {
-	exrpApp := exrpcommon.CreateExrpApp(constants.LocalnetChainID.ChainID)
+	exrpApp := sharedTestApp()
 
 	tt := []struct {
 		name    string
