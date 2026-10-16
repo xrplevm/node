@@ -998,7 +998,9 @@ func (app *App) AutoCliOpts() autocli.AppOptions {
 	}
 }
 
-// Configurator get app configurator
+// Configurator returns the configurator without the msg filter. Use it only
+// for RunMigrations. Registering services with it routes the msg methods in
+// unroutedMsgMethods again.
 func (app *App) Configurator() module.Configurator {
 	return app.configurator
 }
