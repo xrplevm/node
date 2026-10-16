@@ -1,24 +1,56 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
-set -eo pipefail
+# Generates docs/static/openapi.yml from the query services whose REST routes
+# the app registers. The Makefile passes the proto root of each dependency, as
+# pinned in go.mod. docs/swagger-config.json lists the generated files that
+# are combined: keep both lists in sync with the module manager in app/app.go.
 
-mkdir -p ./tmp-swagger-gen
-cd proto
-proto_dirs=$(find ./ -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
-for dir in $proto_dirs; do
-  # generate swagger files (filter query files)
-  query_file=$(find "${dir}" -maxdepth 1 \( -name 'query.proto' -o -name 'service.proto' \))
-  if [[ ! -z "$query_file" ]]; then
-    buf generate --template buf.gen.swagger.yaml $query_file
-  fi
-done
+set -eu
 
-cd ..
+: "${SDK_PROTO:?}" "${EVM_PROTO:?}" "${IBC_PROTO:?}" "${RATELIMIT_PROTO:?}"
 
-# combine swagger files
-# uses nodejs package `swagger-combine`.
-# all the individual swagger files need to be configured in `config.json` for merging
-swagger-combine ./docs/client/config.json -o ./docs/client/swagger-ui/swagger.yaml -f yaml --continueOnConflictingPaths true --includeDefinitions true
+out=tmp-swagger-gen
+rm -rf "$out"
+trap 'rm -rf "$out"' EXIT
 
-# clean swagger files
-rm -rf ./tmp-swagger-gen
+gen() {
+  root=$1
+  shift
+  for file in "$@"; do
+    buf generate "$root" --template proto/buf.gen.swagger.yaml --path "$root/$file" -o .
+  done
+}
+
+gen "$SDK_PROTO" \
+  cosmos/auth/v1beta1/query.proto \
+  cosmos/bank/v1beta1/query.proto \
+  cosmos/base/node/v1beta1/query.proto \
+  cosmos/base/tendermint/v1beta1/query.proto \
+  cosmos/consensus/v1/query.proto \
+  cosmos/distribution/v1beta1/query.proto \
+  cosmos/evidence/v1beta1/query.proto \
+  cosmos/gov/v1/query.proto \
+  cosmos/gov/v1beta1/query.proto \
+  cosmos/slashing/v1beta1/query.proto \
+  cosmos/staking/v1beta1/query.proto \
+  cosmos/tx/v1beta1/service.proto \
+  cosmos/upgrade/v1beta1/query.proto
+
+gen "$IBC_PROTO" \
+  ibc/applications/transfer/v1/query.proto \
+  ibc/core/channel/v1/query.proto \
+  ibc/core/channel/v2/query.proto \
+  ibc/core/client/v1/query.proto \
+  ibc/core/connection/v1/query.proto
+
+gen "$RATELIMIT_PROTO" ratelimit/v1/query.proto
+
+gen "$EVM_PROTO" \
+  cosmos/evm/erc20/v1/query.proto \
+  cosmos/evm/feemarket/v1/query.proto \
+  cosmos/evm/vm/v1/query.proto
+
+gen proto poa/query.proto
+
+swagger-combine docs/swagger-config.json -o docs/static/openapi.yml -f yaml \
+  --continueOnConflictingPaths true --includeDefinitions true
