@@ -17,6 +17,7 @@ This is a **Cosmos SDK-based blockchain node** that runs an EVM-compatible sidec
 | Ante handlers | `app/ante/` | Transaction validation gate — bypasses here affect all txs |
 | POA module | `x/poa/` | Authority checks for validator management |
 | App wiring | `app/app.go` | Module registration, keeper initialization, upgrade handlers |
+| Msg filter | `app/msg_filter.go` | Msg methods that the app does not route. A removed entry reopens a msg path for users and gov |
 | Upgrade handlers | `app/upgrades/` | State migrations run during chain upgrades — bugs here can corrupt state, brick the chain, or open exploit windows post-upgrade |
 | CLI entry point | `cmd/exrpd/` | Node configuration, default values, TLS setup |
 
@@ -128,15 +129,15 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | Area | Components | What to look for |
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
-| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
+| **Authorization & access control** | App wiring, Msg filter | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12), a removed entry in `unroutedMsgMethods` (`app/msg_filter.go`), or a module that registers a Msg service outside the filter |
 | **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention, a fee granter accepted by `DeductFeeDecorator` (x/feegrant removed in v12) |
-| **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, reintroduction of the staking precompile (removed in v12) or any precompile that calls x/staking |
+| **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, reintroduction of the staking or distribution precompile (removed in v12), or any precompile that calls a msg server for a method in `unroutedMsgMethods` (the gov precompile `0x805` calls `voteWeighted`) |
 | **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, reintroduction of ICA host (removed in v12) or any IBC app that executes messages |
 | **Upgrade handlers** | Upgrade handlers | State migration correctness, non-determinism, missing or stale upgrade handlers |
 | **Configuration & secrets** | CLI entry point, App configuration, Encoding config | Hardcoded secrets, insecure defaults, TLS config, env var handling |
 | **Consensus & state machine** | App wiring, POA module, Type definitions | Non-determinism (map iteration, goroutines, `time.Now()`), module account permissions (Minter/Burner scoping), genesis state validation, address prefix correctness |
 | **API surface** | Protocol buffers, Ante handlers | Protobuf message validation, unexpected fields, gRPC/REST endpoint exposure, query handler authorization |
-| **Dependency audit** | Go module dependencies | Known CVEs, pinned vs floating versions, dependency confusion |
+| **Dependency audit** | Go module dependencies | Known CVEs, pinned vs floating versions, dependency confusion, a new Msg method in a dependency bump that reopens a dropped msg path |
 | **Infrastructure & CI** | CI workflows, Release pipeline, Dockerfiles, Makefile, Branch protection, CODEOWNERS | Secret exposure, unpinned base images, build reproducibility, CI permission scoping |
 | **Test coverage** | Test utilities, Integration tests, Linter/coverage config, Cosmovisor setup | Test coverage gaps, security linters enabled (e.g., `gosec`), test helpers that mask real bugs |
 
