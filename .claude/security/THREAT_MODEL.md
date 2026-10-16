@@ -87,6 +87,7 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 - EVM module is wired with correct ante handlers
 - Custom precompiles (if any) are registered correctly
 - The staking precompile is not registered (`app/app.go`). If its address is activated in the EVM params, the EVM panics on any call to it. baseapp recovers the panic and the tx fails with `ErrPanic`. No other registered precompile may create validators or change delegations
+- The distribution precompile is not registered either (`app/app.go`). It calls the distribution msg server directly, so it would reopen `MsgFundCommunityPool` and `MsgDepositValidatorRewardsPool`, which `app/msg_filter.go` drops
 - Gas limit configurations are sane
 
 ### 4. IBC (Inter-Blockchain Communication)
@@ -188,7 +189,9 @@ Threat model for the XRPL EVM Sidechain node. This document identifies assets, a
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
 - `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
-- The legacy gov router routes only text proposals. `ParameterChangeProposal` is not routed (v12), so gov rejects it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`
+- gov v1beta1 msgs, `MsgExecLegacyContent` and `v1.MsgVoteWeighted` are not routed (v12, `app/msg_filter.go`), and no legacy gov router is set. Legacy content such as `ParameterChangeProposal` decodes, but a proposal that carries it fails. Module params change only through each module's `MsgUpdateParams`
+- The filter removes routes, not behavior. The gov precompile (`0x805`) stays registered and calls the gov msg server directly, so `voteWeighted` still works over the EVM if gov activates that precompile. v12 removes it from `ActiveStaticPrecompiles`. Any precompile that is reactivated must be checked against the filter list
+- `app/msg_filter.go` drops Msg methods before they reach the msg router: staking delegation msgs, `MsgFundCommunityPool`, `MsgDepositValidatorRewardsPool`, `MsgSubmitEvidence`, `MsgChannelCloseInit`, the channel v2 msgs and `MsgRegisterCounterparty`. Their types still decode. A tx or gov proposal that carries one fails. `app/msg_routes_test.go` checks that every listed method has no handler in the built app and still decodes. Removing an entry is a policy change that the test does not catch, so review it in the diff. On a dependency bump, check that no new Msg method reopens one of these paths, and check that the filter still matches every listed method (app startup panics if one is missing). `MsgCommunityPoolSpend` stays routed. Only gov can send it, so the community pool stays recoverable
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns
