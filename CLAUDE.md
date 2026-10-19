@@ -13,18 +13,31 @@ make lint                 # Run linter
 go vet ./...              # Vet all packages
 ```
 
+The root commands do not cover `cmd/exrpd-upgrade/`, a separate Go module. Run its CI checks from the repo root with the `golangci-lint` version in `.golangci-lint-version`:
+
+```bash
+(cd cmd/exrpd-upgrade && GOWORK=off go vet ./...)
+(cd cmd/exrpd-upgrade && GOWORK=off go test -count=1 ./...)
+(cd cmd/exrpd-upgrade && golangci-lint run --config ../../.golangci.yml --timeout=10m)
+scripts/upgrade-binary/cosmovisor.sh --test
+```
+
+`scripts/upgrade-binary/e2e.sh` needs release assets supplied via `CACHE`. See [docs/upgrade-binary-dev.md](docs/upgrade-binary-dev.md#end-to-end-test).
+
 ## Project Structure
 
 ```
-cmd/exrpd/          # CLI entry point and node configuration
-app/                # Cosmos SDK app wiring, ante handlers, upgrade handlers
-app/ante/           # Transaction validation (routes EVM vs Cosmos txs)
-x/poa/              # Proof-of-Authority module (validator add/remove)
-proto/              # Protobuf definitions (gRPC API surface)
-types/              # Core types (address prefixes, denominations)
-testutil/           # Test helpers
-tests/              # Integration tests
-security/           # Security audit scope and threat model
+cmd/exrpd/              # CLI entry point and node configuration
+cmd/exrpd-upgrade/      # Upgrade binary launcher (nested Go module)
+scripts/upgrade-binary/ # Bundle build, release, patched Cosmovisor, e2e
+app/                    # Cosmos SDK app wiring, ante handlers, upgrade handlers
+app/ante/               # Transaction validation (routes EVM vs Cosmos txs)
+x/poa/                  # Proof-of-Authority module (validator add/remove)
+proto/                  # Protobuf definitions (gRPC API surface)
+types/                  # Core types (address prefixes, denominations)
+testutil/               # Test helpers
+tests/                  # Integration tests
+security/               # Security audit scope and threat model
 ```
 
 ## Security Audits

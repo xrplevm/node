@@ -68,3 +68,10 @@ jobs:
     secrets: inherit
     with:
       commit_branch: ${{ github.event.inputs.commit_branch }}
+  upgrade-binary:
+    needs: [ goreleaser ]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/upgrade-binary.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}

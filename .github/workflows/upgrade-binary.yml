@@ -1,0 +1,87 @@
+name: Upgrade binary
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag whose standalone archives are bundled
+        required: true
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: Published release tag whose standalone archives are bundled
+        required: true
+
+permissions: {}
+
+jobs:
+  upgrade-binary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      # Every release has an upgrade binary. release.sh fails when the tag does not have
+      # the major.minor of UPGRADE_PLAN, so a forgotten bundle.env bump fails the release
+      # (docs/upgrade-binary-dev.md, Releases and bundles). Tags older than the upgrade
+      # binary (no bundle.env) ship standalone only.
+      - name: Check the tag has a bundle
+        id: plan
+        run: |
+          if [[ -f scripts/upgrade-binary/bundle.env ]]; then
+            echo "bundle=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$TAG has no scripts/upgrade-binary/bundle.env: no upgrade binary is published for it"
+            echo "bundle=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.plan.outputs.bundle == 'true'
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Unit test launcher
+        if: steps.plan.outputs.bundle == 'true'
+        working-directory: cmd/exrpd-upgrade
+        run: |
+          GOWORK=off go vet ./...
+          GOWORK=off go test -count=1 ./...
+      - name: Test patched Cosmovisor
+        if: steps.plan.outputs.bundle == 'true'
+        run: scripts/upgrade-binary/cosmovisor.sh --test
+      - name: Download standalone and genesis release archives
+        if: steps.plan.outputs.bundle == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source scripts/upgrade-binary/bundle.env
+          gh release download "$TAG" --dir dist/standalone \
+            --pattern "node_${TAG#v}_Linux_*.tar.gz" --pattern "node_${TAG#v}_Darwin_*.tar.gz" --pattern checksums.txt
+          gh release download "v$GENESIS_VERSION" --dir dist/genesis \
+            --pattern "node_${GENESIS_VERSION}_Linux_*.tar.gz" --pattern "node_${GENESIS_VERSION}_Darwin_*.tar.gz" --pattern checksums.txt
+      - name: Build upgrade binaries
+        if: steps.plan.outputs.bundle == 'true'
+        run: scripts/upgrade-binary/release.sh --version "${TAG#v}" --standalone-dir dist/standalone --genesis-dir dist/genesis --out-dir dist/upgrade
+      # A real chain upgrade with the linux/amd64 asset, before anything is uploaded.
+      - name: End-to-end test of the linux/amd64 upgrade binary
+        if: steps.plan.outputs.bundle == 'true'
+        run: |
+          source scripts/upgrade-binary/bundle.env
+          version=${TAG#v} e2e=$PWD/dist/e2e
+          mkdir -p "$e2e/cache" "$e2e/standalone"
+          cp "dist/genesis/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" dist/genesis/checksums.txt "$e2e/cache/"
+          tar -xzf "dist/standalone/node_${version}_Linux_amd64.tar.gz" -C "$e2e/standalone" bin/exrpd
+          cp "$e2e/standalone/bin/exrpd" "$e2e/cache/exrpd-${version}-linux-amd64"
+          CACHE=$e2e/cache E2E_DIR=$e2e/run UPGRADE_VERSION=$version \
+            EXRPD_UPGRADE=$PWD/dist/upgrade/exrpd-upgrade_${version}_Linux_amd64 scripts/upgrade-binary/e2e.sh
+      # Never replace published assets: a partial upload would mix new binaries with the
+      # old checksum list. gh fails when an asset already exists.
+      - name: Upload to the release
+        if: steps.plan.outputs.bundle == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$TAG" dist/upgrade/*
