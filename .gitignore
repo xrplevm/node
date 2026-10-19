@@ -12,3 +12,7 @@ release/
 *.html
 
 bin/
+.e2e/
+.e2e.lock
+cmd/exrpd-upgrade/payload/*
+!cmd/exrpd-upgrade/payload/.gitkeep
