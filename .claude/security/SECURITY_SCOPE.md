@@ -36,7 +36,7 @@ This is a **Cosmos SDK-based blockchain node** that runs an EVM-compatible sidec
 |---|---|---|
 | CI workflows | `.github/workflows/` | Secret exposure in env/steps, untrusted input in PR triggers, permission scoping |
 | Release pipeline | `.goreleaser.yml`, `.github/workflows/goreleaser.yml`, `.github/workflows/release.yml` | Binary integrity — compromised release artifacts affect all node operators |
-| Dockerfiles | `Dockerfile`, `tools/cosmovisor/Dockerfile` | Secret leakage (SSH keys in build), unpinned base images, multi-stage hygiene |
+| Dockerfiles | `Dockerfile`, `.oss-scanner/Dockerfile` | Secret leakage (SSH keys in build), unpinned base images, multi-stage hygiene |
 | Makefile | `Makefile` | Build flags, CGO settings, embedded variables |
 | Branch protection | `.github/workflows/branch.yml`, `.github/workflows/pull-request.yml` | Enforce review requirements, prevent force-push to main |
 | CODEOWNERS | `.github/CODEOWNERS` | Ensure security-sensitive paths require appropriate reviewers |
@@ -47,15 +47,11 @@ This is a **Cosmos SDK-based blockchain node** that runs an EVM-compatible sidec
 |---|---|---|
 | Test utilities | `testutil/` | Only matters if test helpers mask real bugs |
 | Integration tests | `tests/` | Verify test coverage gaps |
-| Cosmovisor setup | `.github/workflows/cosmovisor.yml`, `tools/cosmovisor/` | Upgrade orchestration — misconfiguration can brick nodes during upgrades |
 | Linter/coverage config | `.golangci.yml`, `.testcoverage.yml` | Verify security linters are enabled (e.g., `gosec`) |
 
 ## Out of Scope
 
-- **Upstream Cosmos SDK** — audited separately by the Cosmos ecosystem. Treat as a dependency: check for known CVEs in `go.mod`, but do not audit internal SDK code. Flag if we override or patch upstream behavior.
-- **Upstream CometBFT** — same as above.
-- **Upstream `cosmos/evm`** — same as above. Treat as a dependency like Cosmos SDK. Check for version pinning and known vulnerabilities, but do not audit its internals.
-- **Smart contracts deployed on the EVM** — application-layer, not node-layer.
+See "Out of Scope" in `.claude/security/THREAT_MODEL.md`.
 
 ## Trust Boundaries
 
@@ -144,7 +140,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | **API surface** | Protocol buffers, Ante handlers | Protobuf message validation, unexpected fields, gRPC/REST endpoint exposure, query handler authorization |
 | **Dependency audit** | Go module dependencies | Known CVEs, pinned vs floating versions, dependency confusion |
 | **Infrastructure & CI** | CI workflows, Release pipeline, Dockerfiles, Makefile, Branch protection, CODEOWNERS | Secret exposure, unpinned base images, build reproducibility, CI permission scoping |
-| **Test coverage** | Test utilities, Integration tests, Linter/coverage config, Cosmovisor setup | Test coverage gaps, security linters enabled (e.g., `gosec`), test helpers that mask real bugs |
+| **Test coverage** | Test utilities, Integration tests, Linter/coverage config | Test coverage gaps, security linters enabled (e.g., `gosec`), test helpers that mask real bugs |
 
 ### How to run
 
@@ -244,8 +240,4 @@ gh issue list -R peersyst/security --label "repo:xrplevm/node" --state all --jso
 
 ## Severity Classification
 
-- **CRITICAL**: Exploitable now, loss of funds or chain halt possible
-- **HIGH**: Exploitable with effort, significant impact
-- **MEDIUM**: Requires specific conditions, moderate impact
-- **LOW**: Minor issue, defense-in-depth concern
-- **INFO**: Observation, no direct security impact but worth noting
+Use the severity scale in `.claude/security/THREAT_MODEL.md` (Critical, High, Medium, Low, Info).

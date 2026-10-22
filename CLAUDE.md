@@ -31,8 +31,8 @@ security/           # Security audit scope and threat model
 
 This repo is configured for monthly AI-assisted security audits. Before performing any security-related review, read:
 
-1. **`.claude/security/SECURITY_SCOPE.md`** — Defines what to audit, trust boundaries, priority tiers, and focus areas.
-2. **`.claude/security/THREAT_MODEL.md`** — Assets, adversary profiles, attack surfaces, and Cosmos SDK-specific vulnerability patterns.
+1. **`.claude/security/SECURITY_SCOPE.md`**: audit runbook with components, priority tiers, trust boundaries, focus areas, and the reporting workflow.
+2. **`.claude/security/THREAT_MODEL.md`**: the only threat model, with system overview, trust levels, invariants, attack surfaces, out of scope, and severity. Anthropic OSS Scanner reads it too.
 
 ### Running an audit
 
@@ -44,10 +44,4 @@ Read .claude/security/SECURITY_SCOPE.md and .claude/security/THREAT_MODEL.md. Th
 
 ### Key security invariants
 
-These must always hold and should be verified in every audit:
-
-- **Authority gate**: `x/poa` message handlers must check `msg.Authority == k.authority` before any validator set mutation.
-- **Ante handler routing**: EVM and Cosmos transactions must be routed to their respective handler chains with no bypass path.
-- **Extension option rejection**: Unknown extension options must be rejected by the ante handler.
-- **No non-determinism in state machine**: No maps iterated for state, no goroutines, no `time.Now()` in consensus code.
-- **IBC rate limiting**: The rate limiting module must be in the IBC middleware stack.
+The invariants that must always hold are listed in "Invariants" in `.claude/security/THREAT_MODEL.md`. Verify them in every audit.
