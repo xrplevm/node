@@ -1,0 +1,9 @@
+bin/
+build/
+release/
+.idea/
+.vscode/
+.exrpd/
+.DS_Store
+go.work
+go.work.sum
