@@ -16,4 +16,4 @@ We confirm receipt and keep you informed until the issue is fixed.
 
 ## Supported versions
 
-Only the latest tagged release of `exrpd` receives security fixes. This is normally the version that runs on mainnet and testnet. See [releases](https://github.com/xrplevm/node/releases).
+Only the latest stable release of `exrpd` (not a release candidate such as `-rc.1`) receives security fixes. This is normally the version that runs on mainnet and testnet. See [releases](https://github.com/xrplevm/node/releases).
