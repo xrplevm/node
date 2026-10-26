@@ -102,7 +102,7 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	return sdktestutil.TestEncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Codec:             codec,
-		TxConfig:          tx.NewTxConfig(codec, tx.DefaultSignModes),
+		TxConfig:          tx.NewTxConfig(codec, EnabledSignModes),
 		Amino:             cdc,
 	}
 }

@@ -310,7 +310,7 @@ func New(
 
 	// optional: enable sign mode textual by overwriting the default tx config (after setting the bank keeper)
 	txConfigOpts := authtx.ConfigOptions{
-		EnabledSignModes:           authtx.DefaultSignModes,
+		EnabledSignModes:           EnabledSignModes,
 		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper),
 	}
 	txConfig, err := authtx.NewTxConfigWithOptions(
