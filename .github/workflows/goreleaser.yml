@@ -29,11 +29,25 @@ jobs:
           fetch-tags: true
       - uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Configure private EVM access
+        uses: ./.github/actions/private-evm-ssh
+        with:
+          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_NOV_2026 }}
       # Build and push docker image
       - name: Run go releaser
         run: |
-          docker run --rm -e CGO_ENABLED -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-             -v /var/run/docker.sock:/var/run/docker.sock -v $PWD:/go/src/exrp -w /go/src/exrp \
-             --entrypoint /bin/sh \
-             goreleaser/goreleaser-cross:v1.22 -c \
-             'git config --global --add safe.directory /go/src/exrp && goreleaser release --clean --skip validate'
+          docker run --rm \
+            -e CGO_ENABLED \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            -e GOPRIVATE=github.com/xrplevm/cosmos-evm-priv-nov-1-2026 \
+            -e SSH_AUTH_SOCK=/ssh-agent \
+            -v "$SSH_AUTH_SOCK:/ssh-agent" \
+            -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/go/src/exrp" \
+            -w /go/src/exrp \
+            --entrypoint /bin/sh \
+            goreleaser/goreleaser-cross:v1.22 -c \
+            'git config --global --add safe.directory /go/src/exrp && \
+             git config --global url."ssh://git@github.com/xrplevm/cosmos-evm-priv-nov-1-2026".insteadOf "https://github.com/xrplevm/cosmos-evm-priv-nov-1-2026" && \
+             goreleaser release --clean --skip validate'
