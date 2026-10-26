@@ -8,6 +8,7 @@ import (
 	v10 "github.com/xrplevm/node/v10/app/upgrades/v10"
 	v101 "github.com/xrplevm/node/v10/app/upgrades/v101"
 	v112 "github.com/xrplevm/node/v10/app/upgrades/v112"
+	v113 "github.com/xrplevm/node/v10/app/upgrades/v113"
 	v9 "github.com/xrplevm/node/v10/app/upgrades/v9"
 
 	v5 "github.com/xrplevm/node/v10/app/upgrades/v5"
@@ -82,6 +83,13 @@ func (app *App) setupUpgradeHandlers() {
 			app.TransferKeeper,
 		),
 	)
+	app.UpgradeKeeper.SetUpgradeHandler(
+		v113.UpgradeName,
+		v113.CreateUpgradeHandler(
+			app.mm,
+			app.configurator,
+		),
+	)
 
 	// When a planned update height is reached, the old binary will panic
 	// writing on disk the height and name of the update that triggered it
@@ -105,7 +113,8 @@ func (app *App) setupUpgradeHandlers() {
 		v9.UpgradeName,
 		v10.UpgradeName,
 		v101.UpgradeName,
-		v112.UpgradeName:
+		v112.UpgradeName,
+		v113.UpgradeName:
 		storeUpgrades = &storetypes.StoreUpgrades{}
 	}
 

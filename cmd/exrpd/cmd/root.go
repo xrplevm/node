@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
@@ -116,7 +117,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
 			// is only available if the client is online.
 			if !initClientCtx.Offline {
-				enabledSignModes := append(tx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL) //nolint:gocritic
+				enabledSignModes := append(slices.Clone(app.EnabledSignModes), signing.SignMode_SIGN_MODE_TEXTUAL)
 				txConfigOpts := tx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
