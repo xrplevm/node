@@ -12,9 +12,9 @@ else
 	echo "usage: $0 GOOS GOARCH OUTPUT | $0 --test" >&2
 	exit 2
 fi
-here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=SCRIPTDIR/bundle.env
-source "$here/bundle.env"
+pins=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cosmovisor
+# shellcheck source=SCRIPTDIR/cosmovisor/cosmovisor.env
+source "$pins/cosmovisor.env"
 
 work=$(mktemp -d)
 trap 'chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"' EXIT
@@ -36,7 +36,7 @@ chmod -R u+w "$work/src"
 # Inside another git work tree, git apply skips paths outside the current directory and
 # still exits 0. The ceiling keeps git from finding a repository above $work.
 (cd "$work/src" && export GIT_CEILING_DIRECTORIES=$work &&
-	git apply --check "$here/$COSMOVISOR_PATCH" && git apply "$here/$COSMOVISOR_PATCH")
+	git apply --check "$pins/$COSMOVISOR_PATCH" && git apply "$pins/$COSMOVISOR_PATCH")
 # The build and the tests read the dependencies from the module cache too.
 (cd "$work/src" && GOWORK=off GOFLAGS=-mod=readonly go mod download && GOWORK=off go mod verify)
 

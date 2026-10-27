@@ -2,20 +2,19 @@
 # Build exrpd-upgrade_<version>_<Os>_<arch> for each platform from published release archives,
 # plus exrpd-upgrade_<version>_LICENSE, because the executables embed Apache-2.0 code.
 #
-# Usage: release.sh --version X.Y.Z --standalone-dir DIR --genesis-dir DIR --out-dir DIR
+# Usage: release.sh --version X.Y.Z --genesis-version X.Y.Z --standalone-dir DIR --genesis-dir DIR --out-dir DIR
 #   --standalone-dir  node_<version>_<Os>_<arch>.tar.gz + checksums.txt of this release
-#   --genesis-dir     node_<GENESIS_VERSION>_<Os>_<arch>.tar.gz + checksums.txt of the genesis release
+#   --genesis-dir     node_<genesis-version>_<Os>_<arch>.tar.gz + checksums.txt of the genesis release
 # PLATFORMS (env) defaults to "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64".
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=SCRIPTDIR/bundle.env
-source "$here/bundle.env"
 
-version='' standalone='' genesis='' out=''
+version='' genesis_version='' standalone='' genesis='' out=''
 while [[ $# -gt 0 ]]; do
 	case $1 in
 	--version) version=$2 ;;
+	--genesis-version) genesis_version=$2 ;;
 	--standalone-dir) standalone=$2 ;;
 	--genesis-dir) genesis=$2 ;;
 	--out-dir) out=$2 ;;
@@ -23,12 +22,13 @@ while [[ $# -gt 0 ]]; do
 	esac
 	shift 2
 done
-for v in version standalone genesis out; do
-	[[ -n ${!v} ]] || { echo "missing --$v" >&2; exit 2; }
+for v in version genesis_version standalone genesis out; do
+	[[ -n ${!v} ]] || { echo "missing --${v//_/-}" >&2; exit 2; }
 done
-plan_version=${UPGRADE_PLAN#v} base_version=${version%%-*}
+plan=$("$here/plan.sh")
+plan_version=${plan#v} base_version=${version%%-*}
 if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ || ${base_version%.*} != "${plan_version%.*}" ]]; then
-	echo "release $version does not have the major.minor of the bundle plan $UPGRADE_PLAN: bump scripts/upgrade-binary/bundle.env (see docs/upgrade-binary-dev.md, Releases and bundles)" >&2
+	echo "release $version does not have the major.minor of plan $plan in app/upgrades: a new major or minor release needs its upgrade handler (see docs/upgrade-binary-dev.md, Releases and bundles)" >&2
 	exit 1
 fi
 
@@ -55,7 +55,8 @@ for platform in ${PLATFORMS:-linux/amd64 linux/arm64 darwin/amd64 darwin/arm64};
 
 	name=exrpd-upgrade_${version}_${os_title}_${goarch}
 	"$here/build.sh" \
-		--genesis-archive "$genesis/node_${GENESIS_VERSION}_${os_title}_${goarch}.tar.gz" \
+		--genesis-version "$genesis_version" \
+		--genesis-archive "$genesis/node_${genesis_version}_${os_title}_${goarch}.tar.gz" \
 		--genesis-checksums "$genesis/checksums.txt" \
 		--upgrade-exrpd "$work/standalone/bin/exrpd" --upgrade-version "$version" \
 		--goos "$goos" --goarch "$goarch" --out "$out/$name"

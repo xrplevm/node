@@ -6,7 +6,9 @@ short install and run steps, see the [operator guide](upgrade-binary.md).
 | Path | Content |
 | --- | --- |
 | `cmd/exrpd-upgrade/` | the launcher, a separate Go module |
-| `scripts/upgrade-binary/bundle.env` | version pins of the bundle |
+| `scripts/upgrade-binary/plan.sh` | prints the plan: the `UpgradeName` of the one handler in `app/upgrades` |
+| `scripts/upgrade-binary/genesis.sh` | prints the default genesis: the newest published release below the plan |
+| `scripts/upgrade-binary/cosmovisor/` | Cosmovisor pins (`cosmovisor.env`) and the patch |
 | `scripts/upgrade-binary/build.sh` | builds one `exrpd-upgrade` |
 | `scripts/upgrade-binary/cosmovisor.sh` | builds or tests the patched Cosmovisor |
 | `scripts/upgrade-binary/release.sh` | builds the release assets from published archives |
@@ -221,7 +223,7 @@ after an upgrade. After the in-process switch, a SIGTERM sent only to Cosmovisor
 also reaches the stale handler, which cannot signal the old app and calls `os.Exit(1)`.
 Cosmovisor then exits while 12.0.0 keeps running outside the service manager's view.
 
-`scripts/upgrade-binary/cosmovisor-v1.7.3-signal.patch` is the fix proposed upstream in
+`scripts/upgrade-binary/cosmovisor/cosmovisor-v1.7.3-signal.patch` is the fix proposed upstream in
 [cosmos/cosmos-sdk#26879](https://github.com/cosmos/cosmos-sdk/pull/26879):
 
 - It changes only `Launcher.Run`. The handler is registered before the app starts and is
@@ -234,7 +236,7 @@ Cosmovisor then exits while 12.0.0 keeps running outside the service manager's v
 
 Remove the patch when a Cosmovisor release contains the fix.
 
-The build fetches the module at v1.7.3 and checks its `go.sum` hash (from `bundle.env`). It
+The build fetches the module at v1.7.3 and checks its `go.sum` hash (from `cosmovisor/cosmovisor.env`). It
 runs `go mod verify`, so the extracted module source and its dependencies match their
 hashes. It applies the patch with `git apply --check` first and builds with Cosmovisor's
 own `go.mod` (`CGO_ENABLED=0`).
@@ -244,12 +246,12 @@ own `go.mod` (`CGO_ENABLED=0`).
 ```sh
 mkdir -p release12 && tar -xzf node_12.0.0_Linux_amd64.tar.gz -C release12 bin/exrpd
 scripts/upgrade-binary/build.sh \
-  --genesis-archive node_11.3.0_Linux_amd64.tar.gz --genesis-checksums checksums.txt \
+  --genesis-version 11.3.0 --genesis-archive node_11.3.0_Linux_amd64.tar.gz --genesis-checksums checksums.txt \
   --upgrade-exrpd release12/bin/exrpd --upgrade-version 12.0.0 \
   --goos linux --goarch amd64 --out dist/exrpd-upgrade
 scripts/upgrade-binary/cosmovisor.sh --test # patched Cosmovisor test suite
-CACHE=<dir> scripts/upgrade-binary/e2e.sh               # localnet proof on linux/amd64
-CACHE=<dir> scripts/upgrade-binary/e2e.sh --unpatched   # same run with the unpatched v1.7.3 release binary, must show the defect
+CACHE=<dir> GENESIS_VERSION=11.3.0 scripts/upgrade-binary/e2e.sh   # localnet proof on linux/amd64
+CACHE=<dir> GENESIS_VERSION=11.3.0 scripts/upgrade-binary/e2e.sh --unpatched   # same run with the unpatched v1.7.3 release binary, must show the defect
 ```
 
 `--upgrade-exrpd` is the `bin/exrpd` of the standalone 12.0.0 release archive, not the
@@ -263,12 +265,13 @@ logs a replacement whenever it moves between that build and a released bundle.
 
 | File | Content |
 | --- | --- |
-| `node_11.3.0_Linux_amd64.tar.gz`, `checksums.txt` | assets of the GitHub release `v11.3.0` |
+| `node_<GENESIS_VERSION>_Linux_amd64.tar.gz`, `checksums.txt` | assets of the genesis GitHub release, for example `v11.3.0` |
 | `exrpd-<version>-linux-amd64` | standalone upgrade `exrpd` for linux/amd64, executable. `<version>` is `UPGRADE_VERSION`, by default the plan version (12.0.0) |
 | `cosmovisor-v1.7.3-linux-amd64.tar.gz`, `SHA256SUMS-cosmovisor-v1.7.3.txt` | `--unpatched` only: the upstream Cosmovisor v1.7.3 release archive and a checksum list that contains its line |
 
 | Input | Effect |
 | --- | --- |
+| `GENESIS_VERSION=11.3.0` | required: the genesis release in `CACHE`. `genesis.sh <plan>` prints the default |
 | `UPGRADE_VERSION=12.0.1` | tests a patch bundle |
 | `EXRPD_UPGRADE=<path>` | tests an `exrpd-upgrade` that was already built, for example a release asset. The run checks that its manifest names the plan and the SHA-256 of both `exrpd` files in `CACHE`, and does not build one |
 | `E2E_DIR=<dir>` | scratch directory |
@@ -295,15 +298,17 @@ Pull requests (`.github/workflows/pull-request.yml`):
 | Job | Runs |
 | --- | --- |
 | `upgrade-binary` | every pull request and every push to `main`: launcher `go vet`, `go test` and `golangci-lint` in `cmd/exrpd-upgrade`, then `cosmovisor.sh --test` |
-| `upgrade-binary-e2e` | pull requests that change `cmd/exrpd-upgrade/` or `scripts/upgrade-binary/`: `e2e.sh` with an `exrpd` built from the pull request (`make build VERSION=<plan version>`) and the published genesis release |
+| `upgrade-binary-e2e` | pull requests that change `cmd/exrpd-upgrade/`, `scripts/upgrade-binary/` or `app/upgrades/`: `e2e.sh` with an `exrpd` built from the pull request (`make build VERSION=<plan version>`) and the genesis release that `genesis.sh` picks |
 
 Releases (`.github/workflows/upgrade-binary.yml`) run after GoReleaser:
 
-1. Run the launcher unit tests and `cosmovisor.sh --test`.
-2. Download the published standalone archives and the genesis release archives.
-3. Run `scripts/upgrade-binary/release.sh`.
-4. Run `e2e.sh` with the linux/amd64 asset (`EXRPD_UPGRADE`).
-5. Upload the `exrpd-upgrade_*` assets, only when every check passes.
+1. Read the plan from the tagged code (`plan.sh`). Take the genesis from the `genesis_tag`
+   input, or from `genesis.sh` when it is empty.
+2. Run the launcher unit tests and `cosmovisor.sh --test`.
+3. Download the published standalone archives and the genesis release archives.
+4. Run `scripts/upgrade-binary/release.sh`.
+5. Run `e2e.sh` with the linux/amd64 asset (`EXRPD_UPGRADE`).
+6. Upload the `exrpd-upgrade_*` assets, only when every check passes.
 
 The standalone release is already published at that point. The workflow checks out the
 tag, so what to do after a failure depends on the cause:
@@ -312,20 +317,29 @@ tag, so what to do after a failure depends on the cause:
 | --- | --- |
 | transient failure (network, runner) | run the workflow again for the same tag |
 | upload stopped part way | delete the `exrpd-upgrade_*` assets of that release, then run the workflow again. It never replaces an asset that is already there |
-| defect in the tagged code or a wrong `bundle.env` | a rerun builds the same commit and fails again. Fix it on the release branch and publish a new release (for example the next patch), which gets its own standalone and upgrade binary assets |
+| defect in the tagged code or a missing upgrade handler | a rerun builds the same commit and fails again. Fix it on the release branch and publish a new release (for example the next patch), which gets its own standalone and upgrade binary assets |
+| wrong genesis | the `genesis_tag` input or the default picked the wrong release. If the run failed before the upload, run the workflow again with the right `genesis_tag`. After an upload, delete the `exrpd-upgrade_*` assets first |
 
 ## Releases and bundles
 
-All pins live in `scripts/upgrade-binary/bundle.env`. Every release, pre-releases
-included, gets an upgrade binary. Its version must have the major.minor of `UPGRADE_PLAN`
-(today 12.0). `build.sh` and `release.sh` stop with an error otherwise, so the release
-workflow fails until `bundle.env` is bumped. Tags without `bundle.env` (releases older
-than the upgrade binary) ship standalone only.
+Every release, pre-releases included, gets an upgrade binary. A bundle has three inputs:
+
+| Input | Source |
+| --- | --- |
+| Plan | `UpgradeName` of the one handler in `app/upgrades` of the tagged code (`plan.sh`) |
+| Genesis | `genesis_tag` input of the release workflow. Default: the newest published release, drafts and pre-releases excluded, whose major.minor is below the plan's (`genesis.sh`) |
+| Cosmovisor | `scripts/upgrade-binary/cosmovisor/cosmovisor.env` and the patch next to it |
+
+The release version must have the major.minor of the plan (today 12.0). `build.sh` and
+`release.sh` stop with an error otherwise, so a major or minor release without its
+upgrade handler fails the release workflow. Tags without `plan.sh` (releases older than
+the upgrade binary) ship standalone only. The manifest records the plan and the genesis
+version and SHA-256 (`exrpd-upgrade info`).
 
 | Release | Chain | Upgrade binary |
 | --- | --- | --- |
-| Major or minor (`X.0.0`, `X.Y.0`) | changes state or consensus, needs a governance plan `vX.Y.0` with an upgrade handler | new bundle: `GENESIS_VERSION` is the patch release validators run at the halt, `UPGRADE_PLAN` is the plan |
-| Patch (`X.Y.Z`, `Z > 0`) | no upgrade handler, no state or consensus change: a drop-in replacement | bundle with the same plan and the patch as the upgrade binary |
+| Major or minor (`X.0.0`, `X.Y.0`) | changes state or consensus, needs a governance plan `vX.Y.0` with an upgrade handler | new bundle: the genesis is the patch release validators run at the halt, the plan is the new handler |
+| Patch (`X.Y.Z`, `Z > 0`) | no new upgrade handler, no state or consensus change: a drop-in replacement | bundle with the same plan and the patch as the upgrade binary |
 
 A patch bundle reaches validators with a reinstall and a restart, before or after the
 switch: `start` replaces `upgrades/v12.0.0/bin/exrpd` and logs it. The standalone patch
@@ -337,10 +351,10 @@ consensus must be a minor release with its own plan.
 example 12.0.3 while the v12.1.0 bundle carries genesis 12.0.2):
 
 1. Release the standalone 12.0.3.
-2. Release a patch of the upgrade line (12.1.1) with `GENESIS_VERSION=12.0.3`. Its `start`
-   replaces `genesis/bin/exrpd`.
+2. Release a patch of the upgrade line (12.1.1). Its default genesis is now 12.0.3, or pass
+   `genesis_tag: v12.0.3`. Its `start` replaces `genesis/bin/exrpd`.
 
-On the 12.0 branch, `bundle.env` still names `v12.0.0`, so the 12.0.3 tag also publishes
+On the 12.0 branch, the handler is still `v12.0.0`, so the 12.0.3 tag also publishes
 a v12.0.0 bundle for homes that still run that one.
 
 **Next upgrade bundle.** The next bundle, for example v12.1.0, moves `current` to its

@@ -6,10 +6,11 @@
 #                patched build. The run passes only when the SIGTERM after the in-process
 #                upgrade shows the defect (see stop_check).
 #
-# Env: CACHE (inputs, see below), E2E_DIR (scratch, deleted at start: it must be missing,
-# empty or an earlier run's scratch), PORT_BASE (100 ports from here are used),
-# UPGRADE_VERSION (the upgrade exrpd version, default UPGRADE_PLAN without "v", or a patch
-# release of the plan for a patch bundle), EXRPD_UPGRADE (an exrpd-upgrade built from the
+# Env: CACHE (inputs, see below), GENESIS_VERSION (the genesis release, for example 11.3.0),
+# E2E_DIR (scratch, deleted at start: it must be missing, empty or an earlier run's
+# scratch), PORT_BASE (100 ports from here are used), UPGRADE_VERSION (the upgrade exrpd
+# version, default the plan without "v", or a patch release of the plan for a patch
+# bundle), EXRPD_UPGRADE (an exrpd-upgrade built from the
 # same inputs to test instead of building one, for example the release asset. It cannot
 # be used with --unpatched).
 #
@@ -21,7 +22,7 @@
 #
 # Scenarios on one single-validator chain (homes run one at a time on the same ports):
 #   main      genesis home with a data/upgrade-info.json from the plan that started the
-#             genesis release line. A gov upgrade to UPGRADE_PLAN switches in process,
+#             genesis release line. A gov upgrade to the plan (plan.sh) switches in process,
 #             then restart, reinstall, SIGTERM.
 #   restore   post-upgrade copy without cosmovisor/ and with an earlier plan's marker:
 #             stage --select.
@@ -30,8 +31,10 @@
 set -uo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=SCRIPTDIR/bundle.env
-source "$here/bundle.env"
+# shellcheck source=SCRIPTDIR/cosmovisor/cosmovisor.env
+source "$here/cosmovisor/cosmovisor.env"
+GENESIS_VERSION=${GENESIS_VERSION:?set GENESIS_VERSION to the genesis release version, for example 11.3.0}
+UPGRADE_PLAN=$("$here/plan.sh") || exit 1
 CACHE=${CACHE:?set CACHE to the directory with the inputs listed at the top of $0}
 # exrpd-upgrade passes the home to Cosmovisor and exrpd as a cleaned absolute path
 # (filepath.Abs). The pgrep patterns below must see the same string.
@@ -270,7 +273,7 @@ if [[ -e $E2E_DIR && ! -e $scratch_marker && -n $(ls -A "$E2E_DIR" 2>/dev/null) 
 fi
 trap cleanup EXIT
 rm -rf "$E2E_DIR" && mkdir -p "$E2E_DIR/bin" "$E2E_DIR/v11" && touch "$scratch_marker" || die "create $E2E_DIR"
-build_args=(--genesis-archive "$CACHE/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" --genesis-checksums "$CACHE/checksums.txt"
+build_args=(--genesis-version "$GENESIS_VERSION" --genesis-archive "$CACHE/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" --genesis-checksums "$CACHE/checksums.txt"
 	--upgrade-exrpd "$V12" --upgrade-version "$UPGRADE_VERSION" --goos linux --goarch amd64 --out "$UB")
 if [[ $mode == unpatched ]]; then
 	cv=cosmovisor-$COSMOVISOR_VERSION-linux-amd64.tar.gz
