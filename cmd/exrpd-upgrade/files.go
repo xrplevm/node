@@ -16,13 +16,14 @@ import (
 // The helpers below change files so that a crash leaves either the old or the new
 // version on disk, never a partial one: write a temporary file next to the target,
 // sync it, rename it to the target, then sync the directory so the change is durable.
+// Missing parent directories are created and synced the same way.
 
 // writeFileAtomic writes src to dest with mode, replacing dest. check, if not nil, runs
 // after src is fully written and before dest is replaced. An error from it leaves dest
 // untouched.
 func writeFileAtomic(dest string, src io.Reader, mode os.FileMode, check func(size int64) error) error {
 	dir := filepath.Dir(dest)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := mkdirAllSync(dir); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(dir, ".exrpd-upgrade-*")
@@ -96,6 +97,49 @@ func fileSHA256(path string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// mkdirAllSync creates dir and any missing parents with mode 0o755, like os.MkdirAll,
+// then syncs the parent of each new directory so the new entries survive a crash.
+func mkdirAllSync(dir string) error {
+	var missing []string // deepest first
+	for d := filepath.Clean(dir); ; d = filepath.Dir(d) {
+		info, err := os.Stat(d)
+		if err == nil {
+			if !info.IsDir() {
+				return fmt.Errorf("%s is not a directory", d)
+			}
+			break
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		missing = append(missing, d)
+		if filepath.Dir(d) == d {
+			break
+		}
+	}
+	for i := len(missing) - 1; i >= 0; i-- {
+		if err := os.Mkdir(missing[i], 0o755); err != nil {
+			if !errors.Is(err, fs.ErrExist) {
+				return err
+			}
+			// Another process created it first. That is fine if it is a directory.
+			info, err := os.Stat(missing[i])
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				return fmt.Errorf("%s is not a directory", missing[i])
+			}
+		}
+	}
+	for _, d := range missing {
+		if err := syncDir(filepath.Dir(d)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func syncDir(dir string) error {

@@ -60,15 +60,17 @@ func parseSelection(selection, plan string) (string, error) {
 // value from parseSelection and info the content of data/upgrade-info.json.
 func reconcileCurrent(home string, l Layout, plan, selection string, info upgradeInfo) error {
 	if selection == plan {
+		if err := selectUpgrade(l, plan, info, "--select "+plan); err != nil {
+			return err
+		}
 		if info.plan != "" && !info.names(plan) {
 			path := dataPath(home, "upgrade-info.json")
 			if err := os.Remove(path); err != nil {
 				return err
 			}
 			logf("deleted %s, which names plan %s: --select %s is for data past that plan", path, info.plan, plan)
-			info = upgradeInfo{}
 		}
-		return selectUpgrade(l, plan, info, "--select "+plan)
+		return nil
 	}
 	if selection == genesisName && !info.names(plan) {
 		if err := pointCurrent(l, l.GenesisDir, "--select genesis"); err != nil {
@@ -155,7 +157,7 @@ func readUpgradeInfo(path string) (upgradeInfo, error) {
 		Name string `json:"name"`
 	}
 	if err := json.Unmarshal(raw, &plan); err != nil {
-		return upgradeInfo{}, fmt.Errorf("%s is not valid JSON (%w): stop the node, delete the file and start again", path, err)
+		return upgradeInfo{}, fmt.Errorf("%s is not valid JSON (%w): stop the node, delete the file, run exrpd-upgrade stage --select <plan> if the data is past that plan, and start again", path, err)
 	}
 	return upgradeInfo{plan: plan.Name, raw: raw}, nil
 }

@@ -147,9 +147,12 @@ applied_at() { test "$(cli query upgrade applied "$UPGRADE_PLAN" -o json | jq -r
 # as an exrpd left running, a "process already finished" log line from the handler of an
 # earlier run, or the supervisor exit status 1 that handler causes. The patched Cosmovisor
 # must show none of them. With --unpatched, a stop after an in-process switch (third
-# argument "switched") must show the defect.
+# argument "switched") must show the defect: the stale handler log line or an orphan exrpd
+# that still produces blocks, and the supervisor exit status 1. Any other status fails.
+# Afterwards it stops the supervisor and every exrpd of this home that is left, and aborts
+# the run if one of them survives SIGKILL.
 stop_check() {
-	local name=$1 sig=$2 how=${3:-supervisor} expect=clean left status=running stale mark deadline defect=
+	local name=$1 sig=$2 how=${3:-supervisor} expect=clean left status=running stale mark deadline defect='' signature='' h1='' h2='' p
 	[[ $how == switched && $mode == unpatched ]] && expect=defect
 	last=$(height || echo 0)
 	mark=$(wc -l <"$LOG")
@@ -161,7 +164,6 @@ stop_check() {
 	# with status 143.
 	kill "-$sig" "$sup"
 	if [[ $how == group ]]; then
-		local p
 		for p in $(children); do kill "-$sig" "$p" 2>/dev/null; done
 	fi
 	deadline=$((SECONDS + 15))
@@ -179,28 +181,47 @@ stop_check() {
 	echo "    SIG$sig -> supervisor $sup status=$status; exrpd left: ${left:-none}"
 	[[ -n $stale ]] && sed 's/^/    log: /' <<<"$stale"
 	if [[ -n $left ]]; then
-		local h1 h2
 		h1=$(height)
 		sleep 3
 		h2=$(height)
 		echo "    orphan exrpd pid(s) $left, ppid $(ps -o ppid= -p "${left%%$'\n'*}" | tr -d ' '), height $h1 -> $h2"
-		for p in $left; do kill -TERM "$p"; done
-		sleep 5
+		((${h2:-0} > ${h1:-0})) && signature=1
 	fi
+	[[ -n $stale ]] && signature=1
 	[[ -n $left || -n $stale || ($status != running && $status != 0) ]] && defect=1
 	if [[ $status == running ]]; then
 		fail "$name (supervisor still running)"
-		kill -KILL "$sup"
 	elif [[ $expect == defect ]]; then
-		if [[ -n $defect ]]; then
+		if [[ -n $signature && $status == 1 ]]; then
 			pass "SIG$sig after the in-process switch: unpatched Cosmovisor shows the defect"
+		elif [[ -n $signature ]]; then
+			fail "SIG$sig after the in-process switch: defect signature seen, but supervisor exit status $status is not the 1 of the stale handler"
 		else
-			fail "SIG$sig after the in-process switch: the unpatched defect did not show in this run (it depends on which signal handler runs first)"
+			fail "SIG$sig after the in-process switch: the unpatched defect did not show in this run, supervisor exit status $status (it depends on which signal handler runs first)"
 		fi
 	elif [[ -n $defect ]]; then
 		fail "$name"
 	else
 		pass "$name"
+	fi
+	# Stop what is left so the next scenario starts clean.
+	if [[ $status == running ]]; then
+		kill -KILL "$sup" 2>/dev/null
+		deadline=$((SECONDS + 5))
+		while kill -0 "$sup" 2>/dev/null && ((SECONDS < deadline)); do sleep 1; done
+		kill -0 "$sup" 2>/dev/null && die "supervisor $sup still running after SIGKILL"
+		wait "$sup" 2>/dev/null
+	fi
+	left=$(children)
+	if [[ -n $left ]]; then
+		for p in $left; do kill -TERM "$p" 2>/dev/null; done
+		deadline=$((SECONDS + 10))
+		while [[ -n $(children) ]] && ((SECONDS < deadline)); do sleep 1; done
+		for p in $(children); do kill -KILL "$p" 2>/dev/null; done
+		deadline=$((SECONDS + 5))
+		while [[ -n $(children) ]] && ((SECONDS < deadline)); do sleep 1; done
+		left=$(children)
+		[[ -n $left ]] && die "exrpd pid(s) $left of $H still running after SIGKILL"
 	fi
 	sup=
 }
@@ -213,7 +234,7 @@ set_ports() {
 		-e "/^\[p2p\]/,/^\[/ s|^laddr = .*|laddr = \"tcp://127.0.0.1:$((P + 56))\"|" \
 		-e "s|^pprof_laddr = .*|pprof_laddr = \"127.0.0.1:$((P + 60))\"|" \
 		-e "s|^prometheus_listen_addr = .*|prometheus_listen_addr = \"127.0.0.1:$((P + 66))\"|" \
-		-e 's|^timeout_commit = .*|timeout_commit = "1s"|' "$c"
+		-e 's|^timeout_commit = .*|timeout_commit = "1s"|' "$c" || return
 	sed -i \
 		-e "/^\[api\]/,/^\[/ s|^address = .*|address = \"tcp://127.0.0.1:$((P + 17))\"|" \
 		-e "/^\[grpc\]/,/^\[/ s|^address = .*|address = \"127.0.0.1:$((P + 90))\"|" \
@@ -224,13 +245,13 @@ set_ports() {
 }
 
 init_chain() {
-	local v11=$1 g=$H/config/genesis.json
-	"$v11" --home "$H" config set client chain-id "$CHAIN_ID" >/dev/null
-	"$v11" --home "$H" config set client keyring-backend test >/dev/null
-	"$v11" --home "$H" config set client node "$NODE" >/dev/null
-	echo "$MNEMONIC" | "$v11" --home "$H" keys add alice --recover --keyring-backend test --algo eth_secp256k1 >/dev/null 2>&1
-	"$v11" --home "$H" keys add bob --keyring-backend test --algo eth_secp256k1 >/dev/null 2>&1
-	"$v11" --home "$H" init localnet -o --chain-id "$CHAIN_ID" >/dev/null 2>&1
+	local v11=$1 g=$H/config/genesis.json addr
+	"$v11" --home "$H" config set client chain-id "$CHAIN_ID" >/dev/null || return
+	"$v11" --home "$H" config set client keyring-backend test >/dev/null || return
+	"$v11" --home "$H" config set client node "$NODE" >/dev/null || return
+	echo "$MNEMONIC" | "$v11" --home "$H" keys add alice --recover --keyring-backend test --algo eth_secp256k1 >/dev/null 2>&1 || return
+	"$v11" --home "$H" keys add bob --keyring-backend test --algo eth_secp256k1 >/dev/null 2>&1 || return
+	"$v11" --home "$H" init localnet -o --chain-id "$CHAIN_ID" >/dev/null 2>&1 || return
 	jq '.consensus.params.block.max_gas="10500000"
 		| .app_state.evm.params.evm_denom="axrp"
 		| .app_state.gov.params.min_deposit[0].denom="axrp"
@@ -245,11 +266,12 @@ init_chain() {
 		| .app_state.bank.denom_metadata=[{"description":"XRP is the gas token","denom_units":[{"denom":"axrp"},{"denom":"xrp","exponent":18}],"base":"axrp","display":"xrp","name":"XRP","symbol":"XRP"}]
 		| .app_state.erc20.native_precompiles=["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]
 		| .app_state.erc20.token_pairs=[{contract_owner:1,erc20_address:"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",denom:"axrp",enabled:true,"owner_address":"ethm1zrxl239wa6ad5xge3gs68rt98227xgnjq0xyw2"}]' \
-		"$g" >"$g.tmp" && mv "$g.tmp" "$g"
-	"$v11" --home "$H" genesis add-genesis-account "$("$v11" --home "$H" keys show alice -a --keyring-backend test)" 1000000apoa,1000000000000000000000000000axrp --keyring-backend test
-	"$v11" --home "$H" genesis gentx alice 1000000apoa --gas-prices 0axrp --keyring-backend test --chain-id "$CHAIN_ID" >/dev/null 2>&1
-	"$v11" --home "$H" genesis collect-gentxs >/dev/null 2>&1
-	"$v11" --home "$H" genesis validate >/dev/null
+		"$g" >"$g.tmp" && mv "$g.tmp" "$g" || return
+	addr=$("$v11" --home "$H" keys show alice -a --keyring-backend test) || return
+	"$v11" --home "$H" genesis add-genesis-account "$addr" 1000000apoa,1000000000000000000000000000axrp --keyring-backend test || return
+	"$v11" --home "$H" genesis gentx alice 1000000apoa --gas-prices 0axrp --keyring-backend test --chain-id "$CHAIN_ID" >/dev/null 2>&1 || return
+	"$v11" --home "$H" genesis collect-gentxs >/dev/null 2>&1 || return
+	"$v11" --home "$H" genesis validate >/dev/null || return
 	set_ports
 }
 

@@ -81,6 +81,33 @@ func TestPrepareCurrent(t *testing.T) {
 	}
 }
 
+// A failed --select must keep the data file of the earlier plan. Without it, a later
+// start would keep genesis and run it on data past the upgrade.
+func TestPrepareSelectFailureKeepsDataFile(t *testing.T) {
+	files, _ := testPayload(t)
+	home := t.TempDir()
+	v11 := upgradeInfoJSON("v11.3.0")
+	linkCurrent(t, home, genesisName)
+	writeDataUpgradeInfo(t, home, v11)
+	record := filepath.Join(home, "cosmovisor", testUpgradeDir, "upgrade-info.json")
+	if err := os.MkdirAll(record, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := prepare(files, home, testPlan); err == nil {
+		t.Fatal("prepare() succeeded with an unwritable upgrade record, want an error")
+	}
+	if got := readFile(t, dataPath(home, "upgrade-info.json")); got != v11 {
+		t.Errorf("data/upgrade-info.json = %q, want %q", got, v11)
+	}
+	if _, err := prepare(files, home, ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := currentTarget(t, home); got != genesisName {
+		t.Errorf("current -> %q, want %q", got, genesisName)
+	}
+}
+
 func TestPrepareCurrentLogging(t *testing.T) {
 	for _, tc := range []struct {
 		name, current, data, selection, wantCurrent, reason string

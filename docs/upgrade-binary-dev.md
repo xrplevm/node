@@ -127,7 +127,12 @@ All staged files are `0755` and written atomically. On every `start` and `stage`
 - If you start without selecting, data past the upgrade height on `genesis` exits with a
   store error such as `version of store icahost mismatch` on every start.
 - A `data/upgrade-info.json` that is not valid JSON, for example truncated by a crash,
-  makes `start` and `stage` stop with an error before they change any file.
+  makes `start` and `stage` stop with an error before they change any file. Deleting the
+  file is not enough when the data is past the upgrade height and `current` is missing or
+  on `genesis`, for example after a crash at the halt before the switch. Without a data
+  file, `start` keeps `genesis` and 11.3.0 fails on every start. With the node stopped,
+  delete the file, then run `stage --home <home> --select v12.0.0` for data past the
+  upgrade height.
 - Run the bundle for the chain's next plan before its height. A bundle started on data
   past a later plan points `current` at its genesis binary, which cannot run that data and
   exits.

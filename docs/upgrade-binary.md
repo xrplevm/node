@@ -103,7 +103,7 @@ Stop the node before you run `stage`.
 | Data restored or state-synced at or after the upgrade height | `exrpd-upgrade stage --home <home> --select v12.0.0` | 12.0.0. Without it, 11.3.0 can fail with `version of store icahost mismatch` on every start |
 | Data restored from before the upgrade height | delete a kept `data/upgrade-info.json` that names `v12.0.0` (it wins over `--select genesis`), then `exrpd-upgrade stage --home <home> --select genesis` | 11.3.0 |
 | `<home>/cosmovisor` deleted on data restored or state-synced past the upgrade height | run the `--select v12.0.0` command again | 12.0.0 |
-| `data/upgrade-info.json` is not valid JSON | stop the node, delete the file, start again | `start` and `stage` stop with an error until then |
+| `data/upgrade-info.json` is not valid JSON | stop the node and delete the file. If the data is at or after the upgrade height, run `exrpd-upgrade stage --home <home> --select v12.0.0`. Then start again | `start` and `stage` stop with an error until then. Without `--select`, data past the upgrade height can stay on 11.3.0 and fail on every start |
 | Leave the upgrade binary | stop the service, run the standalone `exrpd` that matches `current` | the standalone `exrpd` |
 
 Details and edge cases:
