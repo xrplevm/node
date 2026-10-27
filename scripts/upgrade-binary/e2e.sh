@@ -146,21 +146,24 @@ applied_at() { test "$(cli query upgrade applied "$UPGRADE_PLAN" -o json | jq -r
 # this home to exit. It records the last height in $last. The signal-handler defect shows
 # as an exrpd left running, a "process already finished" log line from the handler of an
 # earlier run, or the supervisor exit status 1 that handler causes. The patched Cosmovisor
-# must show none of them, also when the app exits before the supervisor forwards the
-# signal. With --unpatched, a stop after an in-process switch (third argument
-# "switched") must show the defect.
+# must show none of them. With --unpatched, a stop after an in-process switch (third
+# argument "switched") must show the defect.
 stop_check() {
 	local name=$1 sig=$2 how=${3:-supervisor} expect=clean left status=running stale mark deadline defect=
 	[[ $how == switched && $mode == unpatched ]] && expect=defect
 	last=$(height || echo 0)
 	mark=$(wc -l <"$LOG")
-	# The app is signalled first, so it can exit before Cosmovisor's handler forwards the
-	# signal. The handler then finds a finished process and must not exit 1.
+	# The supervisor is signalled first. With "group", the app may exit before the handler
+	# forwards the signal, or it may still be shutting down. Either way the supervisor must
+	# exit 0. The group case of the patch's TestLaunchProcessStop also exercises this.
+	# Signalling the app first can let it exit before the supervisor gets the signal. A
+	# signal that arrives after Launcher.Run has unregistered its handler kills Cosmovisor
+	# with status 143.
+	kill "-$sig" "$sup"
 	if [[ $how == group ]]; then
 		local p
-		for p in $(children); do kill "-$sig" "$p"; done
+		for p in $(children); do kill "-$sig" "$p" 2>/dev/null; done
 	fi
-	kill "-$sig" "$sup"
 	deadline=$((SECONDS + 15))
 	while :; do
 		if [[ $status == running ]] && ! kill -0 "$sup" 2>/dev/null; then

@@ -39,6 +39,10 @@ you restored or state-synced past the upgrade height, run `stage --select v12.0.
 - `start` passes every other argument to `exrpd start` unchanged. It refuses
   `--cosmovisor-config`, because Cosmovisor would then read its settings from that file
   and ignore the environment that `start` sets.
+- `start` and `stage` refuse a bare `--`. The launcher cannot tell whether `--` is the
+  value of the flag before it or the end of the flags. If it guessed wrong, Cosmovisor and
+  exrpd could use different homes. `exrpd start` ignores positional arguments, so `--` has
+  no use there. To pass `--` as a value, write it with `=`, for example `--moniker=--`.
 - `start` checks the environment, stages the files, then replaces itself with Cosmovisor
   (same PID). Cosmovisor runs `exrpd start`. Under systemd, `MainPID` is Cosmovisor.
 - `stage` stages the files and prints the paths without starting the node. You can run it
@@ -130,7 +134,9 @@ All staged files are `0755` and written atomically. On every `start` and `stage`
 
 ### Settings details
 
-- An empty value counts as unset.
+- An empty value counts as unset for the variables that this bundle pins or gives a
+  default. All other variables go to Cosmovisor unchanged. For example, an empty
+  `COSMOVISOR_TIMEFORMAT_LOGS` removes the log timestamps. Unset it to keep the default.
 - Cosmovisor refuses a `DAEMON_SHUTDOWN_GRACE` of `0`, so the upstream default (kill
   exrpd at once) is not available.
 - All other Cosmovisor variables keep their upstream meaning, notably

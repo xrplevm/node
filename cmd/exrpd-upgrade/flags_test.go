@@ -36,9 +36,6 @@ func TestResolveHome(t *testing.T) {
 		{"flag with equals", []string{"--x", "--home=/b"}, "/env", "/b", []string{"--x"}},
 		{"DAEMON_HOME", []string{"--x"}, "/env", "/env", []string{"--x"}},
 		{"default", nil, "", "/users/val/.exrpd", []string{}},
-		{"flag after -- is positional", []string{"--home", "/a", "--", "--home", "/b"}, "/env", "/a", []string{"--", "--home", "/b"}},
-		{"flag with equals after -- is positional", []string{"--home=/a", "--", "--home=/b"}, "/env", "/a", []string{"--", "--home=/b"}},
-		{"only after --", []string{"--", "--home", "/b"}, "/env", "/env", []string{"--", "--home", "/b"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			getenv := func(string) string { return tc.daemonEnv }
@@ -59,5 +56,19 @@ func TestResolveHomeMakesRelativePathAbsolute(t *testing.T) {
 	home, _, err := resolveHome([]string{"--home", "rel"}, noEnv, os.UserHomeDir)
 	if err != nil || home != filepath.Join(wd, "rel") {
 		t.Errorf("resolveHome() = %q, %v; want %q", home, err, filepath.Join(wd, "rel"))
+	}
+}
+
+// exrpd reads "--moniker --" as the moniker "--". A launcher that stopped at "--" would
+// miss the --home that exrpd uses, and Cosmovisor would watch another home.
+func TestResolveHomeRefusesTerminator(t *testing.T) {
+	noEnv := func(string) string { return "" }
+	for _, args := range [][]string{
+		{"--moniker", "--", "--home", "/srv/exrpd"},
+		{"--home", "/a", "--"},
+	} {
+		if home, _, err := resolveHome(args, noEnv, os.UserHomeDir); err == nil {
+			t.Errorf("resolveHome(%q) = %q, want an error for --", args, home)
+		}
 	}
 }
