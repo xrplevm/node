@@ -1,19 +1,19 @@
 # exrpd upgrade binary
 
 `exrpd-upgrade` is one executable that runs your node across the `v12.0.0` chain upgrade.
-At the upgrade height it stops 11.2.0 and starts 12.0.0 by itself. Nothing is downloaded.
+At the upgrade height it stops 11.3.0 and starts 12.0.0 by itself. Nothing is downloaded.
 For details and internals, see the [developer notes](upgrade-binary-dev.md).
 
 | Inside | Origin |
 | --- | --- |
-| genesis `exrpd` 11.2.0 | exact bytes of the GitHub release `v11.2.0` archive |
+| genesis `exrpd` 11.3.0 | exact bytes of the GitHub release `v11.3.0` archive |
 | upgrade `exrpd` 12.0.0 | the same bytes as the standalone 12.0.0 release binary |
 | Cosmovisor v1.7.3 | `cosmossdk.io/tools/cosmovisor@v1.7.3` plus one signal-handling patch |
 
 What it writes in the node home:
 
 ```text
-<home>/cosmovisor/genesis/bin/exrpd                    11.2.0
+<home>/cosmovisor/genesis/bin/exrpd                    11.3.0
 <home>/cosmovisor/upgrades/v12.0.0/bin/exrpd           12.0.0
 <home>/cosmovisor/supervisor/<sha256[:16]>/cosmovisor  Cosmovisor
 <home>/cosmovisor/current -> genesis or upgrades/v12.0.0
@@ -88,7 +88,7 @@ Keep the default `KillMode=control-group`. Do not use `KillMode=process` or `non
 ## At the upgrade height
 
 You do not need to do anything. The chain halts at the `v12.0.0` plan height, and
-Cosmovisor stops 11.2.0 and starts 12.0.0 in the same process. If the node halts and does
+Cosmovisor stops 11.3.0 and starts 12.0.0 in the same process. If the node halts and does
 not switch, restart the service.
 
 ## Restart, reinstall and restore
@@ -97,11 +97,11 @@ Stop the node before you run `stage`.
 
 | Case | Do this | Then runs |
 | --- | --- | --- |
-| Restart before the upgrade height | nothing | 11.2.0 |
+| Restart before the upgrade height | nothing | 11.3.0 |
 | Restart after the upgrade, or stopped or killed at the halt | nothing | 12.0.0 |
 | Reinstall, or install a 12.0 patch release (for example 12.0.1) | restart. Changed binaries are replaced and logged | the installed binaries |
-| Data restored or state-synced at or after the upgrade height | `exrpd-upgrade stage --home <home> --select v12.0.0` | 12.0.0. Without it, 11.2.0 can fail with `version of store icahost mismatch` on every start |
-| Data restored from before the upgrade height | delete a kept `data/upgrade-info.json` that names `v12.0.0` (it wins over `--select genesis`), then `exrpd-upgrade stage --home <home> --select genesis` | 11.2.0 |
+| Data restored or state-synced at or after the upgrade height | `exrpd-upgrade stage --home <home> --select v12.0.0` | 12.0.0. Without it, 11.3.0 can fail with `version of store icahost mismatch` on every start |
+| Data restored from before the upgrade height | delete a kept `data/upgrade-info.json` that names `v12.0.0` (it wins over `--select genesis`), then `exrpd-upgrade stage --home <home> --select genesis` | 11.3.0 |
 | `<home>/cosmovisor` deleted on data restored or state-synced past the upgrade height | run the `--select v12.0.0` command again | 12.0.0 |
 | `data/upgrade-info.json` is not valid JSON | stop the node, delete the file, start again | `start` and `stage` stop with an error until then |
 | Leave the upgrade binary | stop the service, run the standalone `exrpd` that matches `current` | the standalone `exrpd` |
@@ -135,7 +135,7 @@ upgrades or `cosmovisor add-upgrade --upgrade-height`. See
 ## Rollback
 
 Keep a rollback point before the upgrade height. By default nothing copies `data/`, and
-11.2.0 cannot open the data after the upgrade. Take a snapshot of `data/` with the node
+11.3.0 cannot open the data after the upgrade. Take a snapshot of `data/` with the node
 stopped and test that it restores. You can also enable the Cosmovisor backup, see
 [Cosmovisor backup](upgrade-binary-dev.md#cosmovisor-backup).
 

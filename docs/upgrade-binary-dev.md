@@ -21,12 +21,12 @@ short install and run steps, see the [operator guide](upgrade-binary.md).
 | --- | --- | --- |
 | Release asset | `node_<version>_<Os>_<arch>.tar.gz` (`.zip` on Windows) | `exrpd-upgrade_<version>_<Os>_<arch>`, the executable without an archive |
 | Checksums | `checksums.txt` | `exrpd-upgrade_<version>_checksums.txt`. The release also has `exrpd-upgrade_<version>_LICENSE` |
-| Contents | one chain version | 11.2.0 + 12.0.0 + Cosmovisor |
+| Contents | one chain version | 11.3.0 + 12.0.0 + Cosmovisor |
 | At the upgrade height | halts, then you swap the binary and restart | switches to 12.0.0 by itself |
 | Platforms | linux/darwin amd64/arm64, windows/amd64 | linux/darwin amd64/arm64 |
 
 Both use the same node home, keys and config. You can move between them at any time
-while the node is stopped. The binary you start must match the chain height: 11.2.0
+while the node is stopped. The binary you start must match the chain height: 11.3.0
 before the upgrade height, 12.0.0 after. If you move to the upgrade binary on data that
 you restored or state-synced past the upgrade height, run `stage --select v12.0.0` first.
 
@@ -107,13 +107,13 @@ All staged files are `0755` and written atomically. On every `start` and `stage`
 - `<home>/cosmovisor` deleted on a home past the upgrade height without that file (state
   sync, or a restore that used `stage --select v12.0.0`): only `current` recorded the
   selection. Run `stage --select v12.0.0` again before you start. Otherwise Cosmovisor
-  links `current` to `genesis` and 11.2.0 fails on every start.
+  links `current` to `genesis` and 11.3.0 fails on every start.
 - Restored data usually has no `data/upgrade-info.json` for the plan it is past. So you
   select the binary for the height of the data yourself, with the node stopped, as the
   node user.
 - `--select` accepts only `genesis` and `v12.0.0`.
 - `--select v12.0.0` deletes a `data/upgrade-info.json` that names another plan, such as
-  `v11.2.0` kept in the home from before the restore, and logs it. Cosmovisor would
+  `v11.3.0` kept in the home from before the restore, and logs it. Cosmovisor would
   otherwise try to switch back to that plan's binary.
 - A `data/upgrade-info.json` that names `v12.0.0` wins over `--select genesis`. If you
   restored data from before the upgrade height and kept that file from the newer data,
@@ -140,7 +140,7 @@ All staged files are `0755` and written atomically. On every `start` and `stage`
 ### Cosmovisor backup
 
 With the default `UNSAFE_SKIP_BACKUP=true`, nothing copies `data/`. The upgrade migrates
-the stores at the upgrade height, and 11.2.0 cannot open them after that. Pointing
+the stores at the upgrade height, and 11.3.0 cannot open them after that. Pointing
 `current` back at `genesis` or installing another binary does not restore the data.
 
 To keep the upstream backup, set `UNSAFE_SKIP_BACKUP=false`, optionally with
@@ -160,7 +160,7 @@ lets the validator sign heights it already signed, which is double signing.
 
 ## Payload
 
-- The genesis `exrpd` is the exact bytes of the GitHub release `v11.2.0` archive. The build
+- The genesis `exrpd` is the exact bytes of the GitHub release `v11.3.0` archive. The build
   checks it against that release's `checksums.txt`.
 - The upgrade `exrpd` is the same bytes as the standalone 12.0.0 release binary.
 - Cosmovisor is built from `cosmossdk.io/tools/cosmovisor@v1.7.3` plus one patch. See
@@ -183,7 +183,7 @@ for that plan and records the plan there:
 | `data/upgrade-info.json` | `current` |
 | --- | --- |
 | names `v12.0.0` | `upgrades/v12.0.0` |
-| names any other plan (`v11.2.0` on homes that ran that upgrade) | `genesis`. Without the record, Cosmovisor would try to switch to `upgrades/v11.2.0` and stop, because it cannot download that binary |
+| names any other plan (`v11.3.0` on homes that ran that upgrade) | `genesis`. Without the record, Cosmovisor would try to switch to `upgrades/v11.3.0` and stop, because it cannot download that binary |
 | missing | `genesis` and `upgrades/v12.0.0` stay. Any other `current` moves to `genesis`, and the plan recorded there moves with it, like the other-plan case. A missing `current` stays missing, and Cosmovisor links it to `genesis` |
 | not valid JSON | `start` and `stage` stop with an error before they change any file |
 
@@ -244,7 +244,7 @@ own `go.mod` (`CGO_ENABLED=0`).
 ```sh
 mkdir -p release12 && tar -xzf node_12.0.0_Linux_amd64.tar.gz -C release12 bin/exrpd
 scripts/upgrade-binary/build.sh \
-  --genesis-archive node_11.2.0_Linux_amd64.tar.gz --genesis-checksums checksums.txt \
+  --genesis-archive node_11.3.0_Linux_amd64.tar.gz --genesis-checksums checksums.txt \
   --upgrade-exrpd release12/bin/exrpd --upgrade-version 12.0.0 \
   --goos linux --goarch amd64 --out dist/exrpd-upgrade
 scripts/upgrade-binary/cosmovisor.sh --test # patched Cosmovisor test suite
@@ -263,7 +263,7 @@ logs a replacement whenever it moves between that build and a released bundle.
 
 | File | Content |
 | --- | --- |
-| `node_11.2.0_Linux_amd64.tar.gz`, `checksums.txt` | assets of the GitHub release `v11.2.0` |
+| `node_11.3.0_Linux_amd64.tar.gz`, `checksums.txt` | assets of the GitHub release `v11.3.0` |
 | `exrpd-<version>-linux-amd64` | standalone upgrade `exrpd` for linux/amd64, executable. `<version>` is `UPGRADE_VERSION`, by default the plan version (12.0.0) |
 | `cosmovisor-v1.7.3-linux-amd64.tar.gz`, `SHA256SUMS-cosmovisor-v1.7.3.txt` | `--unpatched` only: the upstream Cosmovisor v1.7.3 release archive and a checksum list that contains its line |
 

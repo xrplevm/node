@@ -19,7 +19,7 @@ import (
 //
 //   - The embedded plan: the chain is at or past the upgrade height. `current` moves to
 //     the upgrade binary.
-//   - Any other plan (v11.2.0 on homes that ran that upgrade): `current` moves to the
+//   - Any other plan (v11.3.0 on homes that ran that upgrade): `current` moves to the
 //     genesis binary. Without the record, Cosmovisor would look for upgrades/<plan>,
 //     which this bundle does not carry.
 //   - No file: `current` stays on the genesis or upgrade binary of this bundle. When it

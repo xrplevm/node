@@ -34,7 +34,7 @@ func testPayload(t *testing.T) (fstest.MapFS, Manifest) {
 	m := Manifest{
 		Platform:   runtime.GOOS + "/" + runtime.GOARCH,
 		Plan:       testPlan,
-		Genesis:    add("exrpd-genesis", "11.2.0", "v11 bytes"),
+		Genesis:    add("exrpd-genesis", "11.3.0", "v11 bytes"),
 		Upgrade:    add("exrpd-upgrade", "12.0.0", "v12 bytes"),
 		Cosmovisor: add("cosmovisor", "v1.7.3", "cosmovisor bytes"),
 	}

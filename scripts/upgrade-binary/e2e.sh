@@ -306,7 +306,7 @@ check "staged upgrade exrpd = standalone v12 bytes" cmp -s "$V12" "$H/cosmovisor
 
 # ---------------------------------------------------------------- previous plan marker
 # Existing validator homes carry data/upgrade-info.json from the plan that started the
-# genesis release line (v11.2.0 for genesis 11.2.0).
+# genesis release line (v11.3.0 for genesis 11.3.0).
 IFS=. read -r genesis_major genesis_minor _ <<<"$GENESIS_VERSION"
 PREV_PLAN=v$genesis_major.$genesis_minor.0
 echo "{\"name\":\"$PREV_PLAN\",\"time\":\"0001-01-01T00:00:00Z\",\"height\":1}" >"$H/data/upgrade-info.json"

@@ -11,7 +11,7 @@ import (
 // recorded where Cosmovisor compares it with data/upgrade-info.json. A wrong target runs
 // the wrong exrpd. A missing record makes Cosmovisor switch to a binary it does not have.
 func TestPrepareCurrent(t *testing.T) {
-	v11 := upgradeInfoJSON("v11.2.0")
+	v11 := upgradeInfoJSON("v11.3.0")
 	v12 := upgradeInfoJSON("V12.0.0") // plan names match case-insensitively
 	for _, tc := range []struct {
 		name          string
@@ -24,8 +24,8 @@ func TestPrepareCurrent(t *testing.T) {
 		currentRecord string // upgrade-info.json under current before prepare
 	}{
 		{"no data keeps a missing current", "", "", "", "", "", "", ""},
-		{"no data replaces an earlier current", "upgrades/v11.2.0", "", "", genesisName, "", "", ""},
-		{"no data copies an earlier current record", "upgrades/v11.2.0", "", "", genesisName, v11, "", v11},
+		{"no data replaces an earlier current", "upgrades/v11.3.0", "", "", genesisName, "", "", ""},
+		{"no data copies an earlier current record", "upgrades/v11.3.0", "", "", genesisName, v11, "", v11},
 		{"no data keeps genesis", genesisName, "", "", genesisName, "", "", ""},
 		{"no data keeps the genesis record", genesisName, "", "", genesisName, v11, "", v11},
 		{"no data keeps the upgrade", testUpgradeDir, "", "", testUpgradeDir, "", "", ""},
@@ -33,7 +33,7 @@ func TestPrepareCurrent(t *testing.T) {
 
 		{"earlier plan on a new home", "", v11, "", genesisName, v11, v11, ""},
 		{"earlier plan on genesis", genesisName, v11, "", genesisName, v11, v11, ""},
-		{"earlier plan takes over another Cosmovisor setup", "upgrades/v11.2.0", v11, "", genesisName, v11, v11, ""},
+		{"earlier plan takes over another Cosmovisor setup", "upgrades/v11.3.0", v11, "", genesisName, v11, v11, ""},
 		{"earlier plan moves current off the upgrade", testUpgradeDir, v11, "", genesisName, v11, v11, ""},
 
 		{"plan reached on a new home", "", v12, "", testUpgradeDir, v12, v12, ""},
@@ -88,7 +88,7 @@ func TestPrepareCurrentLogging(t *testing.T) {
 		{"reached plan", genesisName, testPlan, "", testUpgradeDir, "data/upgrade-info.json names " + testPlan},
 		{"next plan", testUpgradeDir, "v12.1.0", "", genesisName, "data/upgrade-info.json names v12.1.0"},
 		{"missing current", "", testPlan, "", testUpgradeDir, "data/upgrade-info.json names " + testPlan},
-		{"unbundled current", "upgrades/v11.2.0", "", "", genesisName, "points at neither binary of this bundle"},
+		{"unbundled current", "upgrades/v11.3.0", "", "", genesisName, "points at neither binary of this bundle"},
 		{"select genesis", testUpgradeDir, "", genesisName, genesisName, "--select genesis"},
 		{"select upgrade", genesisName, "", testPlan, testUpgradeDir, "--select " + testPlan},
 		{"select upgrade with reached plan", genesisName, testPlan, testPlan, testUpgradeDir, "--select " + testPlan},
