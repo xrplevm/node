@@ -8,16 +8,25 @@ import (
 	"testing/fstest"
 )
 
+// The genesis binary goes to genesis/, for a home without a data file, and to the
+// directory of its plan, which data/upgrade-info.json names on homes that ran it. The
+// first install into a home is logged, so an install into an unexpected home shows.
 func TestInstallWritesStockLayout(t *testing.T) {
 	files, m := testPayload(t)
 	home := t.TempDir()
 	l := newLayout(home, m)
-	if err := install(files, m, l); err != nil {
+	var err error
+	logged := captureStderr(t, func() { err = install(files, m, l) })
+	if err != nil {
 		t.Fatal(err)
+	}
+	if want := "exrpd: installed the bundle in " + l.Root + "\n"; logged != want {
+		t.Errorf("install logged %q, want %q", logged, want)
 	}
 
 	for path, want := range map[string]string{
 		filepath.Join(home, "cosmovisor/genesis/bin/exrpd"):                                  "v11 bytes",
+		filepath.Join(home, "cosmovisor/upgrades/v11.3.0/bin/exrpd"):                         "v11 bytes",
 		filepath.Join(home, "cosmovisor/upgrades/v12.0.0/bin/exrpd"):                         "v12 bytes",
 		filepath.Join(home, "cosmovisor/supervisor", m.Cosmovisor.SHA256[:16], "cosmovisor"): "cosmovisor bytes",
 	} {
@@ -35,8 +44,12 @@ func TestInstallWritesStockLayout(t *testing.T) {
 	if target := currentTarget(t, home); target != "" {
 		t.Errorf("install created current -> %q, but Cosmovisor owns its first link", target)
 	}
-	if err := install(files, m, l); err != nil {
+	logged = captureStderr(t, func() { err = install(files, m, l) })
+	if err != nil {
 		t.Fatalf("installing the same files again: %v", err)
+	}
+	if logged != "" {
+		t.Errorf("installing the same files again logged %q, want no output", logged)
 	}
 }
 
@@ -45,13 +58,14 @@ func TestInstallWritesStockLayout(t *testing.T) {
 func TestInstallReplacesDifferentBinary(t *testing.T) {
 	files, m := testPayload(t)
 	l := newLayout(t.TempDir(), m)
-	writeFile(t, l.Genesis, "v11 earlier patch", 0o644)
-	writeFile(t, l.Upgrade, "v12 earlier patch", 0o644)
+	genesis, upgrade := l.bin(genesisName), l.bin(testUpgradeDir)
+	writeFile(t, genesis, "v11 earlier patch", 0o644)
+	writeFile(t, upgrade, "v12 earlier patch", 0o644)
 
 	if err := install(files, m, l); err != nil {
 		t.Fatal(err)
 	}
-	for path, want := range map[string]string{l.Genesis: "v11 bytes", l.Upgrade: "v12 bytes"} {
+	for path, want := range map[string]string{genesis: "v11 bytes", upgrade: "v12 bytes"} {
 		if got := readFile(t, path); got != want {
 			t.Errorf("%s = %q, want %q", path, got, want)
 		}
@@ -72,22 +86,23 @@ func TestInstallReplacesDifferentBinary(t *testing.T) {
 func TestInstallMakesExistingBinaryExecutable(t *testing.T) {
 	files, m := testPayload(t)
 	l := newLayout(t.TempDir(), m)
-	writeFile(t, l.Upgrade, "v12 bytes", 0o644)
+	upgrade := l.bin(testUpgradeDir)
+	writeFile(t, upgrade, "v12 bytes", 0o644)
 
 	if err := install(files, m, l); err != nil {
 		t.Fatal(err)
 	}
-	info, err := os.Stat(l.Upgrade)
+	info, err := os.Stat(upgrade)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0o755 {
-		t.Errorf("%s mode = %v, want 0755", l.Upgrade, info.Mode().Perm())
+		t.Errorf("%s mode = %v, want 0755", upgrade, info.Mode().Perm())
 	}
 }
 
-// Concurrent stage runs move `current` at the same time and must not fail on each
-// other's temporary link.
+// Concurrent starts move `current` at the same time and must not fail on each other's
+// temporary link.
 func TestSymlinkAtomicConcurrent(t *testing.T) {
 	dir := t.TempDir()
 	link := filepath.Join(dir, "current")
@@ -115,7 +130,7 @@ func TestSymlinkAtomicConcurrent(t *testing.T) {
 
 func TestInstallRejectsCorruptPayload(t *testing.T) {
 	files, m := testPayload(t)
-	files[m.Upgrade.File] = &fstest.MapFile{Data: gzipped(t, "v12 bytez")}
+	files[m.Upgrades[0].File] = &fstest.MapFile{Data: gzipped(t, "v12 bytez")}
 	home := t.TempDir()
 	l := newLayout(home, m)
 
@@ -123,7 +138,7 @@ func TestInstallRejectsCorruptPayload(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "corrupt") {
 		t.Fatalf("install() error = %v, want a corrupt payload error", err)
 	}
-	entries, err := os.ReadDir(filepath.Dir(l.Upgrade))
+	entries, err := os.ReadDir(filepath.Dir(l.bin(testUpgradeDir)))
 	if err != nil {
 		t.Fatal(err)
 	}

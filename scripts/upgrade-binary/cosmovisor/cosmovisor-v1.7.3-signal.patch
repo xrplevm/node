@@ -87,13 +87,48 @@ index 26ef82900fe65796cdf2e7c792aaa31db6656d5d..073677e2b903fd0e5a711f9f39ae355f
  	"testing"
  	"time"
  
-@@ -89,6 +93,146 @@ func TestLaunchProcess(t *testing.T) {
+@@ -89,6 +93,187 @@ func TestLaunchProcess(t *testing.T) {
  	require.Equal(t, rPath, currentBin)
  }
  
 +// TestLaunchProcessSignalAfterUpgrade will check that a SIGTERM received after an upgrade
 +// is forwarded to the upgraded binary, and that the pre-upgrade run does not exit cosmovisor
 +func TestLaunchProcessSignalAfterUpgrade(t *testing.T) {
++	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
++	defer cancel()
++	executable, err := os.Executable()
++	require.NoError(t, err)
++	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestHelperSignalAfterUpgrade$")
++	cmd.Dir = workDir
++	cmd.Env = append(os.Environ(), "COSMOVISOR_HELPER=1")
++	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
++	cmd.WaitDelay = time.Second
++	output := newBuffer()
++	cmd.Stdout, cmd.Stderr = output, output
++	require.NoError(t, cmd.Start())
++	defer func() {
++		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
++		if cmd.ProcessState == nil {
++			_ = cmd.Wait()
++		}
++		if t.Failed() {
++			t.Logf("helper output:\n%s", output.String())
++		}
++	}()
++	require.Eventually(t, func() bool {
++		return strings.Contains(output.String(), "upgraded daemon running\n")
++	}, 10*time.Second, 10*time.Millisecond)
++
++	// signal only cosmovisor, so the upgraded daemon can receive SIGTERM only through it
++	require.NoError(t, syscall.Kill(cmd.Process.Pid, syscall.SIGTERM))
++	require.NoError(t, cmd.Wait())
++	require.Contains(t, output.String(), "signal after upgrade checked\n")
++}
++
++func TestHelperSignalAfterUpgrade(t *testing.T) {
++	if os.Getenv("COSMOVISOR_HELPER") != "1" {
++		return
++	}
 +	// binaries from testdata/signal directory
 +	cfg := prepareConfig(
 +		t,
@@ -138,30 +173,36 @@ index 26ef82900fe65796cdf2e7c792aaa31db6656d5d..073677e2b903fd0e5a711f9f39ae355f
 +	stdout.Reset()
 +	stderr.Reset()
 +
-+	runErr := make(chan error, 1)
++	type result struct {
++		upgrade bool
++		err     error
++	}
++	runResult := make(chan result, 1)
 +	go func() {
-+		doUpgrade, err = launcher.Run(args, stdin, stdout, stderr)
-+		runErr <- err
++		upgrade, err := launcher.Run(args, stdin, stdout, stderr)
++		runResult <- result{upgrade, err}
 +	}()
 +	require.Eventually(t, func() bool {
 +		return strings.Contains(stdout.String(), "Args: second run --verbose\n")
 +	}, 5*time.Second, 10*time.Millisecond)
++	// the parent sends SIGTERM to this process once it reads this line
++	fmt.Println("upgraded daemon running")
 +
-+	// the signal goes to the whole test process, so no test in this package may run in parallel
-+	require.NoError(t, syscall.Kill(os.Getpid(), syscall.SIGTERM))
++	var res result
 +	select {
-+	case err = <-runErr:
++	case res = <-runResult:
 +	case <-time.After(10 * time.Second):
 +		require.FailNow(t, "SIGTERM was not forwarded to the upgraded binary")
 +	}
-+	require.NoError(t, err)
-+	require.False(t, doUpgrade)
++	require.NoError(t, res.err)
++	require.False(t, res.upgrade)
 +	require.Empty(t, stderr.String())
 +	require.Equal(t, "Chain 2 is live!\nArgs: second run --verbose\nReceived SIGTERM\n", stdout.String())
 +
 +	// a signal handler left over from the first run would call os.Exit(1)
 +	// once its batch upgrade watcher stops, which takes up to a second
 +	time.Sleep(2 * time.Second)
++	fmt.Println("signal after upgrade checked")
 +}
 +
 +func TestHelperRunLauncher(t *testing.T) {

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Build one exrpd-upgrade binary for one platform.
+# Build one bundle executable, exrpd, for one platform.
 #
 # Usage: build.sh --genesis-version X.Y.Z --genesis-archive node_<X.Y.Z>_<Os>_<arch>.tar.gz --genesis-checksums checksums.txt \
 #                 --upgrade-exrpd PATH --upgrade-version X.Y.Z --goos GOOS --goarch GOARCH --out PATH \
-#                 [--cosmovisor PATH --cosmovisor-source TEXT]
+#                 [--genesis-plan vX.Y.Z] [--cosmovisor PATH --cosmovisor-source TEXT]
 #
-# The plan is the upgrade handler of this checkout (plan.sh). The genesis exrpd is taken
-# byte for byte from its release archive after checking the archive against the release
-# checksums.txt. Without --cosmovisor, Cosmovisor is built from the pinned module source
-# plus the committed patch (cosmovisor.sh).
+# The upgrade plan is the upgrade handler of this checkout (plan.sh). The genesis plan
+# defaults to the newest plan in the genesis release tag (genesis-plan.sh). The genesis
+# exrpd is taken byte for byte from its release archive after checking the archive
+# against the release checksums.txt. Without --cosmovisor, Cosmovisor is built from the
+# pinned module source plus the committed patch (cosmovisor.sh).
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -16,11 +17,12 @@ repo=$(cd "$here/../.." && pwd)
 # shellcheck source=SCRIPTDIR/cosmovisor/cosmovisor.env
 source "$here/cosmovisor/cosmovisor.env"
 
-genesis_version='' genesis_archive='' genesis_checksums='' upgrade_exrpd='' upgrade_version='' goos='' goarch='' out='' cosmovisor='' cosmovisor_source=''
+genesis_version='' genesis_plan='' genesis_archive='' genesis_checksums='' upgrade_exrpd='' upgrade_version='' goos='' goarch='' out='' cosmovisor='' cosmovisor_source=''
 while [[ $# -gt 0 ]]; do
 	case $1 in
 	--genesis-version) genesis_version=$2 ;;
 	--genesis-archive) genesis_archive=$2 ;;
+	--genesis-plan) genesis_plan=$2 ;;
 	--genesis-checksums) genesis_checksums=$2 ;;
 	--upgrade-exrpd) upgrade_exrpd=$2 ;;
 	--upgrade-version) upgrade_version=$2 ;;
@@ -52,6 +54,20 @@ plan=$("$here/plan.sh")
 plan_version=${plan#v} base_version=${upgrade_version%%-*}
 if [[ ! $upgrade_version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ || ${base_version%.*} != "${plan_version%.*}" ]]; then
 	echo "--upgrade-version $upgrade_version does not have the major.minor of plan $plan in app/upgrades: a new major or minor release needs its upgrade handler" >&2
+	exit 1
+fi
+[[ -n $genesis_plan ]] || genesis_plan=$("$here/genesis-plan.sh" "$genesis_version")
+# The launcher accepts only plans named vX.Y.Z without leading zeros: any other name would
+# make every command of the bundle fail.
+for p in "$plan" "$genesis_plan"; do
+	if [[ ! $p =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+		echo "plan $p is not named vX.Y.Z, so this bundle cannot carry it" >&2
+		exit 1
+	fi
+done
+# The launcher requires plans in order: the genesis runs the data before the upgrade plan.
+if [[ $genesis_plan == "$plan" || $(printf '%s\n%s\n' "$genesis_plan" "$plan" | sort -V | head -n 1) != "$genesis_plan" ]]; then
+	echo "genesis $genesis_version runs plan $genesis_plan, which does not come before plan $plan of this bundle: choose a genesis release from before plan $plan" >&2
 	exit 1
 fi
 
@@ -86,16 +102,16 @@ fi
 for f in exrpd-genesis exrpd-upgrade cosmovisor; do
 	gzip -n -9 -c "$raw/$f" >"$payload/$f.gz"
 done
-entry() { # version name source
-	jq -cn --arg version "$1" --arg file "$2.gz" --arg sha256 "$(sha256 "$raw/$2")" \
-		--argjson size "$(size "$raw/$2")" --arg source "$3" \
-		'{version: $version, file: $file, sha256: $sha256, size: $size, source: $source}'
+entry() { # plan version name source
+	jq -cn --arg plan "$1" --arg version "$2" --arg file "$3.gz" --arg sha256 "$(sha256 "$raw/$3")" \
+		--argjson size "$(size "$raw/$3")" --arg source "$4" \
+		'{version: $version, file: $file, sha256: $sha256, size: $size, source: $source} + if $plan == "" then {} else {plan: $plan} end'
 }
 {
-	printf '{"platform":"%s","plan":"%s",' "$goos/$goarch" "$plan"
-	printf '"genesis":%s,' "$(entry "$genesis_version" exrpd-genesis "github.com/xrplevm/node release v$genesis_version $archive_name sha256:$got")"
-	printf '"upgrade":%s,' "$(entry "$upgrade_version" exrpd-upgrade "exrpd $upgrade_version standalone release binary")"
-	printf '"cosmovisor":%s}\n' "$(entry "$COSMOVISOR_VERSION" cosmovisor "$cosmovisor_source")"
+	printf '{"platform":"%s",' "$goos/$goarch"
+	printf '"genesis":%s,' "$(entry "$genesis_plan" "$genesis_version" exrpd-genesis "github.com/xrplevm/node release v$genesis_version $archive_name sha256:$got")"
+	printf '"upgrades":[%s],' "$(entry "$plan" "$upgrade_version" exrpd-upgrade "exrpd $upgrade_version standalone release binary")"
+	printf '"cosmovisor":%s}\n' "$(entry "" "$COSMOVISOR_VERSION" cosmovisor "$cosmovisor_source")"
 } >"$payload/manifest.json"
 jq -e . "$payload/manifest.json" >/dev/null
 

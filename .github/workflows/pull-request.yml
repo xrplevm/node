@@ -69,7 +69,7 @@ jobs:
 
     # Chain upgrade with an upgrade binary built from the PR and the newest published
     # release below the plan (genesis.sh). It runs only when the PR changes the upgrade
-    # binary or the upgrade handler.
+    # binary, the exrpd CLI, the upgrade handler, the app wiring, or the root Go dependencies.
     upgrade-binary-e2e:
         if: github.event_name == 'pull_request'
         runs-on: ubuntu-latest
@@ -81,12 +81,12 @@ jobs:
                 with:
                     persist-credentials: false
                     fetch-depth: 0
-            -   name: Check the PR changes the upgrade binary
+            -   name: Check the PR changes the upgrade binary or the upgrade path
                 id: changes
                 env:
                     BASE_SHA: ${{ github.event.pull_request.base.sha }}
                 run: |
-                    if git diff --name-only "$BASE_SHA" HEAD | grep -Eq '^(cmd/exrpd-upgrade|scripts/upgrade-binary|app/upgrades)/'; then
+                    if git diff --name-only "$BASE_SHA" HEAD | grep -Eq '^((cmd/exrpd|cmd/exrpd-upgrade|scripts/upgrade-binary|app/upgrades)/|app/(app|upgrades)\.go$|go\.(mod|sum)$|\.github/workflows/pull-request\.yml$)'; then
                         echo "run=true" >> "$GITHUB_OUTPUT"
                     else
                         echo "run=false" >> "$GITHUB_OUTPUT"

@@ -9,24 +9,52 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 )
 
-// install writes the three embedded binaries to their place in the layout. A binary
-// already there with the embedded hash is kept. A different one is replaced and the
-// replacement is logged: a bundle with a patch release replaces the binaries of the
-// earlier bundle, and an older exrpd-upgrade started on the home puts its own back.
-// install never touches `current`.
+// install writes the embedded binaries to their place in the layout: genesis to
+// genesis/ and to the directory of its plan, each upgrade to the directory of its plan,
+// and Cosmovisor. A binary already there with the embedded hash is kept. A different one
+// is replaced and the replacement is logged: a bundle with a patch release replaces the
+// binaries of the earlier bundle, and an older bundle started on the home puts its own
+// back. install never touches `current`. It refuses, before it writes, when two binary
+// directories of the bundle are the same directory, for example through a symlink made
+// by hand: each binary would overwrite the other. The first install into a home is
+// logged, so an install into a home the operator did not expect shows.
 func install(files fs.FS, m Manifest, l Layout) error {
-	for _, target := range []struct {
+	if err := distinctDirs(l, m); err != nil {
+		return err
+	}
+	_, err := os.Lstat(l.Root)
+	first := errors.Is(err, fs.ErrNotExist)
+	type target struct {
 		bin  Binary
 		dest string
-	}{
-		{m.Genesis, l.Genesis},
-		{m.Upgrade, l.Upgrade},
-		{m.Cosmovisor, l.Cosmovisor},
-	} {
-		if err := installBinary(files, target.bin, target.dest); err != nil {
+	}
+	targets := []target{{m.Genesis.Binary, l.bin(genesisName)}}
+	for _, r := range m.releases() {
+		targets = append(targets, target{r.Binary, l.bin(planDir(r.Plan))})
+	}
+	targets = append(targets, target{m.Cosmovisor, l.Cosmovisor})
+	for _, t := range targets {
+		if err := installBinary(files, t.bin, t.dest); err != nil {
 			return err
+		}
+	}
+	if first {
+		logf("installed the bundle in %s", l.Root)
+	}
+	return nil
+}
+
+func distinctDirs(l Layout, m Manifest) error {
+	dirs := binDirs(m)
+	for i, a := range dirs {
+		for _, b := range dirs[i+1:] {
+			if sameDir(filepath.Join(l.Root, a), filepath.Join(l.Root, b)) {
+				return fmt.Errorf("%s and %s are the same directory. Each needs its own binary: replace the symlink with a real directory",
+					filepath.Join(l.Root, a), filepath.Join(l.Root, b))
+			}
 		}
 	}
 	return nil

@@ -17,8 +17,10 @@ import (
 )
 
 const (
-	testPlan       = "v12.0.0"
-	testUpgradeDir = "upgrades/" + testPlan // `current` target of the upgrade binary
+	testGenesisPlan = "v11.3.0"
+	testPlan        = "v12.0.0"
+	testGenesisDir  = "upgrades/" + testGenesisPlan // `current` target of the genesis plan
+	testUpgradeDir  = "upgrades/" + testPlan        // `current` target of the upgrade binary
 )
 
 // testPayload returns a payload for the running platform whose binaries contain the
@@ -33,9 +35,8 @@ func testPayload(t *testing.T) (fstest.MapFS, Manifest) {
 	}
 	m := Manifest{
 		Platform:   runtime.GOOS + "/" + runtime.GOARCH,
-		Plan:       testPlan,
-		Genesis:    add("exrpd-genesis", "11.3.0", "v11 bytes"),
-		Upgrade:    add("exrpd-upgrade", "12.0.0", "v12 bytes"),
+		Genesis:    Release{Plan: testGenesisPlan, Binary: add("exrpd-genesis", "11.3.0", "v11 bytes")},
+		Upgrades:   []Release{{Plan: testPlan, Binary: add("exrpd-upgrade", "12.0.0", "v12 bytes")}},
 		Cosmovisor: add("cosmovisor", "v1.7.3", "cosmovisor bytes"),
 	}
 	setManifest(t, files, m)
@@ -126,3 +127,35 @@ func currentTarget(t *testing.T, home string) string {
 	}
 	return target
 }
+
+// danglingCurrent points <home>/cosmovisor/current at target without creating target.
+func danglingCurrent(t *testing.T, home, target string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(home, "cosmovisor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(home, "cosmovisor", "current")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// captureStderr runs f with os.Stderr sent to a file and returns what f wrote there.
+func captureStderr(t *testing.T, f func()) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "stderr")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stderr := os.Stderr
+	os.Stderr = file
+	defer func() {
+		os.Stderr = stderr
+		file.Close()
+	}()
+	f()
+	return readFile(t, path)
+}
+
+// testUserHomeDir is os.UserHomeDir for tests.
+func testUserHomeDir() (string, error) { return "/users/val", nil }

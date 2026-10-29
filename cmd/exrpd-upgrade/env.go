@@ -38,7 +38,7 @@ func cosmovisorEnv(environ []string, home string) ([]string, error) {
 		key, value, _ := strings.Cut(kv, "=")
 		if want, ok := lookup(pinned, key); ok {
 			if key != "DAEMON_HOME" && !sameSetting(value, want) {
-				return nil, fmt.Errorf("%s=%s is not supported by exrpd-upgrade (it requires %s)", key, value, want)
+				return nil, fmt.Errorf("%s=%s is not supported by this exrpd (it requires %s)", key, value, want)
 			}
 			continue
 		}
@@ -67,7 +67,7 @@ func cosmovisorEnv(environ []string, home string) ([]string, error) {
 func refuseCosmovisorConfig(args []string) error {
 	for _, arg := range args {
 		if strings.EqualFold(arg, "--cosmovisor-config") || strings.EqualFold(arg, "-cosmovisor-config") {
-			return fmt.Errorf("%s is not supported by exrpd-upgrade: it sets the Cosmovisor settings in the environment", arg)
+			return fmt.Errorf("%s is not supported by this exrpd: it sets the Cosmovisor settings in the environment", arg)
 		}
 	}
 	return nil

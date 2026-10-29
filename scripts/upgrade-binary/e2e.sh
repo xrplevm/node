@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Localnet E2E for exrpd-upgrade (linux/amd64).
+# Localnet E2E for the exrpd bundle (linux/amd64).
 #
 # Usage: e2e.sh [--unpatched]
 #   --unpatched  embed the unpatched upstream Cosmovisor release binary instead of the
@@ -10,7 +10,7 @@
 # E2E_DIR (scratch, deleted at start: it must be missing, empty or an earlier run's
 # scratch), PORT_BASE (100 ports from here are used), UPGRADE_VERSION (the upgrade exrpd
 # version, default the plan without "v", or a patch release of the plan for a patch
-# bundle), EXRPD_UPGRADE (an exrpd-upgrade built from the
+# bundle), EXRPD_UPGRADE (a bundle exrpd built from the
 # same inputs to test instead of building one, for example the release asset. It cannot
 # be used with --unpatched).
 #
@@ -21,13 +21,16 @@
 #   cosmovisor-<COSMOVISOR_VERSION>-linux-amd64.tar.gz, SHA256SUMS-cosmovisor-<COSMOVISOR_VERSION>.txt
 #
 # Scenarios on one single-validator chain (homes run one at a time on the same ports):
-#   main      genesis home with a data/upgrade-info.json from the plan that started the
-#             genesis release line. A gov upgrade to the plan (plan.sh) switches in process,
-#             then restart, reinstall, SIGTERM.
-#   restore   post-upgrade copy without cosmovisor/ and with an earlier plan's marker:
-#             stage --select.
+#   main      genesis home with a data/upgrade-info.json from the genesis plan, as on the
+#             validators that ran it. Commands before the first start run the genesis
+#             exrpd. A gov upgrade to the plan (plan.sh) switches in process, then
+#             restart, reinstall, SIGTERM.
+#   resync    post-upgrade copy without data/upgrade-info.json, as after a resync: start
+#             keeps the upgrade. A corrupted data file is refused.
 #   halt-kill pre-upgrade copy whose supervisor and app are SIGKILLed at the upgrade halt,
-#             before Cosmovisor switched: the next start switches.
+#             before Cosmovisor switched: commands and the next start use the upgrade.
+#   stock     pre-upgrade copy rebuilt as a stock Cosmovisor home: the bundle takes it over,
+#             replaces the operator's binaries and switches at the upgrade height.
 set -uo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -36,7 +39,7 @@ source "$here/cosmovisor/cosmovisor.env"
 GENESIS_VERSION=${GENESIS_VERSION:?set GENESIS_VERSION to the genesis release version, for example 11.3.0}
 UPGRADE_PLAN=$("$here/plan.sh") || exit 1
 CACHE=${CACHE:?set CACHE to the directory with the inputs listed at the top of $0}
-# exrpd-upgrade passes the home to Cosmovisor and exrpd as a cleaned absolute path
+# The bundle passes the home to Cosmovisor and exrpd as a cleaned absolute path
 # (filepath.Abs). The pgrep patterns below must see the same string.
 E2E_DIR=$(realpath -ms "${E2E_DIR:-$here/../../.e2e}")
 P=${PORT_BASE:-29000}
@@ -47,7 +50,7 @@ CHAIN_ID=xrplevm_1449999-1
 MNEMONIC="birth rebuild refuse area aisle language bullet pride place clutch paddle drama"
 FEES=1000000000000000axrp
 NODE=tcp://127.0.0.1:$((P + 57))
-UB=$E2E_DIR/bin/exrpd-upgrade
+UB=$E2E_DIR/bin/exrpd
 UPGRADE_VERSION=${UPGRADE_VERSION:-${UPGRADE_PLAN#v}}
 V12=$CACHE/exrpd-$UPGRADE_VERSION-linux-amd64
 EXRPD_UPGRADE=${EXRPD_UPGRADE:-}
@@ -139,6 +142,32 @@ child_exe() {
 running() { test "$(child_exe)" = "$(readlink -f "$H/cosmovisor/$1/bin/exrpd")"; }
 current_is() { test "$(readlink "$H/cosmovisor/current")" = "$1" -o "$(readlink "$H/cosmovisor/current")" = "$H/cosmovisor/$1"; }
 applied_at() { test "$(cli query upgrade applied "$UPGRADE_PLAN" -o json | jq -r '.header.height // .height')" = "$1"; }
+not() { ! "$@"; }
+# fails_quietly runs a command that must fail, hiding its stderr.
+fails_quietly() { ! "$@" 2>/dev/null; }
+marker_names() { jq -e --arg n "$2" '.name == $n' "$1" >/dev/null; } # file, plan
+# bundle_info prints the version --bundle JSON for a home that does not exist, so it
+# reads nothing of a real home and writes nothing.
+bundle_info() { "$UB" version --bundle --home "$E2E_DIR/no-home"; }
+cosmovisor_source() { bundle_info | jq -e '.manifest.cosmovisor.source' | grep "$1" >/dev/null; }
+# version_is VERSION: exrpd version on this home names VERSION first, as the standalone does.
+version_is() { test "$("$UB" version --home "$H" | cut -d' ' -f1)" = "$1"; }
+# ran_version_is VERSION: a command passed through to exrpd ran the binary of VERSION.
+ran_version_is() { "$UB" --home "$H" version --long | grep -qx "version: $1"; }
+# start_refused: the launcher refuses start with its "is corrupted" message, so the
+# refusal is its own and not a later Cosmovisor or exrpd failure on the same file. Exit
+# status 124 means it was still running after the timeout, so it did not refuse.
+start_refused() {
+	local out=$E2E_DIR/start-refused.out rc
+	timeout 30 "$UB" start --home "$H" >"$out" 2>&1
+	rc=$?
+	cat "$out" >>"$LOG"
+	((rc != 0 && rc != 124)) && grep -q "^exrpd: .* is corrupted" "$out"
+}
+sup_exe_has() { readlink "/proc/$sup/exe" | grep "$1" >/dev/null; }
+sup_env_has() { tr '\0' '\n' <"/proc/$sup/environ" | grep -x "$1" >/dev/null; }
+sup_running() { kill -0 "$sup" && running "$1"; }
+halted_before_switch() { current_is "upgrades/$GENESIS_PLAN" && marker_names "$H/data/upgrade-info.json" "$1"; }
 
 # stop_check NAME SIGNAL [switched|group] sends SIGNAL to the supervisor PID only (not
 # the group), or with "group" to this home's exrpd as well, the way systemd's default
@@ -308,47 +337,76 @@ if [[ $mode == unpatched ]]; then
 fi
 IFS=. read -r plan_major plan_minor _ <<<"${UPGRADE_PLAN#v}"
 next_minor=$plan_major.$((plan_minor + 1)).0
-build_refuses_next_minor() { ! "$here/build.sh" "${build_args[@]}" --upgrade-version "$next_minor" 2>/dev/null; }
+# build.sh must refuse the version with its major.minor diagnostic. Other build errors,
+# for example a missing Go toolchain, do not prove the version check.
+build_refuses_next_minor() {
+	local out
+	if out=$("$here/build.sh" "${build_args[@]}" --upgrade-version "$next_minor" 2>&1); then
+		echo "build.sh accepted --upgrade-version $next_minor"
+		return 1
+	fi
+	grep -qF "does not have the major.minor of plan" <<<"$out" && return 0
+	echo "build.sh failed without the major.minor diagnostic. Output:"
+	echo "$out"
+	return 1
+}
 check "build refuses $next_minor, a minor release that needs its own plan" build_refuses_next_minor
 if [[ -n $EXRPD_UPGRADE ]]; then
 	cp "$EXRPD_UPGRADE" "$UB" || die "copy $EXRPD_UPGRADE"
 else
 	"$here/build.sh" "${build_args[@]}" || die "build"
 fi
-check "manifest cosmovisor source ($mode)" bash -c "'$UB' info | jq -e '.cosmovisor.source' | grep -q '$([[ $mode == patched ]] && echo "$COSMOVISOR_PATCH" || echo unpatched)'"
+check "manifest cosmovisor source ($mode)" cosmovisor_source "$([[ $mode == patched ]] && echo "$COSMOVISOR_PATCH" || echo unpatched)"
 
 tar -xzf "$CACHE/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" -C "$E2E_DIR/v11" bin/exrpd
 V11=$E2E_DIR/v11/bin/exrpd
 check "genesis tool is release v$GENESIS_VERSION" test "$("$V11" version)" = "$GENESIS_VERSION"
-manifest_sha() { "$UB" info | jq -r ".$1.sha256"; }
+manifest() { bundle_info | jq -r ".manifest.$1"; }
 file_sha() { sha256sum "$1" | cut -d' ' -f1; }
-check "manifest plan is $UPGRADE_PLAN" test "$("$UB" info | jq -r .plan)" = "$UPGRADE_PLAN"
-check "manifest genesis is the release v$GENESIS_VERSION exrpd" test "$(manifest_sha genesis)" = "$(file_sha "$V11")"
-check "manifest upgrade is the standalone $UPGRADE_VERSION exrpd" test "$(manifest_sha upgrade)" = "$(file_sha "$V12")"
+GENESIS_PLAN=$(manifest genesis.plan)
+check "manifest genesis plan $GENESIS_PLAN is the newest plan of v$GENESIS_VERSION" test "$GENESIS_PLAN" = "$("$here/genesis-plan.sh" "$GENESIS_VERSION")"
+check "manifest upgrade plan is $UPGRADE_PLAN" test "$(manifest 'upgrades[0].plan')" = "$UPGRADE_PLAN"
+check "manifest genesis is the release v$GENESIS_VERSION exrpd" test "$(manifest genesis.sha256)" = "$(file_sha "$V11")"
+check "manifest upgrade is the standalone $UPGRADE_VERSION exrpd" test "$(manifest 'upgrades[0].sha256')" = "$(file_sha "$V12")"
 
 # ---------------------------------------------------------------- chain
 init_chain "$V11" || die "init chain"
-"$UB" stage --home "$H" || die "stage"
-check "staged genesis exrpd = release bytes" cmp -s "$V11" "$H/cosmovisor/genesis/bin/exrpd"
-check "staged upgrade exrpd = standalone v12 bytes" cmp -s "$V12" "$H/cosmovisor/$UPGRADE_DIR/bin/exrpd"
+# Help never installs: before anything is installed it only tells how to find the home.
+help_writes_nothing() {
+	"$UB" --home "$H" --help | grep -F "no exrpd is installed in $H yet" >/dev/null && test ! -e "$H/cosmovisor"
+}
+check "help before the first install writes nothing" help_writes_nothing
+# Before the first start, every command runs the genesis exrpd, and installs the binaries
+# without creating `current`.
+check "command before the first start runs genesis" ran_version_is "$GENESIS_VERSION"
+# shellcheck disable=SC2016 # $1 and $2 expand in the inner shell
+check "completion passes the typed words to exrpd" bash -c '"$1" __completeNoDesc --home "$2" ke | grep -qx keys' _ "$UB" "$H"
+check "no current before the first start" test ! -e "$H/cosmovisor/current" -a ! -L "$H/cosmovisor/current"
+check "installed genesis exrpd = release bytes" cmp -s "$V11" "$H/cosmovisor/genesis/bin/exrpd"
+check "installed $GENESIS_PLAN exrpd = release bytes" cmp -s "$V11" "$H/cosmovisor/upgrades/$GENESIS_PLAN/bin/exrpd"
+check "installed upgrade exrpd = standalone v12 bytes" cmp -s "$V12" "$H/cosmovisor/$UPGRADE_DIR/bin/exrpd"
+check "version before the first start is $GENESIS_VERSION" version_is "$GENESIS_VERSION"
+# shellcheck disable=SC2016 # $1 and $2 expand in the inner shell
+check "help runs the installed exrpd" bash -c '"$1" --home "$2" --help | grep "Available Commands" >/dev/null' _ "$UB" "$H"
 
-# ---------------------------------------------------------------- previous plan marker
-# Existing validator homes carry data/upgrade-info.json from the plan that started the
-# genesis release line (v11.3.0 for genesis 11.3.0).
-IFS=. read -r genesis_major genesis_minor _ <<<"$GENESIS_VERSION"
-PREV_PLAN=v$genesis_major.$genesis_minor.0
-echo "{\"name\":\"$PREV_PLAN\",\"time\":\"0001-01-01T00:00:00Z\",\"height\":1}" >"$H/data/upgrade-info.json"
+# ---------------------------------------------------------------- genesis plan marker
+# Validator homes that ran the genesis plan carry data/upgrade-info.json naming it.
+echo "{\"name\":\"$GENESIS_PLAN\",\"time\":\"0001-01-01T00:00:00Z\",\"height\":1}" >"$H/data/upgrade-info.json"
 start_node
 log "supervisor pid $sup"
 wait_height 3 90 || die "chain did not start"
-check "supervisor execs cosmovisor in place (pid $sup)" bash -c "readlink /proc/$sup/exe | grep -q '/cosmovisor/supervisor/'"
-check "downloads disabled in supervisor env" bash -c "tr '\0' '\n' </proc/$sup/environ | grep -qx DAEMON_ALLOW_DOWNLOAD_BINARIES=false"
-check "backups off by default in supervisor env" bash -c "tr '\0' '\n' </proc/$sup/environ | grep -qx UNSAFE_SKIP_BACKUP=true"
-check "previous plan $PREV_PLAN recorded on genesis" bash -c "jq -e '.name == \"$PREV_PLAN\"' '$H/cosmovisor/genesis/upgrade-info.json' >/dev/null"
+check "supervisor execs cosmovisor in place (pid $sup)" sup_exe_has /cosmovisor/supervisor/
+check "downloads disabled in supervisor env" sup_env_has DAEMON_ALLOW_DOWNLOAD_BINARIES=false
+check "backups off by default in supervisor env" sup_env_has UNSAFE_SKIP_BACKUP=true
+check "current -> upgrades/$GENESIS_PLAN" current_is "upgrades/$GENESIS_PLAN"
+check "$GENESIS_PLAN recorded in its directory" marker_names "$H/cosmovisor/upgrades/$GENESIS_PLAN/upgrade-info.json" "$GENESIS_PLAN"
+check "no record on genesis" test ! -e "$H/cosmovisor/genesis/upgrade-info.json"
+# shellcheck disable=SC2016 # $1 to $3 expand in the inner shell
+check "version --bundle reports upgrades/$GENESIS_PLAN from --home" bash -c '"$1" version --bundle --home "$2" | jq -e --arg d "$3" ".will_run.dir == \$d and .home_source == \"--home\"" >/dev/null' _ "$UB" "$H" "upgrades/$GENESIS_PLAN"
 h0=$(height)
-check "v$GENESIS_VERSION keeps producing blocks with a $PREV_PLAN marker" wait_height $((h0 + 15)) 60
-check "same supervisor still running v$GENESIS_VERSION" bash -c "kill -0 $sup && test '$(child_exe)' = '$(readlink -f "$H/cosmovisor/genesis/bin/exrpd")'"
-check "no false switch to $PREV_PLAN" bash -c "! grep -q 'upgrades/$PREV_PLAN' '$LOG'"
+check "v$GENESIS_VERSION keeps producing blocks with a $GENESIS_PLAN marker" wait_height $((h0 + 15)) 60
+check "same supervisor still running v$GENESIS_VERSION" sup_running "upgrades/$GENESIS_PLAN"
+check "Cosmovisor did not switch" not grep -q "daemon shutting down in an attempt to restart" "$LOG"
 check "signed bank tx before upgrade" send_tx
 
 # ---------------------------------------------------------------- governance upgrade
@@ -370,10 +428,13 @@ while ((SECONDS < deadline)); do
 done
 check "proposal $pid passed ($status)" test "$status" = PROPOSAL_STATUS_PASSED -o "$status" = 3
 
-# Stop before the upgrade height and keep a copy of the home for the halt-kill scenario.
+# Stop before the upgrade height and keep copies of the home for the halt-kill and
+# stock Cosmovisor scenarios.
 stop_check "SIGTERM to supervisor before upgrade leaves no exrpd" TERM
 ((last < UH)) || die "stopped at or past the upgrade height. Raise the proposal margin"
+PRE_H=$last
 cp -a "$H" "$E2E_DIR/halt-kill"
+cp -a "$H" "$E2E_DIR/stock"
 start_node
 log "restarted before the upgrade, supervisor pid $sup"
 wait_height $((last + 1)) 60 || die "chain did not restart"
@@ -385,9 +446,10 @@ check "blocks advance past H=$UH (now $(height))" wait_height $((UH + 5)) 1
 check "current -> $UPGRADE_DIR" current_is "$UPGRADE_DIR"
 check "same supervisor still running after switch (one start, pid $sup)" test -d "/proc/$sup"
 check "running upgrade exrpd after switch" running "$UPGRADE_DIR"
-check "no download attempted" bash -c "! grep -Eiq 'beginning to download|downloading binary' '$LOG'"
+check "no download attempted" not grep -Eiq 'beginning to download|downloading binary' "$LOG"
 check "upgrade applied at H" applied_at "$UH"
 check "signed bank tx after upgrade" send_tx
+check "version after the switch is $UPGRADE_VERSION" version_is "$UPGRADE_VERSION"
 
 # ---------------------------------------------------------------- signals, restart, reinstall
 stop_check "SIGTERM to supervisor after upgrade leaves no exrpd" TERM switched
@@ -406,26 +468,29 @@ check "current -> $UPGRADE_DIR after reinstall" test "$(readlink "$H/cosmovisor/
 check "running upgrade exrpd after reinstall" running "$UPGRADE_DIR"
 stop_check "SIGTERM to supervisor after reinstall leaves no exrpd" TERM
 
-# ---------------------------------------------------------------- restore past H with --select
-# A snapshot or state-sync restore past the upgrade height has no cosmovisor/. The data
-# directory keeps the marker of an earlier plan, which --select deletes.
-cp -a "$H" "$E2E_DIR/restore"
-use_home restore
-rm -rf "$H/cosmovisor"
-echo "{\"name\":\"$PREV_PLAN\",\"time\":\"0001-01-01T00:00:00Z\",\"height\":1}" >"$H/data/upgrade-info.json"
-check "stage --select refuses an unknown name" bash -c "! '$UB' stage --home '$H' --select 'v$next_minor' 2>/dev/null"
-check "stage --select $UPGRADE_PLAN" "$UB" stage --home "$H" --select "$UPGRADE_PLAN"
-check "current -> $UPGRADE_DIR after --select" test "$(readlink "$H/cosmovisor/current")" = "$UPGRADE_DIR"
-check "--select deletes the $PREV_PLAN marker" test ! -e "$H/data/upgrade-info.json"
+# ---------------------------------------------------------------- resync past H
+# A resync (unsafe-reset-all, then state sync) deletes data/upgrade-info.json. `current`
+# is then the only evidence of the plan, and start must keep it.
+cp -a "$H" "$E2E_DIR/resync"
+use_home resync
+rm "$H/data/upgrade-info.json"
 start_node
-log "restore home, supervisor pid $sup"
-check "restored home past H starts $UPGRADE_PLAN and chain advances" wait_height $((last + 5)) 90
-check "running upgrade exrpd on restored home" running "$UPGRADE_DIR"
-stop_check "SIGTERM to supervisor on restored home leaves no exrpd" TERM
+log "resync home, supervisor pid $sup"
+check "without a data file start keeps $UPGRADE_PLAN and chain advances" wait_height $((last + 5)) 90
+check "current -> $UPGRADE_DIR without a data file" current_is "$UPGRADE_DIR"
+check "running upgrade exrpd without a data file" running "$UPGRADE_DIR"
+stop_check "SIGTERM to supervisor on the resync home leaves no exrpd" TERM
+echo '{"name":"v12.0' >"$H/data/upgrade-info.json"
+bins_before=$(sha256sum "$H"/cosmovisor/*/bin/exrpd "$H"/cosmovisor/upgrades/*/bin/exrpd)
+check "corrupted data file is refused" fails_quietly "$UB" version --home "$H"
+check "start refuses a corrupted data file" start_refused
+check "current and binaries unchanged after the refusal" \
+	test "$(readlink "$H/cosmovisor/current")" = "$UPGRADE_DIR" -a "$(sha256sum "$H"/cosmovisor/*/bin/exrpd "$H"/cosmovisor/upgrades/*/bin/exrpd)" = "$bins_before"
 
 # ---------------------------------------------------------------- killed at the halt
-# Cosmovisor polls upgrade-info.json every DAEMON_POLL_INTERVAL. A long interval holds the
-# window between the v11 halt and the switch open so the SIGKILL lands inside it.
+# A long DAEMON_POLL_INTERVAL keeps Cosmovisor from switching before the kill. The halted
+# app exits on its own, so the checks rely on the state on disk: current still on the
+# genesis plan and the data file naming the upgrade.
 use_home halt-kill
 start_node DAEMON_POLL_INTERVAL=1h
 log "halt-kill home, supervisor pid $sup"
@@ -439,8 +504,9 @@ wait "$sup" 2>/dev/null
 sup=
 sleep 1
 log "killed at the halt: current -> $(readlink "$H/cosmovisor/current"), data/upgrade-info.json: $(cat "$H/data/upgrade-info.json" 2>/dev/null)"
-check "killed between halt and switch (current -> genesis, marker names $UPGRADE_PLAN)" \
-	bash -c "test \"\$(readlink '$H/cosmovisor/current')\" = genesis && jq -e '.name == \"$UPGRADE_PLAN\"' '$H/data/upgrade-info.json' >/dev/null"
+check "killed between halt and switch (current -> upgrades/$GENESIS_PLAN, marker names $UPGRADE_PLAN)" \
+	halted_before_switch "$UPGRADE_PLAN"
+check "commands follow the data file, not the stale current" ran_version_is "$UPGRADE_VERSION"
 start_node
 log "restarted after the kill, supervisor pid $sup"
 check "restart after the kill switches and passes H=$UH" wait_height $((UH + 5)) 120
@@ -448,6 +514,71 @@ check "current -> $UPGRADE_DIR after the kill" test "$(readlink "$H/cosmovisor/c
 check "running upgrade exrpd after the kill" running "$UPGRADE_DIR"
 check "upgrade applied at H after the kill" applied_at "$UH"
 stop_check "SIGTERM to supervisor after the kill leaves no exrpd" TERM
+
+# ---------------------------------------------------------------- takeover of a stock Cosmovisor home
+# A validator runs stock Cosmovisor v1.7.3, stops it before the upgrade height and starts
+# the bundle on the same home. Stock Cosmovisor sets up the home itself: `init` writes
+# genesis/ and config.toml, `add-upgrade` stages the genesis plan, an older plan and the
+# operator's own build of the upgrade, and the run switches to upgrades/<genesis plan>
+# because data/upgrade-info.json names it, writing its record there.
+use_home stock
+cv=$H/cosmovisor
+rm -rf "$cv"
+GOBIN=$E2E_DIR/stock-cv GOWORK=off go install "$COSMOVISOR_MODULE/cmd/cosmovisor@$COSMOVISOR_VERSION" || die "build stock Cosmovisor"
+SCV=$E2E_DIR/stock-cv/cosmovisor
+stock_env=(DAEMON_HOME="$H" DAEMON_NAME=exrpd DAEMON_ALLOW_DOWNLOAD_BINARIES=false DAEMON_RESTART_AFTER_UPGRADE=true
+	UNSAFE_SKIP_BACKUP=true DAEMON_GRPC_ADDRESS=127.0.0.1:$((P + 90)))
+# OLD_PLAN is a dummy older plan, far below every real plan of the chain.
+OLD_PLAN=v0.1.0
+printf '#!/bin/sh\necho old\n' >"$E2E_DIR/old-exrpd" && chmod 0755 "$E2E_DIR/old-exrpd"
+# The operator's own build of the upgrade: runnable, other bytes than the bundle's.
+{ cat "$V12" && echo operator-build; } >"$E2E_DIR/operator-exrpd" && chmod 0755 "$E2E_DIR/operator-exrpd"
+env "${stock_env[@]}" "$SCV" init "$V11" >>"$LOG" 2>&1 || die "cosmovisor init"
+env "${stock_env[@]}" "$SCV" add-upgrade "$GENESIS_PLAN" "$V11" >>"$LOG" 2>&1 || die "cosmovisor add-upgrade $GENESIS_PLAN"
+env "${stock_env[@]}" "$SCV" add-upgrade "$OLD_PLAN" "$E2E_DIR/old-exrpd" >>"$LOG" 2>&1 || die "cosmovisor add-upgrade $OLD_PLAN"
+env "${stock_env[@]}" "$SCV" add-upgrade "$UPGRADE_PLAN" "$E2E_DIR/operator-exrpd" >>"$LOG" 2>&1 || die "cosmovisor add-upgrade $UPGRADE_PLAN"
+config_sum=$(sha256sum "$cv/config.toml" | cut -d' ' -f1) || die "cosmovisor init wrote no config.toml"
+env --default-signal=INT,QUIT "${stock_env[@]}" "$SCV" run start --home "$H" --chain-id "$CHAIN_ID" >>"$LOG" 2>&1 &
+sup=$!
+log "stock Cosmovisor on the stock home, pid $sup"
+for ((i = 0; i < 120; i++)); do
+	current_is "upgrades/$GENESIS_PLAN" && break
+	sleep 0.5
+done
+wait_height $((PRE_H + 3)) 90 || die "stock Cosmovisor did not run the home"
+check "stock Cosmovisor switched to upgrades/$GENESIS_PLAN" current_is "upgrades/$GENESIS_PLAN"
+check "stock Cosmovisor recorded $GENESIS_PLAN" marker_names "$cv/upgrades/$GENESIS_PLAN/upgrade-info.json" "$GENESIS_PLAN"
+stock_h=$(height)
+# Unpatched Cosmovisor can mishandle a stop after its in-process switch, so the whole
+# group is stopped, as systemd does.
+kill -TERM "$sup" 2>/dev/null
+for p in $(children); do kill -TERM "$p" 2>/dev/null; done
+for ((i = 0; i < 30; i++)); do
+	[[ -z $(children) ]] && ! kill -0 "$sup" 2>/dev/null && break
+	sleep 0.5
+done
+kill -KILL "$sup" 2>/dev/null
+for p in $(children); do kill -KILL "$p" 2>/dev/null; done
+wait "$sup" 2>/dev/null
+sup=
+[[ -z $(children) ]] || die "exrpd of the stock home still running"
+((stock_h < UH)) || die "stock Cosmovisor reached the upgrade height. Raise the proposal margin"
+
+start_node
+log "bundle on the stock home, supervisor pid $sup"
+wait_height $((stock_h + 1)) 60 || die "chain did not start on the stock home"
+(($(height) < UH)) || die "the stock home passed the upgrade height before the takeover checks"
+check "takeover keeps current -> upgrades/$GENESIS_PLAN" current_is "upgrades/$GENESIS_PLAN"
+check "takeover does not move current" not grep -q "exrpd: moved" "$LOG"
+check "takeover replaces the operator's $UPGRADE_PLAN binary and logs it" grep -q "exrpd: replaced $cv/$UPGRADE_DIR/bin/exrpd" "$LOG"
+check "takeover keeps identical binaries" not grep -q "exrpd: replaced $cv/upgrades/$GENESIS_PLAN/bin/exrpd" "$LOG"
+check "takeover leaves other plan directories and config.toml" test "$("$cv/upgrades/$OLD_PLAN/bin/exrpd")" = old -a "$(sha256sum "$cv/config.toml" | cut -d' ' -f1)" = "$config_sum"
+check "takeover runs the $GENESIS_PLAN exrpd" sup_running "upgrades/$GENESIS_PLAN"
+check "after the takeover the chain passes H=$UH" wait_height $((UH + 5)) 180
+check "current -> $UPGRADE_DIR after the takeover" current_is "$UPGRADE_DIR"
+check "the bundle's upgrade exrpd runs, not the operator's" cmp -s "$V12" "$(child_exe)"
+check "upgrade applied at H after the takeover" applied_at "$UH"
+stop_check "SIGTERM to supervisor after the takeover leaves no exrpd" TERM switched
 
 check "standalone upgrade exrpd version is $UPGRADE_VERSION" test "$("$V12" version)" = "$UPGRADE_VERSION"
 

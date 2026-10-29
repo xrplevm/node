@@ -10,6 +10,9 @@ import (
 	"io/fs"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 // payload holds manifest.json and the gzip-compressed binaries it lists, for exactly
@@ -21,14 +24,22 @@ var payload embed.FS
 
 const manifestFile = "manifest.json"
 
-// Manifest describes the payload. Plan is the on-chain upgrade plan that switches the
-// node from Genesis to Upgrade.
+// Manifest describes the payload. Genesis runs the data of its own plan and the data of
+// a home that has no data/upgrade-info.json yet. Each upgrade runs the data of its plan.
+// Upgrades are in plan order, after the genesis plan.
 type Manifest struct {
-	Platform   string `json:"platform"`
-	Plan       string `json:"plan"`
-	Genesis    Binary `json:"genesis"`
-	Upgrade    Binary `json:"upgrade"`
-	Cosmovisor Binary `json:"cosmovisor"`
+	Platform   string    `json:"platform"`
+	Genesis    Release   `json:"genesis"`
+	Upgrades   []Release `json:"upgrades"`
+	Cosmovisor Binary    `json:"cosmovisor"`
+}
+
+// Release is an exrpd binary and the on-chain plan whose data it runs. The plans of this
+// chain are named v<release> after the release that adds their handler, and patch
+// releases keep the plan of their release.
+type Release struct {
+	Plan string `json:"plan"`
+	Binary
 }
 
 // Binary is one embedded executable. File is its gzip-compressed copy in the payload.
@@ -49,12 +60,11 @@ func embeddedPayload() fs.FS {
 	return sub
 }
 
-// loadManifest reads and validates the manifest of p. Names in it become path elements
-// under the node home, so they must not contain separators.
+// loadManifest reads and validates the manifest of p.
 func loadManifest(p fs.FS) (Manifest, error) {
 	raw, err := fs.ReadFile(p, manifestFile)
 	if errors.Is(err, fs.ErrNotExist) {
-		return Manifest{}, errors.New("this exrpd-upgrade was built without a payload. Build it with scripts/upgrade-binary/build.sh")
+		return Manifest{}, errors.New("this exrpd was built without a payload. Build it with scripts/upgrade-binary/build.sh")
 	}
 	if err != nil {
 		return Manifest{}, err
@@ -66,23 +76,75 @@ func loadManifest(p fs.FS) (Manifest, error) {
 	return m, m.validate()
 }
 
+// validate checks what the launcher relies on. Plans and files become path elements under
+// the node home. Plans are lower case because Cosmovisor lowercases the plan it reads
+// from data/upgrade-info.json and switches to upgrades/<that name>.
 func (m Manifest) validate() error {
 	if running := runtime.GOOS + "/" + runtime.GOARCH; m.Platform != running {
 		return fmt.Errorf("payload is for %s, running on %s", m.Platform, running)
 	}
-	if !isPathElement(m.Plan) {
-		return fmt.Errorf("invalid upgrade plan name %q", m.Plan)
+	if len(m.Upgrades) == 0 {
+		return errors.New("manifest has no upgrade")
 	}
+	releases := m.releases()
+	for i, r := range releases {
+		if !isPathElement(r.Plan) || r.Plan != strings.ToLower(r.Plan) {
+			return fmt.Errorf("invalid plan name %q: want a lower-case directory name", r.Plan)
+		}
+		parts, ok := planParts(r.Plan)
+		if !ok {
+			return fmt.Errorf("invalid plan name %q: want vX.Y.Z", r.Plan)
+		}
+		if i > 0 {
+			if prev, _ := planParts(releases[i-1].Plan); slices.Compare(prev, parts) >= 0 {
+				return fmt.Errorf("plan %s does not follow plan %s", r.Plan, releases[i-1].Plan)
+			}
+		}
+	}
+	files := map[string]bool{}
 	for _, b := range m.binaries() {
 		if err := b.validate(); err != nil {
 			return err
 		}
+		if files[b.File] {
+			return fmt.Errorf("manifest lists %s twice", b.File)
+		}
+		files[b.File] = true
 	}
 	return nil
 }
 
+// releases returns the genesis release and the upgrades, in plan order.
+func (m Manifest) releases() []Release {
+	return append([]Release{m.Genesis}, m.Upgrades...)
+}
+
+// release returns the release whose plan is plan. Plan names match case-insensitively,
+// like Cosmovisor matches them.
+func (m Manifest) release(plan string) (Release, bool) {
+	for _, r := range m.releases() {
+		if strings.EqualFold(r.Plan, plan) {
+			return r, true
+		}
+	}
+	return Release{}, false
+}
+
+// plans lists the plans this bundle runs, for messages.
+func (m Manifest) plans() string {
+	names := make([]string, 0, len(m.Upgrades)+1)
+	for _, r := range m.releases() {
+		names = append(names, r.Plan)
+	}
+	return strings.Join(names, ", ")
+}
+
 func (m Manifest) binaries() []Binary {
-	return []Binary{m.Genesis, m.Upgrade, m.Cosmovisor}
+	bins := []Binary{m.Genesis.Binary}
+	for _, r := range m.Upgrades {
+		bins = append(bins, r.Binary)
+	}
+	return append(bins, m.Cosmovisor)
 }
 
 func (b Binary) validate() error {
@@ -98,4 +160,21 @@ func (b Binary) validate() error {
 
 func isPathElement(s string) bool {
 	return s != "" && s != "." && s != ".." && filepath.Base(s) == s
+}
+
+// planParts parses a plan name "vX.Y.Z" into its three numbers.
+func planParts(plan string) ([]int, bool) {
+	fields := strings.Split(strings.TrimPrefix(plan, "v"), ".")
+	if !strings.HasPrefix(plan, "v") || len(fields) != 3 {
+		return nil, false
+	}
+	parts := make([]int, 0, len(fields))
+	for _, f := range fields {
+		n, err := strconv.Atoi(f)
+		if err != nil || n < 0 || f != strconv.Itoa(n) {
+			return nil, false
+		}
+		parts = append(parts, n)
+	}
+	return parts, true
 }

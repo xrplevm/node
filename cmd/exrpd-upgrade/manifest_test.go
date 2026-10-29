@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -12,20 +13,30 @@ func TestLoadManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("loadManifest() = %+v, want %+v", got, want)
 	}
 }
 
 func TestLoadManifestRejectsInvalid(t *testing.T) {
 	for name, corrupt := range map[string]func(*Manifest){
-		"other platform":      func(m *Manifest) { m.Platform = "plan9/mips" },
-		"plan with separator": func(m *Manifest) { m.Plan = "../v12" },
-		"file with separator": func(m *Manifest) { m.Upgrade.File = "../x" },
+		"other platform":          func(m *Manifest) { m.Platform = "plan9/mips" },
+		"no upgrade":              func(m *Manifest) { m.Upgrades = nil },
+		"plan with separator":     func(m *Manifest) { m.Upgrades[0].Plan = "../v12" },
+		"upper-case plan":         func(m *Manifest) { m.Upgrades[0].Plan = "V12.0.0" },
+		"plan not vX.Y.Z":         func(m *Manifest) { m.Genesis.Plan = "v11" },
+		"upgrade before genesis":  func(m *Manifest) { m.Upgrades[0].Plan = "v11.2.0" },
+		"upgrade same as genesis": func(m *Manifest) { m.Upgrades[0].Plan = m.Genesis.Plan },
+		"upgrades out of order": func(m *Manifest) {
+			m.Upgrades = append(m.Upgrades, Release{Plan: "v11.4.0", Binary: m.Upgrades[0].Binary})
+			m.Upgrades[1].File = "other.gz"
+		},
+		"file listed twice":   func(m *Manifest) { m.Upgrades[0].File = m.Genesis.File },
+		"file with separator": func(m *Manifest) { m.Upgrades[0].File = "../x" },
 		"short sha256":        func(m *Manifest) { m.Genesis.SHA256 = "abcd" },
 		"uppercase sha256":    func(m *Manifest) { m.Genesis.SHA256 = strings.ToUpper(m.Genesis.SHA256) },
 		"no version":          func(m *Manifest) { m.Cosmovisor.Version = "" },
-		"no size":             func(m *Manifest) { m.Upgrade.Size = 0 },
+		"no size":             func(m *Manifest) { m.Upgrades[0].Size = 0 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			files, m := testPayload(t)

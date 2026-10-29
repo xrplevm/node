@@ -8,60 +8,95 @@ import (
 	"strings"
 )
 
-// The launcher only owns --home and --select. Every other argument belongs to
-// "exrpd start". A full flag parser would reject those, so flags are taken out of the
-// argument list by name instead.
+// The launcher only owns --home. Every other argument belongs to the exrpd command. A
+// full flag parser would reject those, so --home is taken out of the argument list by
+// name instead.
+//
+// Taking a flag by name cannot see which tokens exrpd reads as flag values. exrpd reads
+// "--moniker --home=/srv/name" as the moniker "--home=/srv/name", but the launcher would
+// take /srv/name as the home and stage binaries there. The launcher does not know the
+// flags of exrpd, so it cannot tell a boolean flag such as --trace, which does not take
+// the next token, from a string flag such as --moniker, which does. A list of boolean
+// flags could become incorrect when exrpd changes and then select the wrong home
+// silently. Thus takeHome refuses --home when it directly follows a forwarded flag
+// without "=". The user can write the forwarded flag as --flag=VALUE or --flag=true, or
+// move the owned flag before it. This refuses some unambiguous forms, such as
+// "--trace --home /x", but it never selects a home that exrpd does not use.
 
-// takeFlag removes every "name VALUE" and "name=VALUE" from args. It returns the last
-// value, the remaining arguments in order, and whether the flag was present.
-func takeFlag(args []string, name string) (value string, rest []string, found bool, err error) {
+// takeHome removes every "--home VALUE" and "--home=VALUE" from args. It returns the
+// last value, "" when there is none, and the remaining arguments in order. It refuses
+// --home when the token before it is a flag without "=" that exrpd can read as taking
+// --home as its value.
+func takeHome(args []string) (value string, rest []string, err error) {
+	const name = "--home"
 	rest = make([]string, 0, len(args))
+	valueAt := -1
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
+		if (arg == name || strings.HasPrefix(arg, name+"=")) && i > 0 && i-1 != valueAt && mayTakeValue(args[i-1]) {
+			prev := args[i-1]
+			return "", nil, fmt.Errorf("%s follows %s, and exrpd can read %q as the value of %s: write %s=%s if that is the value, write %s=true if %s is a boolean flag, or put %s first",
+				name, prev, arg, prev, prev, arg, prev, prev, name)
+		}
 		switch {
 		case arg == name:
 			if i+1 == len(args) || args[i+1] == "" {
-				return "", nil, false, fmt.Errorf("%s requires a value", name)
+				return "", nil, fmt.Errorf("%s requires a value", name)
 			}
 			i++
-			value, found = args[i], true
+			valueAt = i
+			value = args[i]
 		case strings.HasPrefix(arg, name+"="):
-			value, found = strings.TrimPrefix(arg, name+"="), true
+			value = strings.TrimPrefix(arg, name+"=")
 			if value == "" {
-				return "", nil, false, fmt.Errorf("%s requires a value", name)
+				return "", nil, fmt.Errorf("%s requires a value", name)
 			}
 		default:
 			rest = append(rest, arg)
 		}
 	}
-	return value, rest, found, nil
+	return value, rest, nil
 }
 
-// resolveHome removes --home from args and returns the node home as an absolute path:
-// the flag, else $DAEMON_HOME, else $HOME/.exrpd.
+// mayTakeValue reports whether arg is a flag token that can take the next argument as
+// its value. "-" alone is a positional argument. --bundle is the launcher's own boolean
+// flag of "exrpd version".
+func mayTakeValue(arg string) bool {
+	return strings.HasPrefix(arg, "-") && arg != "-" && !strings.Contains(arg, "=") && arg != "--bundle"
+}
+
+// resolveHome removes --home from args and returns the node home as an absolute path,
+// and its source: the flag, else $DAEMON_HOME, else $EXRPD_HOME, else $NODE_HOME, else
+// $HOME/.exrpd ("default").
 //
-// It refuses "--". exrpd reads "--moniker --" as the moniker "--" and then reads a later
-// --home. takeFlag cannot tell such a value from a terminator, so allowing "--" could
-// give Cosmovisor and exrpd different homes. "exrpd start" ignores positional arguments,
-// so "--" has no use there.
-func resolveHome(args []string, getenv func(string) string, userHomeDir func() (string, error)) (home string, rest []string, err error) {
+// It refuses "--" for every command. exrpd reads "--moniker --" as the moniker "--" and
+// then reads a later --home. takeHome cannot tell such a value from a terminator, so
+// allowing "--" could give Cosmovisor, the launcher and exrpd different homes. A value
+// "--" can still be written as --flag=--.
+func resolveHome(args []string, getenv func(string) string, userHomeDir func() (string, error)) (home, source string, rest []string, err error) {
 	if slices.Contains(args, "--") {
-		return "", nil, errors.New(`"--" is not supported: write a flag value that is "--" as --flag=--`)
+		return "", "", nil, errors.New(`"--" is not supported: write a flag value that is "--" as --flag=--`)
 	}
-	home, rest, _, err = takeFlag(args, "--home")
+	home, rest, err = takeHome(args)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
-	if home == "" {
-		home = getenv("DAEMON_HOME")
+	source = "--home"
+	// The standalone exrpd runs its node, and every command that opens the node's config
+	// and data, on $EXRPD_HOME (viper prefix "exrpd"). It reads its default home from
+	// $NODE_HOME (client/v2 helpers).
+	for _, key := range []string{"DAEMON_HOME", "EXRPD_HOME", "NODE_HOME"} {
+		if home == "" {
+			home, source = getenv(key), "$"+key
+		}
 	}
 	if home == "" {
 		dir, err := userHomeDir()
 		if err != nil {
-			return "", nil, err
+			return "", "", nil, err
 		}
-		home = filepath.Join(dir, ".exrpd")
+		home, source = filepath.Join(dir, ".exrpd"), "default"
 	}
 	home, err = filepath.Abs(home)
-	return home, rest, err
+	return home, source, rest, err
 }

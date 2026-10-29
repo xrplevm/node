@@ -93,12 +93,13 @@ jobs:
         if: steps.plan.outputs.bundle == 'true'
         run: |
           version=${TAG#v} e2e=$PWD/dist/e2e
-          mkdir -p "$e2e/cache" "$e2e/standalone"
+          mkdir -p "$e2e/cache" "$e2e/standalone" "$e2e/bundle"
           cp "dist/genesis/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" dist/genesis/checksums.txt "$e2e/cache/"
           tar -xzf "dist/standalone/node_${version}_Linux_amd64.tar.gz" -C "$e2e/standalone" bin/exrpd
           cp "$e2e/standalone/bin/exrpd" "$e2e/cache/exrpd-${version}-linux-amd64"
+          tar -xzf "dist/upgrade/exrpd-upgrade_${GENESIS_VERSION}-${version}_Linux_amd64.tar.gz" -C "$e2e/bundle" exrpd
           CACHE=$e2e/cache E2E_DIR=$e2e/run GENESIS_VERSION=$GENESIS_VERSION UPGRADE_VERSION=$version \
-            EXRPD_UPGRADE=$PWD/dist/upgrade/exrpd-upgrade_${version}_Linux_amd64 scripts/upgrade-binary/e2e.sh
+            EXRPD_UPGRADE=$e2e/bundle/exrpd scripts/upgrade-binary/e2e.sh
       # Never replace published assets: a partial upload would mix new binaries with the
       # old checksum list. gh fails when an asset already exists.
       - name: Upload to the release
