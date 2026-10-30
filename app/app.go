@@ -527,29 +527,30 @@ func New(
 
 	/**** IBC Routing ****/
 
-	// Sealing prevents other modules from creating scoped sub-keepers
 	/*
 		Create Transfer Stack
 
 		transfer stack contains (from bottom to top):
 			- IBC Transfer
 			- Rate Limit Middleware
-			- ERC-20 Middleware
+
+		The erc20 IBC middleware is not wired, so received IBC denoms are not
+		registered as ERC20 token pairs. Native ERC20 tokens that come back over
+		IBC, timeout and error-ack refunds included, arrive as their erc20: bank
+		coin and convert with MsgConvertCoin.
 
 		SendPacket, since it is originating from the application to core IBC:
 			transferKeeper.SendPacket -> rateLimitKeeper.SendPacket -> channel.SendPacket
 
 		RecvPacket, message that originates from core IBC and goes down to app, the flow is the other way
-			channel.RecvPacket -> erc20.OnRecvPacket -> rateLimit.OnRecvPacket -> transfer.OnRecvPacket
+			channel.RecvPacket -> rateLimit.OnRecvPacket -> transfer.OnRecvPacket
 	*/
 
-	// create IBC module from top to bottom of stack
+	// create IBC module from bottom to top of stack
 	var transferStack ibcporttypes.IBCModule
 
-	// TODO: Update when migrating to v10
 	transferStack = transfer.NewIBCModule(app.TransferKeeper)
 	transferStack = ratelimit.NewIBCMiddleware(app.RateLimitKeeper, transferStack)
-	transferStack = erc20.NewIBCMiddleware(app.Erc20Keeper, transferStack)
 
 	/**** IBC V1 ****/
 
