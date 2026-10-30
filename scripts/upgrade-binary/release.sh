@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Build exrpd-upgrade_<genesis-version>-<version>_<Os>_<arch>.tar.gz for each platform from
+# published release archives. Each archive holds the bundle executable exrpd and the
+# LICENSE, because the executable embeds Apache-2.0 code.
+#
+# Usage: release.sh --version X.Y.Z --genesis-version X.Y.Z --standalone-dir DIR --genesis-dir DIR --out-dir DIR
+#   --out-dir         must be absent or empty, so that no old asset stays without a checksum entry
+#   --standalone-dir  node_<version>_<Os>_<arch>.tar.gz + checksums.txt of this release
+#   --genesis-dir     node_<genesis-version>_<Os>_<arch>.tar.gz + checksums.txt of the genesis release
+# PLATFORMS (env) defaults to "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64".
+set -euo pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+version='' genesis_version='' standalone='' genesis='' out=''
+while [[ $# -gt 0 ]]; do
+	case $1 in
+	--version) version=$2 ;;
+	--genesis-version) genesis_version=$2 ;;
+	--standalone-dir) standalone=$2 ;;
+	--genesis-dir) genesis=$2 ;;
+	--out-dir) out=$2 ;;
+	*) echo "unknown argument $1" >&2; exit 2 ;;
+	esac
+	shift 2
+done
+for v in version genesis_version standalone genesis out; do
+	[[ -n ${!v} ]] || { echo "missing --${v//_/-}" >&2; exit 2; }
+done
+if [[ -e $out && ( ! -d $out || -n $(ls -A "$out") ) ]]; then
+	echo "--out-dir $out is not an empty directory: use a new or empty directory, so that no old asset stays without a checksum entry" >&2
+	exit 2
+fi
+plan=$("$here/plan.sh")
+plan_version=${plan#v} base_version=${version%%-*}
+if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ || ${base_version%.*} != "${plan_version%.*}" ]]; then
+	echo "release $version does not have the major.minor of plan $plan in app/upgrades: a new major or minor release needs its upgrade handler (see docs/upgrade-binary-dev.md, Releases and bundles)" >&2
+	exit 1
+fi
+
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
+
+genesis_plan=$("$here/genesis-plan.sh" "$genesis_version")
+
+mkdir -p "$out"
+out=$(cd "$out" && pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+sums=$out/exrpd-upgrade_${genesis_version}-${version}_checksums.txt
+: >"$sums"
+
+for platform in ${PLATFORMS:-linux/amd64 linux/arm64 darwin/amd64 darwin/arm64}; do
+	goos=${platform%/*} goarch=${platform#*/}
+	os_title=Linux
+	[[ $goos == darwin ]] && os_title=Darwin
+
+	archive=node_${version}_${os_title}_${goarch}.tar.gz
+	want=$(awk -v f="$archive" '$2 == f { print $1 }' "$standalone/checksums.txt")
+	got=$(sha256 "$standalone/$archive")
+	[[ -n $want && $got == "$want" ]] || { echo "$archive sha256 $got does not match checksums.txt ($want)" >&2; exit 1; }
+	rm -rf "$work/standalone" && mkdir -p "$work/standalone"
+	tar -xzf "$standalone/$archive" -C "$work/standalone" bin/exrpd
+
+	name=exrpd-upgrade_${genesis_version}-${version}_${os_title}_${goarch}
+	rm -rf "${work:?}/$name" && mkdir -p "$work/$name"
+	"$here/build.sh" \
+		--genesis-version "$genesis_version" --genesis-plan "$genesis_plan" \
+		--genesis-archive "$genesis/node_${genesis_version}_${os_title}_${goarch}.tar.gz" \
+		--genesis-checksums "$genesis/checksums.txt" \
+		--upgrade-exrpd "$work/standalone/bin/exrpd" --upgrade-version "$version" \
+		--goos "$goos" --goarch "$goarch" --out "$work/$name/exrpd"
+	cp "$here/../../LICENSE" "$work/$name/LICENSE"
+	tar -C "$work/$name" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -cf - exrpd LICENSE |
+		gzip -n -9 >"$out/$name.tar.gz"
+	echo "$(sha256 "$out/$name.tar.gz")  $name.tar.gz" >>"$sums"
+done
+cat "$sums"

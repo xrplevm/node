@@ -1,0 +1,109 @@
+name: Upgrade binary
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag whose standalone archives are bundled
+        required: true
+      genesis_tag:
+        description: Release tag validators run at the plan's halt (default newest release below the plan)
+        required: false
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: Published release tag whose standalone archives are bundled
+        required: true
+      genesis_tag:
+        type: string
+        description: Release tag validators run at the plan's halt (default newest release below the plan)
+        required: false
+        default: ''
+
+permissions: {}
+
+jobs:
+  upgrade-binary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      GENESIS_TAG: ${{ inputs.genesis_tag }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      # Every release has an upgrade binary. release.sh fails when the tag does not have
+      # the major.minor of the plan in app/upgrades, so a release without its upgrade
+      # handler fails (docs/upgrade-binary-dev.md, Releases and bundles). Tags older than
+      # the upgrade binary (no plan.sh) ship standalone only.
+      - name: Check the tag has a bundle
+        id: plan
+        run: |
+          if [[ -x scripts/upgrade-binary/plan.sh ]]; then
+            echo "bundle=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$TAG has no scripts/upgrade-binary/plan.sh: no upgrade binary is published for it"
+            echo "bundle=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Resolve plan and genesis
+        if: steps.plan.outputs.bundle == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          plan=$(scripts/upgrade-binary/plan.sh)
+          genesis=${GENESIS_TAG#v}
+          [[ -n $genesis ]] || genesis=$(scripts/upgrade-binary/genesis.sh "$plan")
+          [[ $genesis =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "genesis $genesis is not X.Y.Z" >&2; exit 1; }
+          echo "::notice::$TAG bundle: plan $plan, genesis $genesis"
+          echo "GENESIS_VERSION=$genesis" >> "$GITHUB_ENV"
+      - if: steps.plan.outputs.bundle == 'true'
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          # No cache: this job publishes release assets, so it must not restore a Go
+          # module or build cache that another run saved (cache poisoning).
+          cache: false
+      - name: Unit test launcher
+        if: steps.plan.outputs.bundle == 'true'
+        working-directory: cmd/exrpd-upgrade
+        run: |
+          GOWORK=off go vet ./...
+          GOWORK=off go test -count=1 ./...
+      - name: Test patched Cosmovisor
+        if: steps.plan.outputs.bundle == 'true'
+        run: scripts/upgrade-binary/cosmovisor.sh --test
+      - name: Download standalone and genesis release archives
+        if: steps.plan.outputs.bundle == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG" --dir dist/standalone \
+            --pattern "node_${TAG#v}_Linux_*.tar.gz" --pattern "node_${TAG#v}_Darwin_*.tar.gz" --pattern checksums.txt
+          gh release download "v$GENESIS_VERSION" --dir dist/genesis \
+            --pattern "node_${GENESIS_VERSION}_Linux_*.tar.gz" --pattern "node_${GENESIS_VERSION}_Darwin_*.tar.gz" --pattern checksums.txt
+      - name: Build upgrade binaries
+        if: steps.plan.outputs.bundle == 'true'
+        run: scripts/upgrade-binary/release.sh --version "${TAG#v}" --genesis-version "$GENESIS_VERSION" --standalone-dir dist/standalone --genesis-dir dist/genesis --out-dir dist/upgrade
+      # A real chain upgrade with the linux/amd64 asset, before anything is uploaded.
+      - name: End-to-end test of the linux/amd64 upgrade binary
+        if: steps.plan.outputs.bundle == 'true'
+        run: |
+          version=${TAG#v} e2e=$PWD/dist/e2e
+          mkdir -p "$e2e/cache" "$e2e/standalone" "$e2e/bundle"
+          cp "dist/genesis/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" dist/genesis/checksums.txt "$e2e/cache/"
+          tar -xzf "dist/standalone/node_${version}_Linux_amd64.tar.gz" -C "$e2e/standalone" bin/exrpd
+          cp "$e2e/standalone/bin/exrpd" "$e2e/cache/exrpd-${version}-linux-amd64"
+          tar -xzf "dist/upgrade/exrpd-upgrade_${GENESIS_VERSION}-${version}_Linux_amd64.tar.gz" -C "$e2e/bundle" exrpd
+          CACHE=$e2e/cache E2E_DIR=$e2e/run GENESIS_VERSION=$GENESIS_VERSION UPGRADE_VERSION=$version \
+            EXRPD_UPGRADE=$e2e/bundle/exrpd scripts/upgrade-binary/e2e.sh
+      # Never replace published assets: a partial upload would mix new binaries with the
+      # old checksum list. gh fails when an asset already exists.
+      - name: Upload to the release
+        if: steps.plan.outputs.bundle == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$TAG" dist/upgrade/*

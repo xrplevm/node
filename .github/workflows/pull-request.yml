@@ -36,6 +36,82 @@ jobs:
                     version-file: .golangci-lint-version
                     args: --timeout=10m
 
+    upgrade-binary:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+                    # Covers the launcher module and the Cosmovisor pins and patch built below
+                    cache-dependency-path: |
+                        cmd/exrpd-upgrade/go.mod
+                        scripts/upgrade-binary/cosmovisor/cosmovisor.env
+                        scripts/upgrade-binary/cosmovisor/*.patch
+            -   name: Launcher tests
+                working-directory: cmd/exrpd-upgrade
+                run: |
+                    GOWORK=off go vet ./...
+                    GOWORK=off go test -count=1 ./...
+            # The root lint job stops at the nested go.mod, so the launcher module is linted here.
+            -   uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+                with:
+                    working-directory: cmd/exrpd-upgrade
+                    version-file: ../../.golangci-lint-version
+                    args: --config ../../.golangci.yml --timeout=10m
+            -   name: Patched Cosmovisor tests
+                run: scripts/upgrade-binary/cosmovisor.sh --test
+
+    # Chain upgrade with an upgrade binary built from the PR and the newest published
+    # release below the plan (genesis.sh). It runs only when the PR changes the upgrade
+    # binary, the exrpd CLI, the upgrade handler, the app wiring, or the root Go dependencies.
+    upgrade-binary-e2e:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+                    fetch-depth: 0
+            -   name: Check the PR changes the upgrade binary or the upgrade path
+                id: changes
+                env:
+                    BASE_SHA: ${{ github.event.pull_request.base.sha }}
+                run: |
+                    if git diff --name-only "$BASE_SHA" HEAD | grep -Eq '^((cmd/exrpd|cmd/exrpd-upgrade|scripts/upgrade-binary|app/upgrades)/|app/(app|upgrades)\.go$|go\.(mod|sum)$|\.github/workflows/pull-request\.yml$)'; then
+                        echo "run=true" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "run=false" >> "$GITHUB_OUTPUT"
+                    fi
+            -   if: steps.changes.outputs.run == 'true'
+                uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+            -   name: End-to-end test of the upgrade binary
+                if: steps.changes.outputs.run == 'true'
+                env:
+                    GH_TOKEN: ${{ github.token }}
+                    GH_REPO: ${{ github.repository }}
+                run: |
+                    plan=$(scripts/upgrade-binary/plan.sh)
+                    genesis=$(scripts/upgrade-binary/genesis.sh "$plan")
+                    version=${plan#v} cache=$PWD/.e2e-cache
+                    echo "plan $plan, genesis $genesis"
+                    make build VERSION="$version"
+                    mkdir -p "$cache"
+                    cp bin/exrpd "$cache/exrpd-$version-linux-amd64"
+                    gh release download "v$genesis" --dir "$cache" \
+                        --pattern "node_${genesis}_Linux_amd64.tar.gz" --pattern checksums.txt
+                    CACHE=$cache GENESIS_VERSION=$genesis UPGRADE_VERSION=$version scripts/upgrade-binary/e2e.sh
+
     integration:
         runs-on: ubuntu-latest
         permissions:

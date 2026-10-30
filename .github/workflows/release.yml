@@ -12,6 +12,9 @@ on:
         description: Is this the latest release
         type: boolean
         required: true
+      genesis_tag:
+        description: Upgrade binary genesis, the release tag validators run at the plan's halt (default newest release below the plan)
+        required: false
 permissions: {}
 
 jobs:
@@ -68,3 +71,11 @@ jobs:
     secrets: inherit
     with:
       commit_branch: ${{ github.event.inputs.commit_branch }}
+  upgrade-binary:
+    needs: [ goreleaser ]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/upgrade-binary.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}
+      genesis_tag: ${{ github.event.inputs.genesis_tag }}
