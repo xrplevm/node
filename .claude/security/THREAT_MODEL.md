@@ -16,7 +16,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
   - `MsgAddValidator` and `MsgRemoveValidator`: the signer must be the module authority (the gov module account). The add flow mints the bond tokens to the validator. The remove flow slashes 100%, unbonds, and burns.
   - `MsgSelfRemoveValidator`: a validator removes itself. The signer is the validator account.
   - `x/poa/ante/poa.go`: blocks `MsgDelegate`, `MsgUndelegate`, `MsgBeginRedelegate`, `MsgCancelUnbondingDelegation` and `MsgCreateValidator` after height 0. Users must not change the validator set or stake through staking messages.
-- `app/upgrades/`: state migrations for each chain upgrade (`v5.0.0` to `v11.2.0`). `v112` changes staking params, disables the ICA host, and moves escrowed IBC funds.
+- `app/upgrades/`: the state migration for the current chain upgrade (`v12`). The release tags contain the earlier handlers.
 - `cmd/exrpd/`: CLI, node config defaults, and `in-place-testnet`.
 
 ## Untrusted Input and Trust Levels
@@ -208,14 +208,14 @@ These must always hold. Verify them in every audit.
 - Stale upgrade handlers from previous versions executing unexpectedly
 - Upgrade handler accessing or modifying state outside its intended scope
 
-**Key files**: every directory in `app/upgrades/` (`v5` to `v112`), upgrade registration in `app/app.go` and `app/upgrades.go`
+**Key files**: `app/upgrades/v<version>/` and upgrade registration in `app/upgrades.go`. The repository keeps only the current upgrade. The release tags contain the earlier handlers.
 
 **What to check**:
 - Each upgrade handler is registered exactly once with the correct version name
 - Migration logic is deterministic (no maps iterated for state, no goroutines, no time-dependent logic)
 - Upgrade handlers only modify state relevant to their version
 - No upgrade handler can be re-executed after completion
-- Keeper references in upgrade handlers (`app/upgrades/*/keepers.go`) only expose necessary keepers
+- Keeper references in upgrade handlers (`app/upgrades/v<version>/keepers.go`, when present) only expose necessary keepers
 
 ### 8. Governance
 
