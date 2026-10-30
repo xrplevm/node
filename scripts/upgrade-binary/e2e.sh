@@ -91,7 +91,7 @@ trap 'exit 143' TERM
 cur() { echo "$H/cosmovisor/current/bin/exrpd"; }
 # RPC calls are bounded so a node that holds its RPC socket open without answering cannot
 # hang the waits or stop_check. The waits use a wall-clock deadline.
-height() { timeout 5 "$(cur)" status --node "$NODE" 2>/dev/null | jq -r '.sync_info.latest_block_height // .SyncInfo.latest_block_height // 0'; }
+height() { timeout 5 "$(cur)" status --home "$H" --node "$NODE" 2>/dev/null | jq -r '.sync_info.latest_block_height // .SyncInfo.latest_block_height // 0'; }
 wait_height() { # target, timeout seconds
 	local deadline=$((SECONDS + $2))
 	while ((SECONDS < deadline)); do
@@ -360,7 +360,7 @@ check "manifest cosmovisor source ($mode)" cosmovisor_source "$([[ $mode == patc
 
 tar -xzf "$CACHE/node_${GENESIS_VERSION}_Linux_amd64.tar.gz" -C "$E2E_DIR/v11" bin/exrpd
 V11=$E2E_DIR/v11/bin/exrpd
-check "genesis tool is release v$GENESIS_VERSION" test "$("$V11" version)" = "$GENESIS_VERSION"
+check "genesis tool is release v$GENESIS_VERSION" test "$("$V11" version --home "$E2E_DIR/v11")" = "$GENESIS_VERSION"
 manifest() { bundle_info | jq -r ".manifest.$1"; }
 file_sha() { sha256sum "$1" | cut -d' ' -f1; }
 GENESIS_PLAN=$(manifest genesis.plan)
@@ -379,8 +379,10 @@ check "help before the first install writes nothing" help_writes_nothing
 # Before the first start, every command runs the genesis exrpd, and installs the binaries
 # without creating `current`.
 check "command before the first start runs genesis" ran_version_is "$GENESIS_VERSION"
+# exrpd's completion also reads $HOME/config.toml, so the check uses a scratch HOME: a
+# config.toml of another tool in the developer's home must not fail it.
 # shellcheck disable=SC2016 # $1 and $2 expand in the inner shell
-check "completion passes the typed words to exrpd" bash -c '"$1" __completeNoDesc --home "$2" ke | grep -qx keys' _ "$UB" "$H"
+check "completion passes the typed words to exrpd" env HOME="$E2E_DIR/v11" bash -c '"$1" __completeNoDesc --home "$2" ke | grep -qx keys' _ "$UB" "$H"
 check "no current before the first start" test ! -e "$H/cosmovisor/current" -a ! -L "$H/cosmovisor/current"
 check "installed genesis exrpd = release bytes" cmp -s "$V11" "$H/cosmovisor/genesis/bin/exrpd"
 check "installed $GENESIS_PLAN exrpd = release bytes" cmp -s "$V11" "$H/cosmovisor/upgrades/$GENESIS_PLAN/bin/exrpd"
@@ -580,7 +582,7 @@ check "the bundle's upgrade exrpd runs, not the operator's" cmp -s "$V12" "$(chi
 check "upgrade applied at H after the takeover" applied_at "$UH"
 stop_check "SIGTERM to supervisor after the takeover leaves no exrpd" TERM switched
 
-check "standalone upgrade exrpd version is $UPGRADE_VERSION" test "$("$V12" version)" = "$UPGRADE_VERSION"
+check "standalone upgrade exrpd version is $UPGRADE_VERSION" test "$("$V12" version --home "$E2E_DIR/v11")" = "$UPGRADE_VERSION"
 
 echo
 if ((fails > 0)); then

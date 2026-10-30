@@ -305,8 +305,8 @@ unit in the operator guide: use yours if they differ.
     `sudo -u exrpd rm -r "$home/resync-backup"`
 
 The backup is in the home, outside `data/`, because the reset deletes `data/`. The
-commands run as the node user: `data/` and the backup directory are `0700`, so another
-user cannot read them.
+commands run as the node user, because `data/` is `0700`. The copied
+`priv_validator_state.json` keeps its `0600` mode, so another user cannot read it.
 
 ### Settings details
 
