@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"cosmossdk.io/x/feegrant"
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	legacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/types"
@@ -14,11 +15,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	enccodec "github.com/cosmos/evm/encoding/codec"
 	"github.com/cosmos/evm/ethereum/eip712"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	vmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/cosmos/gogoproto/proto"
+	ica "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	feemarketlegacytypes "github.com/xrplevm/node/v12/types/legacy/ethermint/feemarket"
@@ -69,6 +73,16 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 	interfaceRegistry.RegisterImplementations((*authtypes.AccountI)(nil),
 		&legacytypes.EthAccount{}, // evmos (legacy)
 	)
+
+	// x/authz was removed in v12. Keep its types so historical txs still decode.
+	authz.RegisterInterfaces(interfaceRegistry)
+	// ICA host was removed in v12. Keep the ICS-27 types so historical txs and
+	// interchain accounts in the auth store still decode.
+	ica.AppModuleBasic{}.RegisterInterfaces(interfaceRegistry)
+	// x/feegrant was removed in v12. Keep its types so historical txs still decode.
+	feegrant.RegisterInterfaces(interfaceRegistry)
+	// x/crisis was removed in v12. Keep its types so historical txs still decode.
+	crisistypes.RegisterInterfaces(interfaceRegistry)
 
 	codec := amino.NewProtoCodec(interfaceRegistry)
 	enccodec.RegisterLegacyAminoCodec(cdc)

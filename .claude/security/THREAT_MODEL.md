@@ -6,7 +6,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 
 `exrpd` is the node software of the XRPL EVM Sidechain. It is a Cosmos SDK chain with an EVM (`cosmos/evm`). Validators are managed by Proof of Authority (`x/poa`), not by open staking. The chain holds real value: the native `axrp` token, ERC-20 tokens, and IBC assets.
 
-- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, authz, feegrant, upgrade, evidence, consensus, params, crisis), IBC (transfer, ICA host, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
+- `app/app.go`: wires the modules. Standard SDK modules (auth, bank, staking, slashing, distribution, gov, upgrade, evidence, consensus, params), IBC (transfer, rate limiting), and cosmos/evm (`vm`, `feemarket`, `erc20`, static precompiles).
 - `app/ante/`: the ante handler. It routes each transaction by its first extension option:
   - `/cosmos.evm.vm.v1.ExtensionOptionsEthereumTx` -> EVM ante chain (`evm_handler.go`)
   - `/cosmos.evm.ante.v1.ExtensionOptionDynamicFeeTx` -> Cosmos ante chain (`cosmos_handler.go`)
@@ -23,8 +23,8 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 
 Treat all of these as attacker-controlled:
 
-- Any transaction from any account, Cosmos or Ethereum format, sent through CometBFT RPC, gRPC, REST, or Ethereum JSON-RPC. This includes `authz.MsgExec` with nested messages and EVM calls to precompiles.
-- EVM bytecode and calldata, including contracts that call the static precompiles (for example staking, distribution, bank, erc20, ics20, gov, slashing).
+- Any transaction from any account, Cosmos or Ethereum format, sent through CometBFT RPC, gRPC, REST, or Ethereum JSON-RPC. This includes EVM calls to precompiles.
+- EVM bytecode and calldata, including contracts that call the static precompiles (for example distribution, bank, erc20, ics20, gov, slashing).
 - IBC packets and acknowledgements from a counterparty chain, which may be malicious.
 - Queries to the public gRPC, REST and JSON-RPC endpoints.
 
@@ -46,7 +46,7 @@ These must always hold. Verify them in every audit.
 4. Tokens are not created or destroyed except by the intended mint and burn paths. Watch the `x/poa` add and remove flows, the bond pool routing (Bonded vs NotBonded), the EVM module (Minter and Burner), erc20 conversion, and IBC transfer escrow.
 5. The state machine is deterministic. No map iteration that writes state, no goroutines, no `time.Now()`, no floats in consensus code.
 6. Upgrade handlers run once, at their height, and change only the state they are meant to change.
-7. The rate limiting middleware stays in the IBC transfer stack. On chains that ran the `v11.2.0` upgrade (mainnet and testnet), the ICA host is disabled by `app/upgrades/v112`. `DefaultGenesis` does not override the ICA host params, so a new network starts with the ibc-go defaults (host enabled, all messages allowed) unless its operator changes them.
+7. The rate limiting middleware stays in the IBC transfer stack. ICA host is removed in v12: the IBC router does not route the `icahost` port on any network.
 
 ## Assets
 
@@ -69,7 +69,6 @@ These must always hold. Verify them in every audit.
 | Supply chain attacker | Compromises a Go module dependency | Backdoor node binary |
 | Rogue insider | Has access to authority key or CI | Add malicious validators, push bad builds |
 | Cross-chain attacker | Controls an IBC-connected chain | Forge IBC messages, drain bridge |
-| ICA controller | Controls an interchain account on a remote chain | Execute arbitrary messages on this chain via ICA host |
 
 ## Attack Surfaces
 
@@ -126,12 +125,14 @@ These must always hold. Verify them in every audit.
 - Incorrect gas accounting between Cosmos and EVM layers
 - State inconsistency between EVM and Cosmos views
 - Precompile vulnerabilities
+- Precompiles that call Cosmos msg servers directly and skip the POA ante handler, for example the staking precompile (`0x...0800`)
 
 **Key files**: Upstream `cosmos/evm` module (out of scope for deep audit, but check integration points in `app/app.go`)
 
 **What to check**:
 - EVM module is wired with correct ante handlers
 - Custom precompiles (if any) are registered correctly
+- The staking precompile is not registered (`app/app.go`). If its address is activated in the EVM params, the EVM panics on any call to it. baseapp recovers the panic and the tx fails with `ErrPanic`. No other registered precompile may create validators or change delegations
 - Gas limit configurations are sane
 
 ### 4. IBC (Inter-Blockchain Communication)
@@ -224,7 +225,7 @@ These must always hold. Verify them in every audit.
 **Threats**:
 - Governance proposal executing arbitrary module messages (parameter changes, software upgrades, community spend)
 - Parameter changes that put the chain in an unsafe state (e.g., unbonding time to 0, max validators to 0)
-- Governance bypass via `authz` grants to the gov module account
+- Delegation of gov authority to an account, for example through a reintroduced `authz` module (removed in v12)
 - POA module exposes `GovKeeper.SubmitProposal` — verify it cannot be abused to self-authorize
 
 **Key files**: Gov module wiring in `app/app.go`, `x/poa/types/expected_keepers.go` (GovKeeper interface)
@@ -232,7 +233,8 @@ These must always hold. Verify them in every audit.
 **What to check**:
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
-- `authz` grants cannot escalate to gov-level authority
+- `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
+- The legacy gov router routes only text proposals. `ParameterChangeProposal` is not routed (v12), so gov rejects it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns
@@ -243,7 +245,10 @@ These are common vulnerability patterns in Cosmos SDK chains that should be chec
 - **Keeper exposure**: Verify keepers are not passed beyond their intended module boundaries. Check `app/app.go` for keepers passed to modules that shouldn't have them. POA receives BankKeeper and StakingKeeper — verify these are the correct scoped interfaces (`x/poa/types/expected_keepers.go`), not the full keeper implementations.
 - **Parameter changes**: Check if on-chain parameter changes can lead to unsafe states (e.g., `MaxValidators` to 0 in staking params, unbonding time to 0, bond denom change breaking POA).
 - **Non-determinism**: Any use of maps iterated for state, goroutines, or `time.Now()` in state machine code causes consensus failures. Check all code paths in `x/poa/`, `app/ante/`, and `app/upgrades/`.
-- **ICA host allow list**: Verify which message types the ICA host module is allowed to execute. An open allow list lets remote chains execute arbitrary messages on this chain.
+- **ICA host**: removed in v12. The IBC router must not route the `icahost` port, and gov must reject `/ibc.applications.interchain_accounts.host.v1.MsgUpdateParams` at proposal submission. ICS-27 types decode only so that historical txs and existing interchain accounts stay readable (`app/encoding.go`). Reintroducing ICA host, or any IBC app that executes messages, lets remote chains call x/staking and bypass the POA ante handler.
+- **feegrant**: removed in v12. The Cosmos ante handler passes a nil feegrant keeper to `DeductFeeDecorator`, so a tx that sets a fee granter fails with "fee grants are not enabled". Feegrant types decode only so that historical txs stay readable (`app/encoding.go`). Reintroducing feegrant lets an account pay fees for txs that it did not sign, so allowance checks in `UseGrantedFees` become part of the fee path.
+- **crisis**: removed in v12, as SDK v0.53 deprecates it. No invariant is checked at genesis, in EndBlock, or through `MsgVerifyInvariant`, so a broken invariant no longer halts the chain. Bank, staking and distribution state must be protected by the code that changes it, not by a later check. Crisis types decode only so that historical txs stay readable (`app/encoding.go`).
+- **x/params**: deprecated in SDK v0.53. No module reads its params from an x/params subspace: the subspaces are passed only for legacy migrations, which cannot run again. A change to a subspace has no effect, which is why `ParameterChangeProposal` is not routed.
 
 ## Out of Scope
 
