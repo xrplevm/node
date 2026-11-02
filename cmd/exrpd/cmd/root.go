@@ -98,6 +98,9 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			// set the default command outputs
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
+			if err := checkAuxSignMode(cmd); err != nil {
+				return err
+			}
 			initClientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
 			if err != nil {
 				return err
@@ -161,6 +164,20 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 	}
 
 	return rootCmd, encodingConfig
+}
+
+// checkAuxSignMode rejects --aux when its sign mode is not enabled.
+// Without --sign-mode, --aux uses SIGN_MODE_DIRECT_AUX.
+func checkAuxSignMode(cmd *cobra.Command) error {
+	if aux, _ := cmd.Flags().GetBool(flags.FlagAux); !aux {
+		return nil
+	}
+	mode, _ := cmd.Flags().GetString(flags.FlagSignMode)
+	if (mode == "" || mode == flags.SignModeDirectAux) &&
+		!slices.Contains(app.EnabledSignModes, signing.SignMode_SIGN_MODE_DIRECT_AUX) {
+		return fmt.Errorf("sign mode %s is not enabled", flags.SignModeDirectAux)
+	}
+	return nil
 }
 
 // initTendermintConfig helps to override default Tendermint Config values.
