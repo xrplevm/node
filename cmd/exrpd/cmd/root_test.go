@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"bytes"
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v12/testutil/constants"
@@ -45,30 +49,40 @@ func TestCheckAuxSignMode(t *testing.T) {
 
 func TestRootCmd_RejectsDirectAux(t *testing.T) {
 	tt := []struct {
-		name     string
-		signMode []string
+		name    string
+		args    []string
+		appToml string
 	}{
-		{name: "default sign mode"},
-		{name: "direct-aux", signMode: []string{"--sign-mode=direct-aux"}},
+		{name: "aux flag with default sign mode", args: []string{"--aux"}},
+		{name: "aux flag with direct-aux", args: []string{"--aux", "--sign-mode=direct-aux"}},
+		{name: "aux in app.toml", appToml: "aux = true\n"},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			if tc.appToml != "" {
+				require.NoError(t, os.MkdirAll(filepath.Join(home, "config"), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(home, "config", "app.toml"), []byte(tc.appToml), 0o600))
+			}
 			// NewRootCmd reads and creates client.toml in the default node home.
-			t.Setenv("NODE_HOME", t.TempDir())
+			t.Setenv("NODE_HOME", home)
 			rootCmd, _ := NewRootCmd()
 			rootCmd.SilenceUsage = true
+			// svrcmd.Execute adds --home in production.
+			rootCmd.PersistentFlags().String(flags.FlagHome, home, "")
 
 			var out bytes.Buffer
 			rootCmd.SetOut(&out)
 			rootCmd.SetErr(&bytes.Buffer{})
 			rootCmd.SetArgs(append([]string{
 				"tx", "bank", "send", "from", "to", "1axrp",
-				"--aux", "--offline", "--account-number=0", "--sequence=0",
+				"--offline", "--account-number=0", "--sequence=0",
 				"--chain-id=" + constants.LocalnetChainID.ChainID,
-			}, tc.signMode...))
+			}, tc.args...))
 
-			require.ErrorContains(t, rootCmd.Execute(), "sign mode direct-aux is not enabled")
+			err := rootCmd.ExecuteContext(svrcmd.CreateExecuteContext(context.Background()))
+			require.ErrorContains(t, err, "sign mode direct-aux is not enabled")
 			require.Empty(t, out.String())
 		})
 	}

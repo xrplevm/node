@@ -98,9 +98,6 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			// set the default command outputs
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
-			if err := checkAuxSignMode(cmd); err != nil {
-				return err
-			}
 			initClientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
 			if err != nil {
 				return err
@@ -147,9 +144,14 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			}
 			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, chainID)
 			customTMConfig := initTendermintConfig()
-			return sdkserver.InterceptConfigsPreRunHandler(
+			if err := sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
-			)
+			); err != nil {
+				return err
+			}
+			// InterceptConfigsPreRunHandler sets unset flags from env and app.toml,
+			// so check --aux after it.
+			return checkAuxSignMode(cmd)
 		},
 	}
 
