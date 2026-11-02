@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+	"github.com/xrplevm/node/v12/testutil/constants"
 )
 
 func TestCheckAuxSignMode(t *testing.T) {
@@ -37,6 +39,37 @@ func TestCheckAuxSignMode(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestRootCmd_RejectsDirectAux(t *testing.T) {
+	tt := []struct {
+		name     string
+		signMode []string
+	}{
+		{name: "default sign mode"},
+		{name: "direct-aux", signMode: []string{"--sign-mode=direct-aux"}},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// NewRootCmd reads and creates client.toml in the default node home.
+			t.Setenv("NODE_HOME", t.TempDir())
+			rootCmd, _ := NewRootCmd()
+			rootCmd.SilenceUsage = true
+
+			var out bytes.Buffer
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&bytes.Buffer{})
+			rootCmd.SetArgs(append([]string{
+				"tx", "bank", "send", "from", "to", "1axrp",
+				"--aux", "--offline", "--account-number=0", "--sequence=0",
+				"--chain-id=" + constants.LocalnetChainID.ChainID,
+			}, tc.signMode...))
+
+			require.ErrorContains(t, rootCmd.Execute(), "sign mode direct-aux is not enabled")
+			require.Empty(t, out.String())
 		})
 	}
 }
