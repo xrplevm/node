@@ -49,6 +49,9 @@ func TestMsgServer_SelfRemoveValidator(t *testing.T) {
 				stakingKeeper.EXPECT().GetValidator(ctx, gomock.Any()).Return(bondedValidator, nil).Times(2)
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{BondDenom: "BND"}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
+					{DelegatorAddress: validatorAddress, Shares: math.LegacyOneDec()},
+				}, nil)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)

@@ -31,7 +31,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should fail - invalid authority address",
 			authority:        "invalidauthority",
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: validatorAccAddress,
 			stakingMocks:     func(_ sdk.Context, _ *testutil.MockStakingKeeper) {},
 			bankMocks:        func(_ sdk.Context, _ *testutil.MockBankKeeper) {},
 			expectedErr:      govtypes.ErrInvalidSigner,
@@ -47,7 +47,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass",
 			authority:        poaAuthority,
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: validatorAccAddress,
 			stakingMocks: func(ctx sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(ctx).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -56,6 +56,9 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 					Tokens: math.NewInt(0),
 				}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(ctx, gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetValidatorDelegations(ctx, gomock.Any()).Return([]stakingtypes.Delegation{
+					{DelegatorAddress: validatorAccAddress, Shares: math.LegacyOneDec()},
+				}, nil)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(ctx, gomock.Any()).Return(nil)
@@ -73,7 +76,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass - BeforeValidatorModified hook error is swallowed and logged",
 			authority:        poaAuthority,
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: validatorAccAddress,
 			stakingMocks: func(_ sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				// gomock.Any() for ctx because the test swaps the logger after
 				// setup, producing a different sdk.Context value.
@@ -84,6 +87,9 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 					Tokens: math.NewInt(0),
 				}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetValidatorDelegations(gomock.Any(), gomock.Any()).Return([]stakingtypes.Delegation{
+					{DelegatorAddress: validatorAccAddress, Shares: math.LegacyOneDec()},
+				}, nil)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(gomock.Any(), gomock.Any()).Return(errors.New("hook failure"))
@@ -102,7 +108,7 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 		{
 			name:             "should pass - BeforeValidatorSlashed hook error is swallowed and logged",
 			authority:        poaAuthority,
-			validatorAddress: "ethm1a0pd5cyew47pvgf7rd7axxy3humv9ev0nnkprp",
+			validatorAddress: validatorAccAddress,
 			stakingMocks: func(_ sdk.Context, stakingKeeper *testutil.MockStakingKeeper) {
 				stakingKeeper.EXPECT().GetParams(gomock.Any()).Return(stakingtypes.Params{
 					BondDenom: "BND",
@@ -111,6 +117,9 @@ func TestMsgServer_RemoveValidator(t *testing.T) {
 					Tokens: sdk.DefaultPowerReduction,
 				}, nil)
 				stakingKeeper.EXPECT().GetUnbondingDelegationsFromValidator(gomock.Any(), gomock.Any()).Return([]stakingtypes.UnbondingDelegation{}, nil)
+				stakingKeeper.EXPECT().GetValidatorDelegations(gomock.Any(), gomock.Any()).Return([]stakingtypes.Delegation{
+					{DelegatorAddress: validatorAccAddress, Shares: math.LegacyOneDec()},
+				}, nil)
 
 				hooks := testutil.NewMockStakingHooks(ctrl)
 				hooks.EXPECT().BeforeValidatorModified(gomock.Any(), gomock.Any()).Return(nil)

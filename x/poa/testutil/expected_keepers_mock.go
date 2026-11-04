@@ -301,7 +301,7 @@ func (m *MockStakingKeeper) GetUnbondingDelegations(ctx context.Context, delegat
 }
 
 // GetUnbondingDelegations indicates an expected call of GetUnbondingDelegations.
-func (mr *MockStakingKeeperMockRecorder) GetUnbondingDelegations(ctx, delegator, maxRetrieve interface{}) *gomock.Call {
+func (mr *MockStakingKeeperMockRecorder) GetUnbondingDelegations(ctx, delegator, maxRetrieve any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnbondingDelegations", reflect.TypeOf((*MockStakingKeeper)(nil).GetUnbondingDelegations), ctx, delegator, maxRetrieve)
 }
@@ -334,6 +334,21 @@ func (m *MockStakingKeeper) GetValidator(ctx context.Context, addr types.ValAddr
 func (mr *MockStakingKeeperMockRecorder) GetValidator(ctx, addr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidator", reflect.TypeOf((*MockStakingKeeper)(nil).GetValidator), ctx, addr)
+}
+
+// GetValidatorDelegations mocks base method.
+func (m *MockStakingKeeper) GetValidatorDelegations(ctx context.Context, valAddr types.ValAddress) ([]types1.Delegation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValidatorDelegations", ctx, valAddr)
+	ret0, _ := ret[0].([]types1.Delegation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetValidatorDelegations indicates an expected call of GetValidatorDelegations.
+func (mr *MockStakingKeeperMockRecorder) GetValidatorDelegations(ctx, valAddr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorDelegations", reflect.TypeOf((*MockStakingKeeper)(nil).GetValidatorDelegations), ctx, valAddr)
 }
 
 // GetValidators mocks base method.
