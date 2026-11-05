@@ -13,18 +13,28 @@ make lint                 # Run linter
 go vet ./...              # Vet all packages
 ```
 
+The root commands do not cover `cmd/exrpd-bundle/`, a separate Go module. Run its CI checks from the repo root with the `golangci-lint` version in `.golangci-lint-version`:
+
+```bash
+scripts/bundle/check.sh
+```
+
+For local bundle E2E checks and their required inputs, see [scripts/bundle/README.md](scripts/bundle/README.md#test).
+
 ## Project Structure
 
 ```
-cmd/exrpd/          # CLI entry point and node configuration
-app/                # Cosmos SDK app wiring, ante handlers, upgrade handlers
-app/ante/           # Transaction validation (routes EVM vs Cosmos txs)
-x/poa/              # Proof-of-Authority module (validator add/remove)
-proto/              # Protobuf definitions (gRPC API surface)
-types/              # Core types (address prefixes, denominations)
-testutil/           # Test helpers
-tests/              # Integration tests
-security/           # Security audit scope and threat model
+cmd/exrpd/              # CLI entry point and node configuration
+cmd/exrpd-bundle/       # Bundle launcher (nested Go module)
+scripts/bundle/         # Bundle build, release, patched Cosmovisor, e2e
+app/                    # Cosmos SDK app wiring, ante handlers, upgrade handlers
+app/ante/               # Transaction validation (routes EVM vs Cosmos txs)
+x/poa/                  # Proof-of-Authority module (validator add/remove)
+proto/                  # Protobuf definitions (gRPC API surface)
+types/                  # Core types (address prefixes, denominations)
+testutil/               # Test helpers
+tests/                  # Integration tests
+security/               # Security audit scope and threat model
 ```
 
 ## Security Audits

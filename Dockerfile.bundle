@@ -1,0 +1,11 @@
+# The bundle image: a drop-in replacement of the release image of Dockerfile, whose exrpd
+# is a bundle executable. It has the same base, path, entrypoint and command. Build it with
+# the named build context bundle-files, a directory that holds the published bundle's
+# exrpd and LICENSE. It builds nothing from this checkout, and the release image builds
+# do not read this file.
+FROM golang:1.23.8@sha256:ec5612bbd9e96d5b80a8b968cea06a4a9b985fe200ff6da784bf607063273c59 AS bundle
+WORKDIR /
+COPY --from=bundle-files exrpd /usr/bin/exrpd
+COPY --from=bundle-files LICENSE /usr/share/doc/exrpd-bundle/LICENSE
+ENTRYPOINT ["/bin/sh", "-ec"]
+CMD ["exrpd"]
