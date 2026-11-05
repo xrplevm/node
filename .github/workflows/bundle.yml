@@ -1,0 +1,256 @@
+name: Bundle
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag to bundle (vX.Y.Z)
+        required: true
+      genesis_tag:
+        description: Release tag validators run at the plan's halt. Set it to also build the two-binary bundle genesis-tag + tag
+        required: false
+
+permissions: {}
+
+# Runs of the same tag would race on the missing-only checks below.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+# Bundle sets of a published release, built only when missing:
+#   single      exrpd-bundle_<version>_*            image peersyst/exrp:bundle-<version>
+#   two-binary  exrpd-bundle_<genesis>-<version>_*  image peersyst/exrp:bundle-<genesis>-<version>, with genesis_tag
+# The plans come from the tags (release-plan.sh). The launcher, the scripts and the
+# Dockerfile.bundle come from main, the only ref this workflow runs on.
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      plan: ${{ steps.plan.outputs.plan }}
+      genesis_version: ${{ steps.plan.outputs.genesis_version }}
+      genesis_plan: ${{ steps.plan.outputs.genesis_plan }}
+      e2e_genesis_version: ${{ steps.plan.outputs.e2e_genesis_version }}
+      single_assets: ${{ steps.plan.outputs.single_assets }}
+      two_binary_assets: ${{ steps.plan.outputs.two_binary_assets }}
+      images: ${{ steps.plan.outputs.images }}
+    env:
+      TAG: ${{ inputs.tag }}
+      GENESIS_TAG: ${{ inputs.genesis_tag }}
+    steps:
+      # The other jobs skip outside main. This one fails, so the run says why.
+      - name: Require main
+        run: |
+          if [[ $GITHUB_REF != refs/heads/main ]]; then
+            echo "::error::Bundle publishes release assets and images, so it runs only on main: dispatch it from main, not $GITHUB_REF"
+            exit 1
+          fi
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Resolve plans and missing assets and images
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version_re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          for t in "$TAG" ${GENESIS_TAG:+"$GENESIS_TAG"}; do
+            [[ $t =~ $version_re ]] || { echo "::error::tag $t is not vX.Y.Z"; exit 1; }
+            [[ $(gh release view "$t" --json isDraft --jq .isDraft) == false ]] || { echo "::error::release $t is not published"; exit 1; }
+          done
+          version=${TAG#v} genesis=${GENESIS_TAG#v}
+          plan=$(scripts/bundle/release-plan.sh "$version")
+          genesis_plan=''
+          if [[ -n $genesis ]]; then
+            genesis_plan=$(scripts/bundle/release-plan.sh "$genesis")
+            e2e_genesis=$genesis
+          else
+            # The E2E needs a genesis to upgrade from, also when only the single set is built.
+            e2e_genesis=$(scripts/bundle/genesis-version.sh "$plan")
+          fi
+          source scripts/bundle/publication.sh
+
+          images='[]'
+          asset_state "$TAG" "$version"
+          single_assets=$state
+          image_state "peersyst/exrp:bundle-$version"
+          if [[ $state == build ]]; then
+            images=$(jq -c --arg n "$version" --arg g "$version" --arg v "$version" '. + [{name: $n, genesis: $g, version: $v}]' <<<"$images")
+          fi
+          two_binary_assets=''
+          if [[ -n $genesis ]]; then
+            asset_state "$TAG" "$genesis-$version"
+            two_binary_assets=$state
+            image_state "peersyst/exrp:bundle-$genesis-$version"
+            if [[ $state == build ]]; then
+              images=$(jq -c --arg n "$genesis-$version" --arg g "$genesis" --arg v "$version" '. + [{name: $n, genesis: $g, version: $v}]' <<<"$images")
+            fi
+          fi
+          echo "::notice::$TAG: plan $plan, genesis ${genesis:-none} ${genesis_plan}, E2E genesis $e2e_genesis"
+          {
+            echo "version=$version"
+            echo "plan=$plan"
+            echo "genesis_version=$genesis"
+            echo "genesis_plan=$genesis_plan"
+            echo "e2e_genesis_version=$e2e_genesis"
+            echo "single_assets=$single_assets"
+            echo "two_binary_assets=$two_binary_assets"
+            echo "images=$images"
+          } >> "$GITHUB_OUTPUT"
+
+  assets:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && (needs.plan.outputs.single_assets == 'build' || needs.plan.outputs.two_binary_assets == 'build')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      PLAN: ${{ needs.plan.outputs.plan }}
+      GENESIS_VERSION: ${{ needs.plan.outputs.genesis_version }}
+      GENESIS_PLAN: ${{ needs.plan.outputs.genesis_plan }}
+      E2E_GENESIS_VERSION: ${{ needs.plan.outputs.e2e_genesis_version }}
+      SINGLE: ${{ needs.plan.outputs.single_assets }}
+      TWO_BINARY: ${{ needs.plan.outputs.two_binary_assets }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          # No cache: this job publishes release assets, so it must not restore a Go
+          # module or build cache that another run saved (cache poisoning).
+          cache: false
+      # golangci-lint for check.sh. skip-cache: no lint cache either, for the same reason.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          install-only: true
+          version-file: .golangci-lint-version
+          skip-cache: true
+      - name: Launcher and patched Cosmovisor checks
+        run: scripts/bundle/check.sh
+      - name: Download release archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG" --dir dist/standalone \
+            --pattern "node_${VERSION}_Linux_*.tar.gz" --pattern "node_${VERSION}_Darwin_*.tar.gz" --pattern checksums.txt
+          # The two-binary set needs every platform of the genesis, the E2E only linux/amd64.
+          if [[ $TWO_BINARY == build ]]; then
+            gh release download "v$GENESIS_VERSION" --dir dist/genesis \
+              --pattern "node_${GENESIS_VERSION}_Linux_*.tar.gz" --pattern "node_${GENESIS_VERSION}_Darwin_*.tar.gz" --pattern checksums.txt
+          else
+            gh release download "v$E2E_GENESIS_VERSION" --dir dist/genesis \
+              --pattern "node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" --pattern checksums.txt
+          fi
+      - name: Build the single set
+        if: env.SINGLE == 'build'
+        run: scripts/bundle/release.sh --version "$VERSION" --plan "$PLAN" --standalone-dir dist/standalone --out-dir dist/single
+      - name: Build the two-binary set
+        if: env.TWO_BINARY == 'build'
+        run: |
+          scripts/bundle/release.sh --version "$VERSION" --plan "$PLAN" --genesis-version "$GENESIS_VERSION" --genesis-plan "$GENESIS_PLAN" \
+            --standalone-dir dist/standalone --genesis-dir dist/genesis --out-dir dist/two-binary
+      # A real chain upgrade with the linux/amd64 assets, before anything is uploaded. Without
+      # a two-binary set it builds one from the E2E genesis, for the test only.
+      - name: End-to-end test of the linux/amd64 bundles
+        run: |
+          e2e=$PWD/dist/e2e
+          mkdir -p "$e2e/standalone"
+          tar -xzf "dist/standalone/node_${VERSION}_Linux_amd64.tar.gz" -C "$e2e/standalone" bin/exrpd
+          args=()
+          if [[ $SINGLE == build ]]; then
+            mkdir -p "$e2e/single"
+            tar -xzf "dist/single/exrpd-bundle_${VERSION}_Linux_amd64.tar.gz" -C "$e2e/single" exrpd
+            args+=(--single-bundle "$e2e/single/exrpd")
+          fi
+          if [[ $TWO_BINARY == build ]]; then
+            mkdir -p "$e2e/two-binary"
+            tar -xzf "dist/two-binary/exrpd-bundle_${GENESIS_VERSION}-${VERSION}_Linux_amd64.tar.gz" -C "$e2e/two-binary" exrpd
+            args+=(--bundle "$e2e/two-binary/exrpd")
+          fi
+          E2E_DIR=$e2e/run scripts/bundle/e2e.sh \
+            --genesis-archive "dist/genesis/node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" --genesis-checksums dist/genesis/checksums.txt \
+            --upgrade-exrpd "$e2e/standalone/bin/exrpd" --upgrade-version "$VERSION" --plan "$PLAN" "${args[@]}"
+      # Never replace published assets: gh fails when an asset already exists. The checksums
+      # go last, so a set whose checksums are on the release is complete.
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source scripts/bundle/publication.sh
+          for dir in dist/single dist/two-binary; do
+            [[ -d $dir ]] || continue
+            if [[ $dir == dist/single ]]; then set=$VERSION; else set=$GENESIS_VERSION-$VERSION; fi
+            asset_state "$TAG" "$set"
+            [[ $state == build ]] || continue
+            gh release upload "$TAG" "$dir"/*.tar.gz
+            gh release upload "$TAG" "$dir"/*_checksums.txt
+          done
+
+  image:
+    needs: [plan, assets]
+    # After the assets job, also when it skipped because every set was on the release.
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && needs.plan.result == 'success'
+      && (needs.assets.result == 'success' || needs.assets.result == 'skipped') && needs.plan.outputs.images != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        set: ${{ fromJSON(needs.plan.outputs.images) }}
+    env:
+      TAG: ${{ inputs.tag }}
+      SET: ${{ matrix.set.name }}
+      SET_GENESIS: ${{ matrix.set.genesis }}
+      SET_VERSION: ${{ matrix.set.version }}
+      IMAGE: peersyst/exrp:bundle-${{ matrix.set.name }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      # The image is built from the published linux/amd64 asset, not from a rebuild.
+      - name: Download and verify the published bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          archive=exrpd-bundle_${SET}_Linux_amd64.tar.gz sums=exrpd-bundle_${SET}_checksums.txt
+          gh release download "$TAG" --dir dist --pattern "$archive" --pattern "$sums"
+          source scripts/bundle/lib.sh
+          verify_archive "dist/$sums" "dist/$archive" >/dev/null
+          mkdir -p dist/image
+          tar -xzf "dist/$archive" -C dist/image exrpd LICENSE
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PUSH_TOKEN }}
+      - name: Build the image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: Dockerfile.bundle
+          target: bundle
+          build-contexts: bundle-files=dist/image
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: ${{ env.IMAGE }}
+      # Runs the embedded binaries: init on a new home runs the genesis exrpd and installs
+      # every exrpd and Cosmovisor, then each of them runs.
+      - name: Smoke test
+        run: scripts/bundle/image-smoke.sh "$IMAGE" "$SET_GENESIS" "$SET_VERSION"
+      - name: Push the image
+        run: |
+          source scripts/bundle/publication.sh
+          image_state "$IMAGE"
+          if [[ $state == build ]]; then docker push "$IMAGE"; fi
