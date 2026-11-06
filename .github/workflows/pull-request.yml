@@ -3,7 +3,7 @@ name: "Pull Request"
 on:
     pull_request:
         types: [opened, synchronize]
-    # Runs on main only to seed the Go and lint caches that PR runs restore from
+    # Runs on main to check each merge and to seed the Go and lint caches that PR runs restore from
     push:
         branches:
             - "main"
@@ -35,6 +35,83 @@ jobs:
                 with:
                     version-file: .golangci-lint-version
                     args: --timeout=10m
+
+    bundle:
+        name: "Bundle: unit tests"
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+                    # Covers the launcher module and the Cosmovisor pins and patch built below
+                    cache-dependency-path: |
+                        cmd/exrpd-bundle/go.mod
+                        scripts/bundle/cosmovisor/cosmovisor.env
+                        scripts/bundle/cosmovisor/*.patch
+            # check.sh lints the launcher module, which the root lint job skips (nested go.mod).
+            # The action keys its lint cache on the working directory, so this job's cache stays
+            # apart from the root lint job's.
+            -   uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+                with:
+                    install-only: true
+                    working-directory: cmd/exrpd-bundle
+                    version-file: ../../.golangci-lint-version
+            -   name: Launcher and patched Cosmovisor checks
+                run: scripts/bundle/check.sh
+
+    # Chain upgrade with a bundle built from this commit and the newest published release
+    # below the plan (plan.sh genesis), and a single bundle of the upgrade exrpd. On pull
+    # requests and pushes to main, it runs only when the change touches the bundle, the
+    # exrpd CLI, the upgrade handler, the app wiring, or the root Go dependencies.
+    bundle-e2e:
+        name: "Bundle: E2E"
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+                    fetch-depth: 0
+            -   name: Check the change touches the bundle or the upgrade path
+                id: changes
+                env:
+                    BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+                run: |
+                    # Without a base to diff against, it runs: a new branch pushes an all-zero
+                    # base, and a force push can leave a base that is gone.
+                    if [[ -z $BASE_SHA || $BASE_SHA =~ ^0+$ ]] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null ||
+                        git diff --name-only "$BASE_SHA" HEAD | grep -Eq '^((cmd/exrpd|cmd/exrpd-bundle|scripts/bundle|app/upgrades)/|app/(app|upgrades)\.go$|go\.(mod|sum)$|\.github/workflows/pull-request\.yml$)'; then
+                        echo "run=true" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "run=false" >> "$GITHUB_OUTPUT"
+                    fi
+            -   if: steps.changes.outputs.run == 'true'
+                uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+            -   name: End-to-end test of the bundle
+                if: steps.changes.outputs.run == 'true'
+                env:
+                    GH_TOKEN: ${{ github.token }}
+                    GH_REPO: ${{ github.repository }}
+                run: |
+                    plan=$(scripts/bundle/plan.sh checkout)
+                    genesis=$(scripts/bundle/plan.sh genesis "$plan")
+                    version=${plan#v} assets=$RUNNER_TEMP/genesis
+                    echo "plan $plan, genesis $genesis"
+                    make build VERSION="$version"
+                    gh release download "v$genesis" --dir "$assets" \
+                        --pattern "node_${genesis}_Linux_amd64.tar.gz" --pattern checksums.txt
+                    scripts/bundle/e2e.sh --genesis-archive "$assets/node_${genesis}_Linux_amd64.tar.gz" \
+                        --genesis-checksums "$assets/checksums.txt" --upgrade-exrpd bin/exrpd --upgrade-version "$version"
 
     integration:
         runs-on: ubuntu-latest
