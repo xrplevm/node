@@ -1,3 +1,21 @@
+# Publishes the exrpd bundles of a release that is already published.
+#
+# Inputs:
+#   tag          the release to bundle, for example v12.0.0.
+#   genesis_tag  optional, for example v11.3.0. Also builds the two-binary bundle
+#                (genesis exrpd + tag exrpd) for nodes that must cross the tag's upgrade.
+#
+# Outputs, each built only when missing, so a rerun completes a failed run:
+#   single      exrpd-bundle_<version>_*            image peersyst/exrp:bundle-<version>
+#   two-binary  exrpd-bundle_<genesis>-<version>_*  image peersyst/exrp:bundle-<genesis>-<version>
+#
+# Jobs:
+#   plan    reads the upgrade plans from the tags and finds what is missing. Builds nothing.
+#   assets  builds the missing archives, runs a real upgrade (E2E), uploads to the release.
+#   image   builds, smoke tests and pushes the missing images from the published archives.
+#
+# The binaries and plans come from the release tags. The launcher, the scripts and
+# Dockerfile.bundle come from main, the only ref this workflow runs on.
 name: Bundle
 on:
   workflow_dispatch:
@@ -16,12 +34,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
 
-# Bundle sets of a published release, built only when missing:
-#   single      exrpd-bundle_<version>_*            image peersyst/exrp:bundle-<version>
-#   two-binary  exrpd-bundle_<genesis>-<version>_*  image peersyst/exrp:bundle-<genesis>-<version>, with genesis_tag
-# The plans come from the tags (release-plan.sh). The launcher, the scripts and the
-# Dockerfile.bundle come from main, the only ref this workflow runs on.
 jobs:
+  # ---- plan: read the plans, find what is missing --------------------------------------
   plan:
     runs-on: ubuntu-latest
     permissions:
@@ -54,39 +68,46 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 1. Check the inputs: each tag has a version form and its release is published.
           version_re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
           for t in "$TAG" ${GENESIS_TAG:+"$GENESIS_TAG"}; do
             [[ $t =~ $version_re ]] || { echo "::error::tag $t is not vX.Y.Z"; exit 1; }
             [[ $(gh release view "$t" --json isDraft --jq .isDraft) == false ]] || { echo "::error::release $t is not published"; exit 1; }
           done
+
+          # 2. Read the upgrade plan of each tag from its app/upgrades.
           version=${TAG#v} genesis=${GENESIS_TAG#v}
           plan=$(scripts/bundle/release-plan.sh "$version")
           genesis_plan=''
+          e2e_genesis=$genesis
           if [[ -n $genesis ]]; then
             genesis_plan=$(scripts/bundle/release-plan.sh "$genesis")
-            e2e_genesis=$genesis
           else
             # The E2E needs a genesis to upgrade from, also when only the single set is built.
             e2e_genesis=$(scripts/bundle/genesis-version.sh "$plan")
           fi
-          source scripts/bundle/publication.sh
 
+          # 3. Find the missing asset sets and images. asset_state and image_state set
+          #    state to build or skip.
+          source scripts/bundle/publication.sh
           images='[]'
+          # queue_image NAME GENESIS adds peersyst/exrp:bundle-NAME to the image matrix if it is missing.
+          queue_image() {
+            image_state "peersyst/exrp:bundle-$1"
+            [[ $state == build ]] || return 0
+            images=$(jq -c --arg n "$1" --arg g "$2" --arg v "$version" '. + [{name: $n, genesis: $g, version: $v}]' <<<"$images")
+          }
           asset_state "$TAG" "$version"
           single_assets=$state
-          image_state "peersyst/exrp:bundle-$version"
-          if [[ $state == build ]]; then
-            images=$(jq -c --arg n "$version" --arg g "$version" --arg v "$version" '. + [{name: $n, genesis: $g, version: $v}]' <<<"$images")
-          fi
+          queue_image "$version" "$version"
           two_binary_assets=''
           if [[ -n $genesis ]]; then
             asset_state "$TAG" "$genesis-$version"
             two_binary_assets=$state
-            image_state "peersyst/exrp:bundle-$genesis-$version"
-            if [[ $state == build ]]; then
-              images=$(jq -c --arg n "$genesis-$version" --arg g "$genesis" --arg v "$version" '. + [{name: $n, genesis: $g, version: $v}]' <<<"$images")
-            fi
+            queue_image "$genesis-$version" "$genesis"
           fi
+
+          # 4. Hand the results to the other jobs.
           echo "::notice::$TAG: plan $plan, genesis ${genesis:-none} ${genesis_plan}, E2E genesis $e2e_genesis"
           {
             echo "version=$version"
@@ -99,6 +120,7 @@ jobs:
             echo "images=$images"
           } >> "$GITHUB_OUTPUT"
 
+  # ---- assets: build, test with a real upgrade, upload ---------------------------------
   assets:
     needs: plan
     if: github.ref == 'refs/heads/main' && (needs.plan.outputs.single_assets == 'build' || needs.plan.outputs.two_binary_assets == 'build')
@@ -116,6 +138,7 @@ jobs:
       SINGLE: ${{ needs.plan.outputs.single_assets }}
       TWO_BINARY: ${{ needs.plan.outputs.two_binary_assets }}
     steps:
+      # Setup and code checks.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -133,6 +156,7 @@ jobs:
           skip-cache: true
       - name: Launcher and patched Cosmovisor checks
         run: scripts/bundle/check.sh
+      # Inputs: the published standalone archives of the tag and of the genesis.
       - name: Download release archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -147,6 +171,7 @@ jobs:
             gh release download "v$E2E_GENESIS_VERSION" --dir dist/genesis \
               --pattern "node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" --pattern checksums.txt
           fi
+      # Build the missing sets. release.sh verifies each input archive against its checksums.
       - name: Build the single set
         if: env.SINGLE == 'build'
         run: scripts/bundle/release.sh --version "$VERSION" --plan "$PLAN" --standalone-dir dist/standalone --out-dir dist/single
@@ -192,6 +217,7 @@ jobs:
             gh release upload "$TAG" "$dir"/*_checksums.txt
           done
 
+  # ---- image: one matrix entry per missing image ---------------------------------------
   image:
     needs: [plan, assets]
     # After the assets job, also when it skipped because every set was on the release.
