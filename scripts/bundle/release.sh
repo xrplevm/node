@@ -1,21 +1,14 @@
 #!/usr/bin/env bash
-# Build one bundle set from published release archives: an exrpd-bundle archive for each
-# platform and its checksums file. Each archive holds the bundle executable exrpd and the
-# LICENSE, because the executable embeds Apache-2.0 code.
+# Build one bundle set from published release archives: exrpd-bundle_<set>_<Os>_<arch>.tar.gz
+# for each platform (the bundle exrpd and LICENSE) and exrpd-bundle_<set>_checksums.txt.
 #
 # Usage: release.sh --version X.Y.Z [--plan vX.Y.Z] --standalone-dir DIR --out-dir DIR \
 #                   [--genesis-version X.Y.Z [--genesis-plan vX.Y.Z] --genesis-dir DIR]
-#   --out-dir          must be absent or empty, so that no old asset stays without a checksum entry
-#   --plan             the plan of --version, default the newest plan of tag v<version> (release-plan.sh)
-#   --standalone-dir   node_<version>_<Os>_<arch>.tar.gz + checksums.txt of this release
-#   --genesis-version  build the two-binary set: the genesis release, then --version staged for --plan.
-#                      Without it, the single set: release --version alone, which runs --plan
-#   --genesis-plan     the plan of --genesis-version, default the newest plan of its tag
-#   --genesis-dir      node_<genesis-version>_<Os>_<arch>.tar.gz + checksums.txt of the genesis release
-# The single set is exrpd-bundle_<version>_<Os>_<arch>.tar.gz and exrpd-bundle_<version>_checksums.txt,
-# the two-binary set exrpd-bundle_<genesis-version>-<version>_<Os>_<arch>.tar.gz and
-# exrpd-bundle_<genesis-version>-<version>_checksums.txt.
-# PLATFORMS (env) defaults to "linux/amd64 linux/arm64 darwin/amd64 darwin/arm64".
+#   Without --genesis-version: the single set <version>, release --version alone.
+#   With it: the two-binary set <genesis-version>-<version>, the genesis then --version staged for --plan.
+#   --standalone-dir and --genesis-dir hold node_<version>_<Os>_<arch>.tar.gz and checksums.txt of each release.
+#   --out-dir must be absent or empty, so that no old asset stays without a checksum line.
+#   Plans default to the plan of each release tag. PLATFORMS (env) defaults to all four.
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -50,8 +43,7 @@ if [[ -e $out_dir && ( ! -d $out_dir || -n $(ls -A "$out_dir") ) ]]; then
 	echo "--out-dir $out_dir is not an empty directory: use a new or empty directory, so that no old asset stays without a checksum entry" >&2
 	exit 2
 fi
-# The plans are the same for every platform, so they are checked once. The single set's
-# genesis is the release itself.
+# Resolve the plans once, before any build. The single set's genesis is the release itself.
 if [[ -n $genesis_version ]]; then
 	plans=$(resolve_plans release "$version" "$plan" "$genesis_version" "$genesis_plan")
 	read -r plan genesis_plan <<<"$plans"
@@ -73,21 +65,19 @@ for platform in ${PLATFORMS:-linux/amd64 linux/arm64 darwin/amd64 darwin/arm64};
 	goos=${platform%/*} goarch=${platform#*/}
 	check_platform "$goos" "$goarch"
 	os=$(os_title "$goos")
-
-	upgrade_exrpd=''
+	args=(--genesis-version "$genesis_version" --genesis-plan "$genesis_plan" --goos "$goos" --goarch "$goarch"
+		--genesis-archive "$genesis_dir/node_${genesis_version}_${os}_${goarch}.tar.gz" --genesis-checksums "$genesis_dir/checksums.txt")
 	if [[ -n $plan ]]; then
 		archive=node_${version}_${os}_${goarch}.tar.gz
 		verify_archive "$standalone_dir/checksums.txt" "$standalone_dir/$archive" >/dev/null
 		rm -rf "$work/standalone" && mkdir -p "$work/standalone"
 		tar -xzf "$standalone_dir/$archive" -C "$work/standalone" bin/exrpd
-		upgrade_exrpd=$work/standalone/bin/exrpd
+		args+=(--upgrade-exrpd "$work/standalone/bin/exrpd" --upgrade-version "$version" --plan "$plan")
 	fi
 
 	name=exrpd-bundle_${set_name}_${os}_${goarch}
 	rm -rf "${work:?}/$name" && mkdir -p "$work/$name"
-	build_one "$work/$name/exrpd" "$goos" "$goarch" "$genesis_version" "$genesis_plan" \
-		"$genesis_dir/node_${genesis_version}_${os}_${goarch}.tar.gz" "$genesis_dir/checksums.txt" \
-		"$plan" "$upgrade_exrpd" "${upgrade_exrpd:+$version}"
+	"$here/build.sh" "${args[@]}" --out "$work/$name/exrpd"
 	cp "$here/../../LICENSE" "$work/$name/LICENSE"
 	tar -C "$work/$name" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -cf - exrpd LICENSE |
 		gzip -n -9 >"$out_dir/$name.tar.gz"

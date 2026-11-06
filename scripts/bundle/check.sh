@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# Run the checks of the bundle, as CI does: go vet, go test and golangci-lint of the
-# launcher module cmd/exrpd-bundle, which the root commands skip, then the tests of the
-# patched Cosmovisor (cosmovisor.sh --test). golangci-lint must be on PATH with the version
-# in .golangci-lint-version.
-# Usage: check.sh
+# The bundle checks of CI: go vet, go test and golangci-lint of the launcher module
+# cmd/exrpd-bundle (the root commands skip it), then the patched Cosmovisor tests.
+# Needs golangci-lint on PATH at the version in .golangci-lint-version.
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

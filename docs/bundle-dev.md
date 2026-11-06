@@ -769,13 +769,13 @@ the commit of the launcher code. The bundle digest hashes the original manifest 
 not the ordered releases.
 
 The genesis plan is the newest `UpgradeName` in `app/upgrades` of the genesis release tag
-(`release-plan.sh`). It does not come from the version: v10.2.x runs plan `v10.1.0`.
+(`plan.sh release`). It does not come from the version: v10.2.x runs plan `v10.1.0`.
 
 Plans are lower-case `vX.Y.Z` names, because Cosmovisor lowercases the plan that it reads
 from the data file and switches to `upgrades/<that name>`. `build.sh` and `release.sh`
 refuse any other name.
 
-`release-plan.sh` refuses a genesis tag in two cases, because a skip could pick the binary
+`plan.sh release` refuses a genesis tag in two cases, because a skip could pick the binary
 of an older plan:
 
 - The tag also has a plan with another name that is newer than its `vX.Y.Z` plan, such as
@@ -832,17 +832,15 @@ These files build, test and release the bundle:
 | Path | Content |
 | --- | --- |
 | `cmd/exrpd-bundle/` | the launcher, a separate Go module. It builds the bundle executable `exrpd` |
-| `scripts/bundle/plan.sh` | prints the upgrade plan of this checkout: the `UpgradeName` of the one handler in `app/upgrades`. Only the PR checks use it |
-| `scripts/bundle/genesis-version.sh` | prints the default genesis version for a plan: the newest published release below the plan |
-| `scripts/bundle/release-plan.sh` | prints the plan of a release: the newest plan in `app/upgrades` of its tag. It fetches the tag if the checkout does not have it |
-| `scripts/bundle/lib.sh` | helpers shared by the scripts, sourced by them: the plans (`release_plan`, `resolve_plans`), the launcher commit (`launcher_commit`) and the build of each executable (`build_one`) |
+| `scripts/bundle/plan.sh` | prints a plan or a version: `checkout` the plan of the one handler in `app/upgrades`, `release X.Y.Z` the newest plan in `app/upgrades` of the release tag (it fetches the tag if needed), `genesis PLAN` the newest published release below the plan |
+| `scripts/bundle/lib.sh` | helpers sourced by the scripts: archive checks and the plan checks (`release_plan`, `resolve_plans`) |
 | `scripts/bundle/publication.sh` | remote-state checks shared by the workflow's planning and publishing jobs |
 | `scripts/bundle/check.sh` | runs the checks of CI: launcher `go vet`, `go test` and `golangci-lint`, then `cosmovisor.sh --test` |
 | `scripts/bundle/cosmovisor/` | Cosmovisor pins (`cosmovisor.env`) and the patch |
 | `scripts/bundle/build.sh` | builds one bundle executable, two-binary or single |
 | `scripts/bundle/cosmovisor.sh` | builds or tests the patched Cosmovisor |
 | `scripts/bundle/release.sh` | builds one bundle set (every platform and the checksums file) from published archives |
-| `scripts/bundle/e2e.sh` | localnet chain upgrade on linux/amd64, with the two-binary and the single bundle |
+| `scripts/bundle/e2e.sh`, `scripts/bundle/e2e/` | localnet chain upgrade on linux/amd64, with the two-binary and the single bundle. `e2e.sh` sets up the run, `e2e/` holds the helpers and one file for each scenario |
 | `scripts/bundle/image-smoke.sh` | smoke test of a bundle image |
 | `Dockerfile.bundle` | the bundle image. The release image builds do not read it |
 | `.github/workflows/bundle.yml` | "Bundle" workflow: builds the missing bundle sets and images of a published release |
@@ -867,16 +865,16 @@ scripts/bundle/check.sh   # launcher vet, test and lint, then the patched Cosmov
   `bin/exrpd` that `make build` writes. A local build has other bytes. A home that installs
   it logs a replacement each time it moves between that build and a released bundle.
 - With `--upgrade-exrpd` and `--upgrade-version`, `build.sh` builds a two-binary bundle.
-  `--plan` is its upgrade plan, by default the handler of this checkout (`plan.sh`).
+  `--plan` is its upgrade plan, by default the handler of this checkout (`plan.sh checkout`).
   Without both flags, it builds a single bundle. Only one of the two flags, or `--plan`
   in single mode, is an error.
-- The genesis plan comes from the genesis release tag (`release-plan.sh`).
+- The genesis plan comes from the genesis release tag (`plan.sh release`).
   `--genesis-plan vX.Y.Z` sets it instead.
 - The manifest gets `launcher.commit` from `git rev-parse HEAD`, with `-dirty` when
   `cmd/exrpd-bundle/` has uncommitted changes.
 - `release.sh` builds one set for each call: without `--genesis-version` the single set
   `exrpd-bundle_<version>_*`, with it the two-binary set
-  `exrpd-bundle_<genesis>-<version>_*`. Both plans default to `release-plan.sh` of their
+  `exrpd-bundle_<genesis>-<version>_*`. Both plans default to `plan.sh release` of their
   tags. `--out-dir` must be absent or empty, so that no old asset stays without a
   checksum entry.
 
@@ -898,11 +896,11 @@ scripts/bundle/e2e.sh --genesis-archive node_11.3.0_Linux_amd64.tar.gz --genesis
 
 | Flag | Content |
 | --- | --- |
-| `--genesis-archive` | required: `node_<genesis version>_Linux_amd64.tar.gz` of the genesis GitHub release, for example `v11.3.0`. Its name gives the genesis version. `genesis-version.sh <plan>` prints the default genesis |
+| `--genesis-archive` | required: `node_<genesis version>_Linux_amd64.tar.gz` of the genesis GitHub release, for example `v11.3.0`. Its name gives the genesis version. `plan.sh genesis <plan>` prints the default genesis |
 | `--genesis-checksums` | required: `checksums.txt` of the genesis release |
 | `--upgrade-exrpd` | required: standalone upgrade `exrpd` for linux/amd64, executable |
 | `--upgrade-version 12.0.1` | the version of `--upgrade-exrpd`, by default the plan version (12.0.0). Set it to test a patch bundle |
-| `--plan v12.0.0` | the upgrade plan, by default the handler of this checkout (`plan.sh`). The "Bundle" workflow passes the plan of the release tag |
+| `--plan v12.0.0` | the upgrade plan, by default the handler of this checkout (`plan.sh checkout`). The "Bundle" workflow passes the plan of the release tag |
 | `--bundle <path>` | tests a two-binary bundle `exrpd` that was already built, for example extracted from a release asset. The run checks that its manifest names the plans and the SHA-256 of both `exrpd` files, and does not build the tested bundle. It still builds the earlier patch bundle, see below. Not with `--unpatched` |
 | `--single-bundle <path>` | tests a single bundle `exrpd` that was already built. Its genesis must be the `--upgrade-exrpd` bytes, and its plan `--plan`. Not with `--unpatched` |
 | `--unpatched` | embeds the upstream Cosmovisor v1.7.3 release binary instead of the patched build, see below |
@@ -991,7 +989,7 @@ again in that case. `TestLaunchProcessSignalAfterUpgrade` is the deterministic c
 | Job (check name) | Runs |
 | --- | --- |
 | `bundle` ("Bundle: unit tests") | every pull request and every push to `main`: `check.sh`, which runs launcher `go vet`, `go test` and `golangci-lint` in `cmd/exrpd-bundle`, then `cosmovisor.sh --test` |
-| `bundle-e2e` ("Bundle: E2E") | pull requests and pushes to `main` that change `cmd/exrpd/`, `cmd/exrpd-bundle/`, `scripts/bundle/`, `app/upgrades/`, `app/upgrades.go`, `app/app.go`, the root `go.mod` or `go.sum`, or `.github/workflows/pull-request.yml`, and every push without a base commit to compare with: `e2e.sh` with an `exrpd` built from the commit (`make build VERSION=<plan version>`), the plan of the commit (`plan.sh`) and the genesis release that `genesis-version.sh` picks |
+| `bundle-e2e` ("Bundle: E2E") | pull requests and pushes to `main` that change `cmd/exrpd/`, `cmd/exrpd-bundle/`, `scripts/bundle/`, `app/upgrades/`, `app/upgrades.go`, `app/app.go`, the root `go.mod` or `go.sum`, or `.github/workflows/pull-request.yml`, and every push without a base commit to compare with: `e2e.sh` with an `exrpd` built from the commit (`make build VERSION=<plan version>`), the plan of the commit (`plan.sh checkout`) and the genesis release that `plan.sh genesis` picks |
 
 ### Bundle
 
@@ -1015,9 +1013,9 @@ an image tag outside this workflow.
 The jobs:
 
 1. **`plan`** checks that the tags are `vX.Y.Z` releases that are published, not drafts.
-   It reads both plans from the tags (`release-plan.sh`). For the E2E test it needs a
+   It reads both plans from the tags (`plan.sh release`). For the E2E test it needs a
    genesis also when only the single set is built: `genesis_tag`, else
-   `genesis-version.sh`. Then it checks each set on the release. A set has 5 files: the
+   `plan.sh genesis`. Then it checks each set on the release. A set has 5 files: the
    archives for Linux and Darwin, amd64 and arm64, and the checksums file.
    - No file of the set: build it.
    - All 5 files: skip it.
@@ -1068,7 +1066,7 @@ complete sets and existing images. Partial asset sets still need the cleanup bel
 
 | Input | Source |
 | --- | --- |
-| Plan | `release-plan.sh` of the release tag: the newest `vX.Y.Z` `UpgradeName` in its `app/upgrades` |
+| Plan | `plan.sh release` of the release tag: the newest `vX.Y.Z` `UpgradeName` in its `app/upgrades` |
 | Genesis | single set: the release itself. Two-binary set: the `genesis_tag` input. Its plan comes from its tag and must come before the plan of the release: `build.sh` and `release.sh` refuse, for example, a 12.0.x genesis for plan `v12.0.0` |
 | Launcher | `cmd/exrpd-bundle/` on `main`, recorded as `launcher.commit` in the manifest |
 | Cosmovisor | `scripts/bundle/cosmovisor/cosmovisor.env` and the patch next to it |

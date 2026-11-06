@@ -66,7 +66,7 @@ jobs:
                 run: scripts/bundle/check.sh
 
     # Chain upgrade with a bundle built from this commit and the newest published release
-    # below the plan (genesis-version.sh), and a single bundle of the upgrade exrpd. On pull
+    # below the plan (plan.sh genesis), and a single bundle of the upgrade exrpd. On pull
     # requests and pushes to main, it runs only when the change touches the bundle, the
     # exrpd CLI, the upgrade handler, the app wiring, or the root Go dependencies.
     bundle-e2e:
@@ -103,8 +103,8 @@ jobs:
                     GH_TOKEN: ${{ github.token }}
                     GH_REPO: ${{ github.repository }}
                 run: |
-                    plan=$(scripts/bundle/plan.sh)
-                    genesis=$(scripts/bundle/genesis-version.sh "$plan")
+                    plan=$(scripts/bundle/plan.sh checkout)
+                    genesis=$(scripts/bundle/plan.sh genesis "$plan")
                     version=${plan#v} assets=$RUNNER_TEMP/genesis
                     echo "plan $plan, genesis $genesis"
                     make build VERSION="$version"

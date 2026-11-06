@@ -77,14 +77,14 @@ jobs:
 
           # 2. Read the upgrade plan of each tag from its app/upgrades.
           version=${TAG#v} genesis=${GENESIS_TAG#v}
-          plan=$(scripts/bundle/release-plan.sh "$version")
+          plan=$(scripts/bundle/plan.sh release "$version")
           genesis_plan=''
           e2e_genesis=$genesis
           if [[ -n $genesis ]]; then
-            genesis_plan=$(scripts/bundle/release-plan.sh "$genesis")
+            genesis_plan=$(scripts/bundle/plan.sh release "$genesis")
           else
             # The E2E needs a genesis to upgrade from, also when only the single set is built.
-            e2e_genesis=$(scripts/bundle/genesis-version.sh "$plan")
+            e2e_genesis=$(scripts/bundle/plan.sh genesis "$plan")
           fi
 
           # 3. Find the missing asset sets and images. asset_state and image_state set

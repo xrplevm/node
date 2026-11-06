@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-# Smoke test of a bundle image (Dockerfile.bundle), as the Bundle workflow runs it
-# before the push. It runs the embedded binaries, not only the launcher: exrpd init on a
-# new home in the image runs the genesis exrpd and installs every exrpd and Cosmovisor,
-# then each installed exrpd prints its version and Cosmovisor runs. The image runs its
+# Smoke test of a bundle image before the push: exrpd init on a new home runs the genesis
+# exrpd and installs every exrpd and Cosmovisor, then each of them must run. The image runs
 # commands through its entrypoint, /bin/sh -ec.
-# Usage: image-smoke.sh IMAGE GENESIS_VERSION VERSION
-#   GENESIS_VERSION is VERSION for a single bundle.
+# Usage: image-smoke.sh IMAGE GENESIS_VERSION VERSION   (GENESIS_VERSION is VERSION for a single bundle)
 set -euo pipefail
 
 image=${1:?usage: $0 IMAGE GENESIS_VERSION VERSION} genesis=${2:?} version=${3:?}

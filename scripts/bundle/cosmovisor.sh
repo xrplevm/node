@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Build Cosmovisor from the pinned upstream module source plus the committed patch.
-# Usage: cosmovisor.sh GOOS GOARCH OUTPUT
-#        cosmovisor.sh --test    run the patched module's own tests (go test ./...)
+# Build Cosmovisor from the pinned module source plus the patch, or run its tests.
+# Usage: cosmovisor.sh GOOS GOARCH OUTPUT | cosmovisor.sh --test
 set -euo pipefail
 
 if [[ ${1:-} == --test && $# -eq 1 ]]; then
@@ -19,9 +18,8 @@ source "$pins/cosmovisor.env"
 work=$(mktemp -d)
 trap 'chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"' EXIT
 
-# A throwaway module that requires Cosmovisor lets go mod verify check the extracted
-# source in the module cache. go mod download checks only the zip, and the build uses
-# the extracted directory.
+# go mod verify through a throwaway module checks the extracted source that the build uses.
+# go mod download checks only the zip.
 printf 'module verify\n\ngo 1.23\n\nrequire %s %s\n' "$COSMOVISOR_MODULE" "$COSMOVISOR_VERSION" >"$work/go.mod"
 if ! info=$(cd "$work" && GOWORK=off GOFLAGS=-mod=mod go mod download -json "$COSMOVISOR_MODULE@$COSMOVISOR_VERSION"); then
 	echo "go mod download $COSMOVISOR_MODULE@$COSMOVISOR_VERSION: $(jq -r '.Error // empty' <<<"$info" 2>/dev/null)" >&2
