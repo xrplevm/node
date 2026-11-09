@@ -39,11 +39,12 @@ this order: `DAEMON_HOME`, `EXRPD_HOME`, then `NODE_HOME`. With `EXRPD_HOME`,
 the bundle keeps the keyring there; the standalone keeps it in the default home.
 Use `--home` to select one home for everything.
 
-The files go under `<node home>/cosmovisor/`: one directory for each `exrpd` version,
-Cosmovisor, and the `current` link to the `exrpd` that matches the chain data (11.3.0
-before the upgrade height, 12.0.0 after it). Nothing changes in `config/`, `data/` or
-your keys. Files that are already correct stay as they are, so a second install of the
-same bundle does no harm.
+The files go under `<node home>/cosmovisor/`: one `upgrades/<plan>/` directory for each
+plan, Cosmovisor in `supervisor/`, and the `current` link to the `exrpd` that matches the
+chain data (11.3.0 before the upgrade height, 12.0.0 after it). `start` sets `current`.
+`init` and `bundle setup` install only the binaries. Nothing changes in `config/`,
+`data/` or your keys. Files that are already correct stay as they are, so a second
+install of the same bundle does no harm.
 
 ### Commands
 
@@ -53,8 +54,8 @@ Run every command as the node user, with `--home <node home>`:
 | --- | --- |
 | `exrpd start` | Installs the files, then runs the node through Cosmovisor. The service runs this. |
 | `exrpd init <moniker> --chain-id <id>` | On a new home: installs the files, then runs `init` with 11.3.0. |
-| `exrpd bundle setup` | Installs the files and starts nothing. Use it with the node stopped, for example before `rollback`, `export` or a resync. |
-| `exrpd version` | Shows the installed bundle: versions, plans and Cosmovisor. |
+| `exrpd bundle setup` | Installs the files, does not change `current`, and starts nothing. Use it with the node stopped, for example before `rollback`, `export` or a resync. |
+| `exrpd version` | Shows the installed bundle: versions and Cosmovisor. `exrpd version --bundle` also shows the plans and the home. |
 | Any other command (`keys`, `tx`, `query`, `status`, ...) | Runs with the `exrpd` that matches the chain data. |
 
 Only `start`, `init` and `bundle setup` copy the files into the home. The other commands
@@ -67,12 +68,15 @@ it restarts. Until then, `keys`, `tx`, `query` and the other commands stop with 
 that tells you to restart the service. So restart the service right away after you
 replace the file.
 
-`exrpd version` does not stop. Its first word is the version of the `exrpd` in the home,
-or one of these:
+`exrpd version` does not stop when the bundle is missing or outdated in the home. Its
+first word is the version of the `exrpd` in the home, or one of these:
 
 - `restart-needed`: the home has the files of another bundle. Restart the service.
 - `not-installed`: the home has no bundle files yet, for example the home of a
   standalone `exrpd`.
+
+If the home itself is refused, for example because of a corrupted data file, `version`
+stops with the same error as the other commands.
 
 Run every command as the user that runs the service:
 
@@ -92,8 +96,9 @@ commands as root, without `sudo -u`.
 
 Write `start` or `init` before their flags. The bundle refuses a bare `--`, and refuses
 `--home` immediately after another flag without `=`. Put `--home` first or write the
-other flag with `=`. Use `exrpd help start` to see start flags without installing files;
-`exrpd start --help` installs them.
+other flag with `=`. Use `exrpd help start` to see start flags without installing files.
+It works once the home has this bundle installed, and otherwise shows the same refusal as
+other commands. `exrpd start --help` installs the files.
 
 ## Prepare
 
@@ -153,6 +158,9 @@ clear: when the service stops, or when Cosmovisor exits on its own, systemd stop
 `exrpd` too. Do not use `KillMode=process` or `none`: then the node `exrpd` can keep
 running without Cosmovisor.
 
+`<node user>` must own the node home. When you replace a unit, use the `User=` of the old
+unit, or first run `sudo chown -R <node user>: <node home>`.
+
 To change an existing unit, keep your own settings, for example extra `start` flags or
 limits. Two settings must stay as in the unit above: `ExecStart` runs the bundle `exrpd`
 with `start --home <node home>` (your flags can follow), and `KillMode=control-group`.
@@ -163,29 +171,8 @@ Edit the unit with `sudo systemctl edit --full <unit>`. This command saves the u
 `/etc/systemd/system/`, so a package update does not undo the change, and it reloads
 systemd. Then check the output of `systemctl cat <unit>`. It shows the unit file first,
 then any drop-in files (`<unit>.service.d/*.conf`). A drop-in overrides the unit file, so
-remove its `ExecStart`, `KillMode` and `DAEMON_*` lines, and run
-`sudo systemctl daemon-reload`.
-
-### macOS launchd
-
-Use a LaunchDaemon with `ProgramArguments` set to `/usr/local/bin/exrpd`, `start`,
-`--home`, and `<node home>`. Use the absolute binary path. Set `KeepAlive` to a dictionary
-with `SuccessfulExit` set to `false`, and leave `AbandonProcessGroup` at its default
-`false` so launchd stops remaining processes when the job exits.
-
-### Without a service manager
-
-An `exrpd` process can outlive Cosmovisor if Cosmovisor exits unexpectedly. On Linux,
-start the node in its own session and stop its process group:
-
-```sh
-setsid exrpd start --home <node home> &
-ps -o pgid= -p <cosmovisor pid>
-kill -TERM -- -<pgid>
-```
-
-Do not signal the process group of a node that you did not start with `setsid`; it may
-contain your shell. Check for a leftover `exrpd` before starting the node again.
+remove its `ExecStart` and `KillMode` lines and the `DAEMON_*` lines that `exrpd start`
+sets (see [Settings](#settings)), and run `sudo systemctl daemon-reload`.
 
 ### Check the service
 
@@ -257,13 +244,22 @@ the upgrade, uses `exrpd-bundle_12.0.0`. See [Join after the upgrade](#join-afte
    exrpd version --bundle
    ```
 
-2. As the node user, run `exrpd init <moniker> --chain-id <id> --home <node home>`.
+2. Run `sudo -u <node user> /usr/local/bin/exrpd init <moniker> --chain-id <id> --home <node home>`.
 3. Add keys, the genesis file, peers and config as you do for the standalone `exrpd`.
-4. Get the chain data before you start the service: configure state sync, or unpack a
-   snapshot whose data requires 11.3.0. The bundle cannot sync from genesis, because it
-   does not carry the binaries of the earlier plans (see [Known limitations](#known-limitations)).
-   For a snapshot, inspect its `data/upgrade-info.json` as in step 3 of
-   [Restore a snapshot from before the upgrade](#restore-a-snapshot-from-before-the-upgrade).
+4. Get the chain data before you start the service. The bundle cannot sync from genesis,
+   because it does not carry the binaries of the earlier plans (see
+   [Known limitations](#known-limitations)).
+   - Before the upgrade height, with `exrpd-bundle_11.3.0-12.0.0`: use state sync only if
+     the chain is well before the upgrade height. Otherwise wait, and use
+     `exrpd-bundle_12.0.0`. For a snapshot, unpack one from before the upgrade height,
+     whose data requires 11.3.0, and inspect its `data/upgrade-info.json` as in step 3 of
+     [Restore a snapshot from before the upgrade](#restore-a-snapshot-from-before-the-upgrade).
+     Then run
+     `sudo -u <node user> /usr/local/bin/exrpd version --bundle --home <node home>`, and
+     go on only if `refused` is `null` and `will_run.dir` is `upgrades/v11.3.0`.
+   - After the upgrade height, with `exrpd-bundle_12.0.0`: configure state sync, or
+     unpack a snapshot from after the upgrade, as in
+     [Join after the upgrade](#join-after-the-upgrade).
 5. Check that your config follows [Node settings](#node-settings).
 6. Create the unit as in [systemd unit](#systemd-unit), then start it:
 
@@ -371,6 +367,11 @@ ran it before.
 
    Then remove the binaries of your old Cosmovisor setup. The bundle installs its own
    binaries in `upgrades/` and sets `current` itself. It does not use `genesis/`.
+   Cosmovisor resolves `COSMOVISOR_CUSTOM_PREUPGRADE` under `<node home>/cosmovisor/`. If
+   that script is in `genesis/`, `upgrades/` or `current/`, move it to
+   `<node home>/cosmovisor/` first, and set the variable to its path relative to that
+   directory, for example `COSMOVISOR_CUSTOM_PREUPGRADE=pre-upgrade.sh`. An absolute path
+   does not work: Cosmovisor appends it to that directory.
 
    ```sh
    sudo rm -rf <node home>/cosmovisor/genesis <node home>/cosmovisor/upgrades \
@@ -408,9 +409,13 @@ ran it before.
    [Node settings](#node-settings) use absolute paths. Under Cosmovisor, relative paths
    already resolve in `<node home>/cosmovisor`, so they keep working.
 5. Create the unit as in [systemd unit](#systemd-unit), or change the old unit. Do not
-   copy the Cosmovisor `ExecStart` or the old `DAEMON_*` settings. `exrpd start` sets the
-   Cosmovisor variables that it needs (see [Settings](#settings)), and it refuses
-   `DAEMON_ALLOW_DOWNLOAD_BINARIES=true`. Then start the service:
+   copy the Cosmovisor `ExecStart`. Drop `DAEMON_NAME`, `DAEMON_HOME`,
+   `DAEMON_ALLOW_DOWNLOAD_BINARIES` and `DAEMON_RESTART_AFTER_UPGRADE`: `exrpd start` sets
+   them (see [Settings](#settings)). Keep the other Cosmovisor settings that you use, for
+   example `COSMOVISOR_CUSTOM_PREUPGRADE`, or `DAEMON_DATA_BACKUP_DIR` with
+   `UNSAFE_SKIP_BACKUP=false` on a non-validator node. Validators should drop
+   `UNSAFE_SKIP_BACKUP=false` (see [Backups during upgrades](#backups-during-upgrades)).
+   Then start the service:
 
    ```sh
    sudo systemctl daemon-reload
@@ -451,7 +456,7 @@ cd /
 For systemd, under the same condition, set `WorkingDirectory=/` in `[Service]` and keep
 an absolute `ExecStart` path. Check `systemctl cat <unit>` for drop-ins that override
 `WorkingDirectory`, remove or update those overrides, and run `sudo systemctl daemon-reload`
-before restarting the service. For launchd, apply the same restriction to `WorkingDirectory`.
+before restarting the service.
 
 A manual start through the selected binary path from the Cosmovisor working directory
 is also refused. Starting through an installed path outside that directory's
@@ -477,6 +482,7 @@ Change only the image, for example in Docker Compose:
     image: peersyst/exrp:bundle-11.3.0-12.0.0   # was peersyst/exrp:v11.3.0
     entrypoint: exrpd
     command: ["start"]
+    restart: unless-stopped
     volumes:
       - /root/.exrpd:/root/.exrpd
 ```
@@ -491,15 +497,24 @@ Check these settings of your container:
 - Give the node time to stop cleanly: `stop_grace_period: 120s` in Docker Compose, or
   `terminationGracePeriodSeconds: 120` in Kubernetes. The defaults are 10 s and 30 s,
   and the systemd unit uses 120 s.
+- Set a restart policy, for example `restart: unless-stopped`. The node needs a restart to
+  recover from some failures at the upgrade height.
 - Run other commands in the same container, for example
-  `docker exec <container> exrpd keys list`. Then they run as the same user and on the
-  same home.
+  `docker exec <container> exrpd keys list`. Then they run as the same user and, with the
+  default home or a home set by an environment variable, on the same home. If the service
+  passes `--home`, pass the same `--home`.
 
 To move a running container to a bundle image, follow the same timing as for a host (see
-the warning in [Choose your path](#choose-your-path)). Before the upgrade, check the home
-first with
-`docker run --rm -v <volume>:/root/.exrpd --entrypoint exrpd <image> version --bundle`,
-as in step 2 of [Move from the standalone exrpd](#move-from-the-standalone-exrpd).
+the warning in [Choose your path](#choose-your-path)). Before you recreate the container,
+change the image in the Compose file and check the home with the volumes and environment
+of the service:
+
+```sh
+docker compose run --rm --no-deps --entrypoint exrpd node version --bundle
+```
+
+Add `--home` if the service uses one. Check `refused` and `will_run.dir` as in step 2 of
+[Move from the standalone exrpd](#move-from-the-standalone-exrpd).
 
 After you change the image in the Compose file, recreate the container. A restart does
 not apply the new image. Before removing the container, verify that its entire node home
@@ -541,8 +556,9 @@ changes. If the node halts and does not switch, restart the service.
 
 The bundle refuses every command if `data/upgrade-info.json.batch` exists, even if it
 contains `[]`. With the node stopped, delete that file. If the node is below the upgrade
-height and a batch upgrade staged that plan in `data/upgrade-info.json`, delete that
-staged data file too.
+height and `data/upgrade-info.json` names a plan that the chain has not reached, delete
+that file too. A batch upgrade or `cosmovisor add-upgrade --upgrade-height` stages such a
+file early.
 
 If `cosmovisor/current` exists, it must be a symbolic link. A regular file or directory
 there stops every command before the bundle reads the data file.
@@ -591,94 +607,104 @@ commands refuse, because the home still has the files of the old bundle.
   `sudo -u <node user> /usr/local/bin/exrpd bundle setup --home <node home>`. It installs
   the files, does not move `current`, and does not start the node.
 
-In a container, change the image tag instead, for example to
-`peersyst/exrp:bundle-12.0.1`. Then follow the
+In a container, change the image tag instead: `peersyst/exrp:bundle-11.3.0-12.0.1` before
+the upgrade height, `peersyst/exrp:bundle-12.0.1` after it. Then follow the
 [container recreation steps](#run-the-node-in-a-container).
 
 ### Resync after the upgrade
 
-Use this when you reset the node with `unsafe-reset-all` after the upgrade, and then get
-the data again with a state sync or a snapshot from after the upgrade height. The reset
-deletes the database directory and resets the configured validator signing-state file.
-Preserve these files:
+Use state sync or a snapshot from after the upgrade height. Run commands one at a time
+as an administrator. If a command fails, stop and do not start the node.
 
-- The file configured by `priv_validator_state_file` holds the last height that the
-  validator signed. Its default is `data/priv_validator_state.json`. The reset writes
-  a new file at height 0, even at a custom path outside `data/`. With it, the validator
-  can sign a height twice.
-- `data/upgrade-info.json` has the plan `v12.0.0`. If the bundle already ran 12.0.0 on
-  this home, you do not need the file: the reset does not touch `cosmovisor/`, so
-  `current` still points at 12.0.0. The file matters only when `current` still points at
-  11.3.0, for example after a crash at the upgrade height before the switch. Keep it in
-  every case, so you do not have to check.
+The reset clears the configured signing state, even outside `data/`. Restore the saved
+state before starting a validator, or it can sign the same height twice.
 
-Prepare state sync or obtain a snapshot from after the upgrade. Run these commands one
-at a time as the node user. If a command fails, stop and do not start the node. Set
-`home` to the absolute home from the service configuration, not `~`:
+1. Stop the node and create a backup directory. Set `home` to the absolute path from
+   the service configuration, not `~`:
 
-```sh
-home="<node home>"
-sudo systemctl stop <unit>
-sudo -u <node user> mkdir "$home/resync-backup"
-```
+   ```sh
+   home="<node home>"
+   sudo systemctl stop <unit>
+   sudo -u <node user> mkdir "$home/resync-backup"
+   ```
 
-If `resync-backup` already exists, stop. An earlier resync may have saved a newer
-signing state there. Do not overwrite either copy until you understand the earlier
-resync. Signing states at the same height can still differ.
+   If `resync-backup` exists, stop. Do not overwrite either signing-state copy until
+   you resolve the earlier resync. States at the same height can still differ.
 
-Read `priv_validator_state_file` in `$home/config/config.toml`. If the path is relative,
-resolve it under `$home`. If it is absolute, use it unchanged. Set `state_file` to that
-absolute path, then save the file:
+2. Back up the signing state. Read `priv_validator_state_file` in
+   `$home/config/config.toml` and resolve relative paths under `$home`:
 
-```sh
-state_file="<absolute signing-state path>"
-sudo -u <node user> cp "$state_file" "$home/resync-backup/priv_validator_state.json"
-```
+   ```sh
+   state_file="<absolute signing-state path>"
+   sudo -u <node user> cp "$state_file" "$home/resync-backup/priv_validator_state.json"
+   ```
 
-If `data/upgrade-info.json` exists, save it too:
+   If `data/upgrade-info.json` exists, save it too. It preserves the upgrade plan if
+   `current` still points at 11.3.0:
 
-```sh
-sudo -u <node user> cp "$home/data/upgrade-info.json" "$home/resync-backup/"
-```
+   ```sh
+   sudo -u <node user> cp "$home/data/upgrade-info.json" "$home/resync-backup/"
+   ```
 
-Check `exrpd version --home "$home"` as the node user. If it reports `restart-needed`
-or `not-installed`, install the bundle while the node is stopped:
+3. Reset the databases. First run
+   `sudo -u <node user> /usr/local/bin/exrpd version --home "$home"`.
+   If it reports `restart-needed` or `not-installed`, run
+   `sudo -u <node user> /usr/local/bin/exrpd bundle setup --home "$home"`.
 
-```sh
-sudo -u <node user> /usr/local/bin/exrpd bundle setup --home "$home"
-```
+   > **Custom paths:** Check `db_dir` in `$home/config/config.toml`. Resolve relative
+   > paths under `$home`. The default is `data`; the application database always
+   > stays in `$home/data`.
+   >
+   > If the signing-state file is in a subdirectory of `db_dir`, the reset deletes
+   > its parent and cannot save the reset state. A file directly in `db_dir` is
+   > unaffected by this problem, including the default `data/priv_validator_state.json`.
+   > After the backup, move the configured signing-state file outside both `db_dir`
+   > and `$home/data`, into an existing directory writable by the node user.
+   > Update `priv_validator_state_file` and `state_file` to the new absolute path.
+   > Do not use `resync-backup` as the new location or change its saved copy.
 
-Then reset:
+   ```sh
+   sudo -u <node user> /usr/local/bin/exrpd comet unsafe-reset-all --home "$home" --keep-addr-book
+   ```
 
-```sh
-sudo -u <node user> /usr/local/bin/exrpd comet unsafe-reset-all --home "$home" --keep-addr-book
-```
+   Check the reset output for `Error removing`: deletion failures do not make the
+   command fail. Run `sudo -u <node user> ls -A "$home/data"`. If `db_dir` is `data`,
+   only the configured signing-state file may remain. If other files remain, stop
+   and fix the file ownership.
 
-For a snapshot, unpack it into the home now. It may contain an older signing state, so
-restore your saved state after unpacking. If you saved the upgrade data file, restore it
-too. With state sync, restore the files before starting the node.
+   If `db_dir` points elsewhere, check that directory is empty too. The reset left
+   the application database in `$home/data`; clear it before restoring. The files
+   needed below are saved in `resync-backup`. `-H` follows a symlink at `$home/data`:
 
-```sh
-sudo -u <node user> cp "$home/resync-backup/priv_validator_state.json" "$state_file"
-# Run only if the upgrade data file was saved:
-sudo -u <node user> cp "$home/resync-backup/upgrade-info.json" "$home/data/"
-```
+   ```sh
+   sudo -u <node user> find -H "$home/data" -mindepth 1 -delete
+   ```
 
-Before you start the node, inspect `data/upgrade-info.json`, also when you did not save
-one. A snapshot can contain a stale record. The data file takes precedence over
-`current`, so with the two-binary bundle a stale `v11.3.0` record selects 11.3.0 for data
-that 12.0.0 already upgraded. If the file names `v12.0.0`, keep it. If it names another
-plan, write it again with `v12.0.0` and its upgrade height, as in
-[Problems with the data file](#problems-with-the-data-file). Then run
-`exrpd version --bundle --home "$home"` as the node user, and check that `refused` is
-`null` and `will_run.dir` is `upgrades/v12.0.0`. Then start the node:
+4. Unpack the snapshot, if used, then restore the saved files. A snapshot can contain
+   an older signing state. For state sync, restore these files before starting:
 
-```sh
-sudo systemctl start <unit>
-```
+   ```sh
+   sudo -u <node user> cp "$home/resync-backup/priv_validator_state.json" "$state_file"
+   # Run only if the upgrade data file was saved:
+   sudo -u <node user> cp "$home/resync-backup/upgrade-info.json" "$home/data/"
+   ```
 
-After the node runs and signs again, remove the backup:
-`sudo -u <node user> rm -r "$home/resync-backup"`.
+5. Check `data/upgrade-info.json`, even if you did not save one. A snapshot's stale
+   `v11.3.0` record overrides `current` and selects the wrong binary in the two-binary
+   bundle. Keep a `v12.0.0` record. Correct any other plan to `v12.0.0` and its upgrade
+   height, as in [Problems with the data file](#problems-with-the-data-file).
+
+   Run `sudo -u <node user> /usr/local/bin/exrpd version --bundle --home "$home"`.
+   Check that `refused` is `null` and `will_run.dir` is `upgrades/v12.0.0`.
+
+6. Start the node:
+
+   ```sh
+   sudo systemctl start <unit>
+   ```
+
+   After the node runs and signs again, remove the backup:
+   `sudo -u <node user> rm -r "$home/resync-backup"`.
 
 ### Join after the upgrade
 
@@ -725,13 +751,18 @@ With the node stopped:
 4. If the node runs `exrpd-bundle_12.0.x`, install `exrpd-bundle_11.3.0-12.0.x` instead,
    as in [Install a new bundle file](#install-a-new-bundle-file). Only this bundle has
    11.3.0.
-5. Start the service. The bundle runs 11.3.0 when the data file names `v11.3.0`,
+5. Run `sudo -u <node user> /usr/local/bin/exrpd version --bundle --home <node home>`. Go
+   on only if `refused` is `null` and `will_run.dir` is `upgrades/v11.3.0`.
+6. Start the service. The bundle runs 11.3.0 when the data file names `v11.3.0`,
    or when both the data file and `current` are absent.
 
 The node then catches up as the network did. It gets the missing blocks from its peers
 and applies them with 11.3.0. At the upgrade height, 11.3.0 halts, and Cosmovisor
 switches to 12.0.0, as in [At the upgrade height](#at-the-upgrade-height). 12.0.0 then
 runs the upgrade and catches up to the latest block.
+
+After the node runs and signs again, remove the backup:
+`sudo -u <node user> rm -r <node home>/resync-backup`.
 
 ### Problems with the data file
 
@@ -759,13 +790,20 @@ the plan in the file.
 
 ### Leave the bundle
 
-Stop the service, and install the standalone `exrpd` of the version that the node runs.
+1. Run `sudo -u <node user> /usr/local/bin/exrpd version --bundle --home <node home>`, and
+   note `will_run.version`. After the next step, no bundle command can tell you this.
+2. Stop the service, and install the standalone `exrpd` of that version at the same path.
+   In a container, change the image to `peersyst/exrp:v<version>`.
+3. Start the service. Before the upgrade height, you must now swap to the next release by
+   hand at the upgrade height.
+4. Optional: delete `upgrades/`, `supervisor/`, `current` and `bundle.sha256` in
+   `<node home>/cosmovisor/`. Keep your own files there.
 
 ### Remove old files
 
 After installing a new bundle, start it once and check that the node runs. Then stop the
-service. As the node user, run `exrpd version --bundle --home <node home>` and inspect
-its `dirs` list. If the command fails, delete nothing.
+service. Run `sudo -u <node user> /usr/local/bin/exrpd version --bundle --home <node home>`
+and inspect its `dirs` list. If the command fails, delete nothing.
 
 Delete only subdirectories of `cosmovisor/upgrades/` and `cosmovisor/supervisor/` that
 the list does not name, and the old `cosmovisor/genesis/` if present. Never delete the
@@ -824,7 +862,8 @@ network upgrade. A verified backup from another node can provide recovery data.
 
 After the upgrade, 11.3.0 cannot open the migrated data. Recovery needs a verified backup
 from before the upgrade, produced by a non-validator node or an external backup method.
-Test that the backup restores before relying on it.
+Test that the backup restores before relying on it. To restore it on a bundle home, follow
+[Restore a snapshot from before the upgrade](#restore-a-snapshot-from-before-the-upgrade).
 
 > [!WARNING]
 > If you restore a backup, preserve your own node and validator keys. Keep your
@@ -842,6 +881,6 @@ Test that the backup restores before relying on it.
   after the upgrade. Use the standalone `exrpd` there.
 - No sync from genesis with a released bundle: it carries two plans, not the whole chain
   history.
-- Without a service manager, a leftover `exrpd` can outlive Cosmovisor. See
-  [Without a service manager](#without-a-service-manager).
+- Run the node under systemd or in a container. Without a service manager, a leftover
+  `exrpd` can outlive Cosmovisor.
 - The supervisor is a patched Cosmovisor until the fix is available upstream.
