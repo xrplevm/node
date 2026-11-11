@@ -2,6 +2,7 @@ package v12
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	storetypes "cosmossdk.io/store/types"
@@ -9,6 +10,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+
+	fastupgradekeeper "github.com/xrplevm/node/v12/x/fastupgrade/keeper"
+	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
 func CreateUpgradeHandler(
@@ -16,6 +20,7 @@ func CreateUpgradeHandler(
 	configurator module.Configurator,
 	evmKeeper EvmKeeper,
 	keys map[string]*storetypes.KVStoreKey,
+	fastUpgradeKeeper fastupgradekeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)
@@ -29,7 +34,6 @@ func CreateUpgradeHandler(
 			}
 			logger.Info("Emptied retired store", "store", name, "keys_deleted", deleted)
 		}
-
 		vm, err := mm.RunMigrations(ctx, configurator, vm)
 		if err != nil {
 			return nil, err
@@ -37,6 +41,22 @@ func CreateUpgradeHandler(
 
 		if err := disableGovPrecompile(ctx, evmKeeper); err != nil {
 			return nil, err
+		}
+
+		// RunMigrations initialized x/fastupgrade with its disabled defaults.
+		// Enable it with the same validation as MsgUpdateParams. With an
+		// incompatible gov configuration the module stays disabled, and gov
+		// can enable it later with MsgUpdateParams.
+		params := fastupgradetypes.DefaultParams()
+		params.Enabled = true
+		err = fastUpgradeKeeper.SetParams(ctx, params)
+		switch {
+		case errors.Is(err, fastupgradetypes.ErrIncompatibleWithGov):
+			logger.Error("x/fastupgrade stays disabled", "error", err)
+		case err != nil:
+			return nil, err
+		default:
+			logger.Info("Enabled x/fastupgrade", "timelock_blocks", params.TimelockBlocks, "threshold", params.Threshold)
 		}
 
 		return vm, nil

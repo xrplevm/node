@@ -1,11 +1,14 @@
 package v12
 
 import (
+	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/feegrant"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
+
+	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
 const (
@@ -24,4 +27,11 @@ var RetiredStoreKeys = []string{
 	feegrant.StoreKey,
 	crisistypes.StoreKey,
 	paramstypes.StoreKey,
+}
+
+// StoreUpgrades returns the stores v12.0.0 adds.
+func StoreUpgrades() storetypes.StoreUpgrades {
+	return storetypes.StoreUpgrades{
+		Added: []string{fastupgradetypes.StoreKey},
+	}
 }

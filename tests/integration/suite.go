@@ -12,6 +12,10 @@ import (
 	exrpcommon "github.com/xrplevm/node/v12/testutil/integration/exrp/common"
 )
 
+// numValidators is the number of validators in the test network. Each
+// keyring key is a validator operator.
+const numValidators = 5
+
 type TestSuite struct {
 	suite.Suite
 
@@ -32,7 +36,7 @@ func (s *TestSuite) SetupSuite() {
 
 func (s *TestSuite) SetupTest() {
 	// Check that the network was created successfully
-	kr := keyring.New(5)
+	kr := keyring.New(numValidators)
 
 	customGenesis := exrpcommon.CustomGenesisState{}
 
@@ -44,7 +48,7 @@ func (s *TestSuite) SetupTest() {
 
 	s.network = NewIntegrationNetwork(
 		exrpcommon.WithPreFundedAccounts(kr.GetAllAccAddrs()...),
-		exrpcommon.WithAmountOfValidators(5),
+		exrpcommon.WithAmountOfValidators(numValidators),
 		exrpcommon.WithCustomGenesis(customGenesis),
 		exrpcommon.WithBondDenom("apoa"),
 		exrpcommon.WithMaxValidators(7),

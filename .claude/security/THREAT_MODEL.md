@@ -16,6 +16,10 @@ This is the only threat model for this repository. Internal AI-assisted audits a
   - `MsgAddValidator` and `MsgRemoveValidator`: the signer must be the module authority (the gov module account). The add flow mints the bond tokens to the validator. The remove flow slashes 100%, unbonds, and burns.
   - `MsgSelfRemoveValidator`: a validator removes itself. The signer is the validator account.
   - `x/poa/ante/poa.go`: blocks `MsgDelegate`, `MsgUndelegate`, `MsgBeginRedelegate`, `MsgCancelUnbondingDelegation` and `MsgCreateValidator` after height 0. Users must not change the validator set or stake through staking messages.
+- `x/fastupgrade/`: our own module. It fast-tracks minor software upgrades (`x/fastupgrade/README.md`).
+  - A gov vote hook records a proposal when a bonded validator votes Yes on a single-message `MsgSoftwareUpgrade` whose plan name is a minor bump of the last completed upgrade.
+  - Its EndBlocker runs before gov's. When bonded validators with at least `threshold` of the bonded tokens voted Yes and gov's own tally passes, it starts a timer for height H. At H-1 it checks again, rewrites the plan height to H, and ends the vote, so gov executes the proposal in that block.
+  - `MsgUpdateParams`: the signer must be the module authority (the gov module account).
 - `app/upgrades/`: the state migration for the current chain upgrade (`v12`). The release tags contain the earlier handlers.
 - `cmd/exrpd/`: CLI, node config defaults, and `in-place-testnet`.
 
@@ -47,6 +51,8 @@ These must always hold. Verify them in every audit.
 5. The state machine is deterministic. No map iteration that writes state, no goroutines, no `time.Now()`, no floats in consensus code.
 6. Upgrade handlers run once, at their height, and change only the state they are meant to change.
 7. The rate limiting middleware stays in the IBC transfer stack. ICA host is removed in v12: the IBC router does not route the `icahost` port on any network.
+8. Apart from a proposer's cancel, only `x/fastupgrade` ends a vote before its deadline, and only for a proposal with exactly one `MsgSoftwareUpgrade` whose plan name is a minor bump of the last completed upgrade. It needs bonded validators with at least `threshold` of the bonded tokens voting Yes, and gov's own tally passing in the same block. An unprivileged account can delay a fast upgrade but cannot start one.
+9. `x/fastupgrade` changes only the plan height and the voting end time of that proposal. Gov executes it and `x/upgrade` schedules the plan. Its vote hook never rejects a vote, and its EndBlocker never halts the chain: on an error or a panic it discards its changes and drops the timer, and stock gov decides.
 
 ## Assets
 
@@ -196,7 +202,7 @@ These must always hold. Verify them in every audit.
 - No use of `pull_request_target` with checkout of PR code
 - Secrets are not interpolated into shell commands (use environment variables instead)
 - GoReleaser config produces reproducible builds
-- CODEOWNERS requires review for `x/poa/`, `app/ante/`, `app/upgrades/`, `.github/workflows/`
+- CODEOWNERS requires review for `x/poa/`, `x/fastupgrade/`, `app/ante/`, `app/upgrades/`, `.github/workflows/`
 
 ### 7. Upgrade Handlers
 
@@ -237,14 +243,38 @@ These must always hold. Verify them in every audit.
 - The legacy gov router routes only text proposals. `ParameterChangeProposal` is not routed (v12), so gov rejects it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
+### 9. Fast Upgrades
+
+**Entry**: gov votes by every path that the app routes, gov proposals from any account, and `MsgUpdateParams` from the authority
+
+**Threats**:
+- A fast upgrade starts or closes without the validator threshold (wrong count for delegations, jailed validators, or a validator set that changes in the same block)
+- Gov's tally differs from the module's check in the same block, so an early-closed proposal fails or is rejected
+- The vote hook rejects or reverts a vote
+- An error or a panic in the EndBlocker halts the chain
+- A stale timer or nomination acts in a later block or on another proposal
+- The module rewrites more of the proposal than the plan height and the voting end time
+
+**Key files**: `x/fastupgrade/keeper/hooks.go`, `x/fastupgrade/keeper/abci.go`, `x/fastupgrade/keeper/support.go`, `x/fastupgrade/keeper/msg_server.go`, `x/fastupgrade/types/params.go`, `x/fastupgrade/types/compat.go`, `x/fastupgrade/types/version.go`, EndBlocker order in `app/app.go`, enablement in `app/upgrades/v12/`
+
+**What to check**:
+- Eligibility: one message, a strict `vMAJOR.MINOR.PATCH` name, the same major and a higher minor than the last completed upgrade, a name that has not run, and a valid plan
+- The validator gate counts only the operator votes of bonded validators, weighted by bonded tokens. The tally check runs gov's `Tally` on a scratch context that is never written
+- The fastupgrade EndBlocker runs before gov's and staking's
+- Another proposal that ends in block H-1 postpones H. The proposal's own deadline always wins
+- `MsgUpdateParams` checks the authority. Enabled params must be compatible with gov's params
+- The vote hook writes only to the module's KV store and does no scratch work
+- The EndBlocker clears the nominations in every block on every path. Genesis exports only the params
+- Not findings: any account can postpone H with a proposal that ends in block H-1, and `fastupgrade_started` can announce an H that the proposal's own deadline then prevents
+
 ## Cosmos SDK-Specific Concerns
 
 These are common vulnerability patterns in Cosmos SDK chains that should be checked each audit:
 
 - **Module account permissions**: Check that module accounts have only the permissions they need. POA module has `Minter` and `Burner` — verify no other module has unexpected mint/burn access. Verify `BondedPoolName` and `NotBondedPoolName` are the only accounts used for staking token burns.
-- **Keeper exposure**: Verify keepers are not passed beyond their intended module boundaries. Check `app/app.go` for keepers passed to modules that shouldn't have them. POA receives BankKeeper and StakingKeeper — verify these are the correct scoped interfaces (`x/poa/types/expected_keepers.go`), not the full keeper implementations.
+- **Keeper exposure**: Verify keepers are not passed beyond their intended module boundaries. Check `app/app.go` for keepers passed to modules that shouldn't have them. POA receives BankKeeper and StakingKeeper — verify these are the correct scoped interfaces (`x/poa/types/expected_keepers.go`), not the full keeper implementations. `x/fastupgrade` holds the concrete gov keeper, because it reads gov's collections — verify it writes only the proposal and its active queue key, in `endVotingNow`.
 - **Parameter changes**: Check if on-chain parameter changes can lead to unsafe states (e.g., `MaxValidators` to 0 in staking params, unbonding time to 0, bond denom change breaking POA).
-- **Non-determinism**: Any use of maps iterated for state, goroutines, or `time.Now()` in state machine code causes consensus failures. Check all code paths in `x/poa/`, `app/ante/`, and `app/upgrades/`.
+- **Non-determinism**: Any use of maps iterated for state, goroutines, or `time.Now()` in state machine code causes consensus failures. Check all code paths in `x/poa/`, `x/fastupgrade/`, `app/ante/`, and `app/upgrades/`.
 - **ICA host**: removed in v12. The IBC router must not route the `icahost` port, and gov must reject `/ibc.applications.interchain_accounts.host.v1.MsgUpdateParams` at proposal submission. ICS-27 types decode only so that historical txs and existing interchain accounts stay readable (`app/encoding.go`). Reintroducing ICA host, or any IBC app that executes messages, lets remote chains call x/staking and bypass the POA ante handler.
 - **feegrant**: removed in v12. The Cosmos ante handler passes a nil feegrant keeper to `DeductFeeDecorator`, so a tx that sets a fee granter fails with "fee grants are not enabled". Feegrant types decode only so that historical txs stay readable (`app/encoding.go`). Reintroducing feegrant lets an account pay fees for txs that it did not sign, so allowance checks in `UseGrantedFees` become part of the fee path.
 - **crisis**: removed in v12, as SDK v0.53 deprecates it. No invariant is checked at genesis, in EndBlock, or through `MsgVerifyInvariant`, so a broken invariant no longer halts the chain. Bank, staking and distribution state must be protected by the code that changes it, not by a later check. Crisis types decode only so that historical txs stay readable (`app/encoding.go`).
