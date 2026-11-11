@@ -141,6 +141,7 @@ func (n *IntegrationNetwork) configureAndInitChain() error {
 	govParams := GovCustomGenesisState{
 		denom:         n.cfg.Denom,
 		minDepositAmt: n.cfg.MinDepositAmt,
+		votingPeriod:  n.cfg.VotingPeriod,
 	}
 
 	totalSupply := calculateTotalSupply(fundedAccountBalances)

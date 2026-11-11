@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"time"
+
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/evm/testutil/integration/evm/factory"
@@ -12,9 +14,13 @@ import (
 	exrpcommon "github.com/xrplevm/node/v12/testutil/integration/exrp/common"
 )
 
-// numValidators is the number of validators in the test network. Each
-// keyring key is a validator operator.
-const numValidators = 5
+const (
+	// numValidators is the number of validators in the test network. Each
+	// keyring key is a validator operator.
+	numValidators = 5
+	// votingPeriod is gov's voting period in the test network.
+	votingPeriod = 48 * time.Hour
+)
 
 type TestSuite struct {
 	suite.Suite
@@ -53,6 +59,7 @@ func (s *TestSuite) SetupTest() {
 		exrpcommon.WithBondDenom("apoa"),
 		exrpcommon.WithMaxValidators(7),
 		exrpcommon.WithMinDepositAmt(sdkmath.NewInt(1)),
+		exrpcommon.WithVotingPeriod(votingPeriod),
 		exrpcommon.WithValidatorOperators(kr.GetAllAccAddrs()),
 	)
 	s.Require().NotNil(s.network)

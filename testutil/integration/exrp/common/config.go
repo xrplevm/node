@@ -2,6 +2,7 @@ package exrpcommon
 
 import (
 	"math/big"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -34,6 +35,7 @@ type Config struct {
 	CustomBaseAppOpts  []func(*baseapp.BaseApp)
 	MinDepositAmt      sdkmath.Int
 	Quorum             string
+	VotingPeriod       time.Duration
 	ChainCoins         ChainCoins
 }
 
@@ -136,5 +138,13 @@ func WithMinDepositAmt(minDepositAmt sdkmath.Int) ConfigOption {
 func WithQuorum(quorum string) ConfigOption {
 	return func(cfg *Config) {
 		cfg.Quorum = quorum
+	}
+}
+
+// WithVotingPeriod sets gov's voting period for the network. Without it, the
+// network uses gov's default.
+func WithVotingPeriod(votingPeriod time.Duration) ConfigOption {
+	return func(cfg *Config) {
+		cfg.VotingPeriod = votingPeriod
 	}
 }
