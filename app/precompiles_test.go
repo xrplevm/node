@@ -8,15 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/stretchr/testify/require"
-	"github.com/xrplevm/node/v12/testutil/constants"
-	exrpcommon "github.com/xrplevm/node/v12/testutil/integration/exrp/common"
 )
 
 // Only the Cosmos precompiles in use on mainnet and testnet are registered.
 // The others call Cosmos keepers and msg servers directly, so activating one
 // of their addresses must not make it callable.
 func TestNew_RegisteredStaticPrecompiles(t *testing.T) {
-	exrpApp := exrpcommon.CreateExrpApp(constants.LocalnetChainID.ChainID)
+	exrpApp := sharedTestApp()
 
 	// The static precompiles that app.New registers in the EVM keeper, next to
 	// the Ethereum native ones.
