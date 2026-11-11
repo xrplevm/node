@@ -442,22 +442,18 @@ func New(
 		tkeys[feemarkettypes.TransientKey],
 	)
 	// EVM Keeper
-	staticPrecompiles := precompiletypes.DefaultStaticPrecompiles(
-		*app.StakingKeeper,
-		app.DistrKeeper,
-		app.BankKeeper,
-		&app.Erc20Keeper,
-		&app.TransferKeeper,
-		app.IBCKeeper.ChannelKeeper,
-		app.GovKeeper,
-		app.SlashingKeeper,
-		appCodec,
-	)
-	// x/poa owns the validator set. The staking precompile calls the staking msg
-	// server directly and skips the POA ante handler, so it is never registered.
-	// If its address is activated in the EVM params, the EVM panics on any call to
-	// it. baseapp recovers the panic and the tx fails with ErrPanic.
-	delete(staticPrecompiles, common.HexToAddress(evmtypes.StakingPrecompileAddress))
+	// Only the Ethereum native precompiles and the ones in use on the live
+	// networks (P256, Bech32, Bank) are registered. The staking, distribution,
+	// ICS20, gov and slashing precompiles call Cosmos keepers and msg servers
+	// directly and skip the ante handlers. With staking, that would bypass x/poa,
+	// which owns the validator set. If the address of an unregistered precompile
+	// is activated in the EVM params, the EVM panics on any call to it. baseapp
+	// recovers the panic and the tx fails with ErrPanic.
+	staticPrecompiles := precompiletypes.NewStaticPrecompiles().
+		WithPraguePrecompiles().
+		WithP256Precompile().
+		WithBech32Precompile().
+		WithBankPrecompile(app.BankKeeper, &app.Erc20Keeper)
 
 	tracer := cast.ToString(appOpts.Get(srvflags.EVMTracer))
 	app.EvmKeeper = evmkeeper.NewKeeper(

@@ -24,7 +24,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 Treat all of these as attacker-controlled:
 
 - Any transaction from any account, Cosmos or Ethereum format, sent through CometBFT RPC, gRPC, REST, or Ethereum JSON-RPC. This includes EVM calls to precompiles.
-- EVM bytecode and calldata, including contracts that call the static precompiles (for example distribution, bank, erc20, ics20, gov, slashing).
+- EVM bytecode and calldata, including contracts that call the static precompiles (P256, bech32, bank) and the erc20 precompiles.
 - IBC packets and acknowledgements from a counterparty chain, which may be malicious.
 - Queries to the public gRPC, REST and JSON-RPC endpoints.
 
@@ -132,7 +132,7 @@ These must always hold. Verify them in every audit.
 **What to check**:
 - EVM module is wired with correct ante handlers
 - Custom precompiles (if any) are registered correctly
-- The staking precompile is not registered (`app/app.go`). If its address is activated in the EVM params, the EVM panics on any call to it. baseapp recovers the panic and the tx fails with `ErrPanic`. No other registered precompile may create validators or change delegations
+- Only the Ethereum native, P256, Bech32 and Bank precompiles are registered as static precompiles (`app/app.go`). The staking, distribution, ICS20, gov and slashing precompiles are not. If the address of an unregistered precompile is activated in the EVM params, the EVM panics on any call to it. baseapp recovers the panic and the tx fails with `ErrPanic`. No registered static precompile may call a Cosmos msg server. This rule does not cover the dynamic erc20 token precompiles, which send coins through the bank msg server
 - Gas limit configurations are sane
 
 ### 4. IBC (Inter-Blockchain Communication)
