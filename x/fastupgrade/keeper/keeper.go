@@ -26,9 +26,9 @@ type Keeper struct {
 	// Timer is the one running timelock, if any.
 	Timer collections.Item[types.Timer]
 	// Nominations holds the proposals a bonded validator voted Yes on in this
-	// block. It is in the KV store, not a transient store: the EVM gov
-	// precompile runs votes on a store that holds only KV stores. EndBlock
-	// clears it in every block.
+	// block. It is in the KV store, not a transient store, so that a vote
+	// through the EVM gov precompile also works: that precompile runs votes on
+	// a store that holds only KV stores. EndBlock clears it in every block.
 	Nominations collections.KeySet[uint64]
 }
 

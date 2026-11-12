@@ -77,7 +77,7 @@ Reasons:
 | `incompatible_with_gov` | Our threshold no longer fits gov's params. The `fast upgrade threshold is incompatible with gov params` log names the conflict. Raise our threshold or restore gov's params. |
 | `gate_below_threshold` | Validator Yes power dropped below the threshold. |
 | `gov_tally_rejected` | Gov's tally would not pass. Unexpected without delegations from other accounts; investigate. |
-| `tally_below_threshold` | Gov's Yes count is below the threshold. Only possible with delegations from other accounts. |
+| `tally_below_threshold` | Gov's Yes count is below the threshold. Possible with delegations from other accounts. Also possible with a weighted validator vote when Yes power is within one token unit of the threshold, because gov truncates its Yes count. |
 | `natural_deadline` | The proposal's own deadline arrived before the vote closed early. The timer is dropped in the block of the deadline, and stock gov decides with the original height. If gov converts an expedited proposal to a regular one there, it deletes all votes: a new Yes vote starts a new timer. |
 | `not_eligible` | The proposal is no longer eligible: another upgrade completed during the timelock, or the chain passed the plan's original height. |
 | `plan_pending` | Another upgrade plan is scheduled. |

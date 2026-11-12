@@ -24,9 +24,12 @@ func (k Keeper) Hooks() Hooks {
 // AfterProposalVote notes the proposal for this block's EndBlock check. It
 // never rejects the vote: errors are only logged.
 //
-// The EVM gov precompile calls it on the EVM's snapshot store, which holds
-// only KV stores and whose CacheContext is not a separate copy. So nominate
-// writes only to the module's KV store and runs no scratch work.
+// The hook stays safe for a vote through the EVM gov precompile, also on a
+// chain that does not activate that precompile. The precompile calls the hook
+// on the EVM's snapshot store, which holds only KV stores and whose
+// CacheContext is not a separate copy. So nominate writes only to the
+// module's KV store and runs no scratch work. This costs nothing, and it
+// prevents a bug if the precompile is activated later.
 func (h Hooks) AfterProposalVote(goCtx context.Context, proposalID uint64, voter sdk.AccAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	if err := h.k.nominate(ctx, proposalID, voter); err != nil {
