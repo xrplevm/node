@@ -136,6 +136,18 @@ func (f *fixture) applyUpgrade(name string) {
 	require.NoError(f.t, f.app.UpgradeKeeper.ApplyUpgrade(f.ctx, upgradetypes.Plan{Name: name, Height: f.ctx.BlockHeight()}))
 }
 
+// completeUpgrades applies the upgrades in order, at blocks 10, 20, and so
+// on, and then returns to startHeight. The last name is the last completed
+// upgrade.
+func (f *fixture) completeUpgrades(names ...string) {
+	f.t.Helper()
+	for i, name := range names {
+		f.setBlock(int64(10*(i+1)), f.ctx.BlockTime())
+		f.applyUpgrade(name)
+	}
+	f.setBlock(startHeight, f.ctx.BlockTime())
+}
+
 func (f *fixture) upgradeMsg(name string) *upgradetypes.MsgSoftwareUpgrade {
 	return &upgradetypes.MsgSoftwareUpgrade{
 		Authority: f.govAddr,

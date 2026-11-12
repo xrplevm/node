@@ -21,7 +21,8 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		nonValidator bool
 		// options is the vote. The default is yes().
 		options govv1.WeightedVoteOptions
-		// noBase uses a fixture with no completed upgrade.
+		// noBase uses a fixture with the module enabled and no completed
+		// upgrade.
 		noBase            bool
 		expectedNominated bool
 	}{
@@ -76,10 +77,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			},
 		},
 		{
-			name: "should not nominate - no completed upgrade baseline",
-			setup: func(f *fixture) {
-				f.setParams(true, 150, "0.85")
-			},
+			name:   "should not nominate - no completed upgrade baseline",
 			noBase: true,
 		},
 		{
@@ -113,15 +111,32 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			},
 		},
 		{
-			name: "should not nominate - already completed name",
-			setup: func(f *fixture) {
-				f.setParams(true, 150, "0.85")
-				f.setBlock(10, f.ctx.BlockTime())
-				f.applyUpgrade(minorVersion)
-				f.setBlock(20, f.ctx.BlockTime())
-				f.applyUpgrade(baseVersion)
-				f.setBlock(startHeight, f.ctx.BlockTime())
+			name:   "should not nominate - already completed name",
+			setup:  func(f *fixture) { f.completeUpgrades(minorVersion, baseVersion) },
+			noBase: true,
+		},
+		{
+			// The last completed upgrade is v1.1.0, the latest by height, and
+			// not v1.5.0, the highest version.
+			name:  "should nominate - minor bump of the latest upgrade by height",
+			setup: func(f *fixture) { f.completeUpgrades("v1.5.0", minorVersion) },
+			propose: func(f *fixture) uint64 {
+				return f.propose(f.upgradeMsg("v1.2.0"))
 			},
+			noBase:            true,
+			expectedNominated: true,
+		},
+		{
+			name:  "should not nominate - same minor as the latest upgrade by height",
+			setup: func(f *fixture) { f.completeUpgrades("v1.5.0", minorVersion) },
+			propose: func(f *fixture) uint64 {
+				return f.propose(f.upgradeMsg("v1.1.5"))
+			},
+			noBase: true,
+		},
+		{
+			name:   "should not nominate - latest upgrade name is not a version",
+			setup:  func(f *fixture) { f.completeUpgrades(baseVersion, "hotfix") },
 			noBase: true,
 		},
 		{
@@ -160,33 +175,38 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			var f *fixture
-			if tc.noBase {
-				f = newFixtureWithoutBaseline(t)
-			} else {
-				f = newFixture(t)
-			}
+			f := newHooksFixture(t, tc.noBase)
 			if tc.setup != nil {
 				tc.setup(f)
 			}
-			var id uint64
-			if tc.propose != nil {
-				id = tc.propose(f)
-			} else {
-				id = f.proposeMinor()
+			if tc.propose == nil {
+				tc.propose = (*fixture).proposeMinor
+			}
+			if tc.options == nil {
+				tc.options = yes()
 			}
 			voter := f.vals[0]
 			if tc.nonValidator {
 				voter = f.other
 			}
-			options := tc.options
-			if options == nil {
-				options = yes()
-			}
-			f.vote(id, voter, options)
+
+			id := tc.propose(f)
+			f.vote(id, voter, tc.options)
+
 			require.Equal(t, tc.expectedNominated, f.nominated(id))
 		})
 	}
+}
+
+// newHooksFixture returns the normal fixture. With noBase it returns a fixture
+// with the module enabled and no completed upgrade.
+func newHooksFixture(t *testing.T, noBase bool) *fixture {
+	if !noBase {
+		return newFixture(t)
+	}
+	f := newFixtureWithoutBaseline(t)
+	f.setParams(true, 150, "0.85")
+	return f
 }
 
 func TestHooks_AfterProposalVote_ErrorNeverRejectsVote(t *testing.T) {
@@ -196,37 +216,4 @@ func TestHooks_AfterProposalVote_ErrorNeverRejectsVote(t *testing.T) {
 	f.vote(id, f.vals[0], yes())
 	require.False(t, f.nominated(id))
 	require.Equal(t, 1, f.storedVotes(id))
-}
-
-func TestHooks_AfterProposalVote_LastCompletedUpgradeIsLatestByHeight(t *testing.T) {
-	t.Run("latest by height, not highest version", func(t *testing.T) {
-		f := newFixtureWithoutBaseline(t)
-		f.setParams(true, 150, "0.85")
-		f.setBlock(10, f.ctx.BlockTime())
-		f.applyUpgrade("v1.5.0")
-		f.setBlock(20, f.ctx.BlockTime())
-		f.applyUpgrade(minorVersion)
-		f.setBlock(startHeight, f.ctx.BlockTime())
-
-		bump := f.propose(f.upgradeMsg("v1.2.0"))
-		sameMinor := f.propose(f.upgradeMsg("v1.1.5"))
-		f.vote(bump, f.vals[0], yes())
-		f.vote(sameMinor, f.vals[0], yes())
-		require.True(t, f.nominated(bump))
-		require.False(t, f.nominated(sameMinor))
-	})
-
-	t.Run("unparsable latest name disables the fast path", func(t *testing.T) {
-		f := newFixtureWithoutBaseline(t)
-		f.setParams(true, 150, "0.85")
-		f.setBlock(10, f.ctx.BlockTime())
-		f.applyUpgrade(baseVersion)
-		f.setBlock(20, f.ctx.BlockTime())
-		f.applyUpgrade("hotfix")
-		f.setBlock(startHeight, f.ctx.BlockTime())
-
-		id := f.proposeMinor()
-		f.vote(id, f.vals[0], yes())
-		require.False(t, f.nominated(id))
-	})
 }
