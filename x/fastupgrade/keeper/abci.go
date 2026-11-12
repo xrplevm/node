@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -26,23 +27,30 @@ func (k Keeper) EndBlock(goCtx context.Context) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	defer k.clearNominations(ctx)
 
-	work, save := ctx.CacheContext()
-	err := k.endBlockRecovered(work)
+	cacheCtx, writeCache := ctx.CacheContext()
+	err := k.endBlockNoPanic(cacheCtx)
 	if err == nil {
-		save()
+		writeCache()
 		return nil
 	}
 	k.Logger(ctx).Error("fast upgrade end block failed; discarding its changes and dropping the timer", "error", err)
 
-	if err := k.dropTimerAfterFailure(ctx); err != nil {
+	if err := k.cancelTimerOnInternalError(ctx); err != nil {
 		k.Logger(ctx).Error("failed to drop fast upgrade timer", "error", err)
 	}
 	return nil
 }
 
-// dropTimerAfterFailure announces the drop like every other one. Without a
-// timer there is nothing to retract, so it emits nothing.
-func (k Keeper) dropTimerAfterFailure(ctx sdk.Context) error {
+// cancelTimerOnInternalError removes the timer after a failed run. The failed
+// run changed no state, so this is a safety choice, not a repair. A timer
+// announces an upgrade at H, and after an internal failure the module cannot
+// stand behind that: the same state would fail again, and a timer that misses
+// its H-1 check is dropped in the next block anyway. Without a timer, stock
+// gov decides the proposal with its original plan.
+//
+// It announces the drop like every other one. Without a timer there is
+// nothing to retract, so it emits nothing.
+func (k Keeper) cancelTimerOnInternalError(ctx sdk.Context) error {
 	timer, err := k.Timer.Get(ctx)
 	switch {
 	case errors.Is(err, collections.ErrNotFound):
@@ -60,12 +68,15 @@ func (k Keeper) clearNominations(ctx sdk.Context) {
 	}
 }
 
-// endBlockRecovered turns a panic into an error. Gov's Tally, for example,
-// divides by the delegator shares of every bonded validator that voted.
-func (k Keeper) endBlockRecovered(ctx sdk.Context) (err error) {
+// endBlockNoPanic runs endBlock and returns a panic as an error. A panic in
+// an end block stops every node at that block, so it would halt the chain.
+func (k Keeper) endBlockNoPanic(ctx sdk.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic: %v", r)
+			// The chain continues after this panic, so the log is the only
+			// place that shows it. The stack gives the line that panicked,
+			// as in the SDK's own recover for transactions.
+			err = fmt.Errorf("panic: %v\nstack:\n%s", r, debug.Stack())
 		}
 	}()
 	return k.endBlock(ctx)
@@ -77,10 +88,12 @@ func (k Keeper) endBlock(ctx sdk.Context) error {
 		return err
 	}
 	timer, err := k.Timer.Get(ctx)
-	running := err == nil
 	if err != nil && !errors.Is(err, collections.ErrNotFound) {
 		return err
 	}
+	// Timer.Get returns a value, which cannot be nil, so the error tells the
+	// two cases apart: nil means a timer is stored, ErrNotFound means none.
+	running := err == nil
 	if !params.Enabled {
 		if !running {
 			return nil
@@ -116,6 +129,8 @@ func (k Keeper) resolveTimer(ctx sdk.Context, timer types.Timer, postpone uint64
 	case ctx.BlockHeight() < finalCheck:
 		return nil
 	}
+	// Here the proposal is in its voting period, its deadline is in the
+	// future, and this block is exactly H-1.
 	return k.closeVoteEarly(ctx, p, timer, postpone, threshold)
 }
 
@@ -138,6 +153,11 @@ func (k Keeper) cancelTimer(ctx sdk.Context, timer types.Timer, reason types.Rea
 // proposal that passes the validator gate decides the block, so at most one
 // full tally runs.
 func (k Keeper) checkNominations(ctx sdk.Context, params types.Params, threshold sdkmath.LegacyDec) error {
+	// H is the same for every nomination of this block.
+	upgradeHeight, err := addBlocks(ctx.BlockHeight(), params.TimelockBlocks)
+	if err != nil {
+		return err
+	}
 	iter, err := k.Nominations.Iterate(ctx, new(collections.Range[uint64]).Descending())
 	if err != nil {
 		return err
@@ -156,12 +176,14 @@ func (k Keeper) checkNominations(ctx sdk.Context, params types.Params, threshold
 		if !voting {
 			continue
 		}
-		// A plan below H-1 would be in the past at the final check, so its
-		// timer could only drop there while holding the timer slot.
-		upgradeHeight, err := addBlocks(ctx.BlockHeight(), params.TimelockBlocks)
-		if err != nil {
-			return err
-		}
+		// The proposal has its own plan height, and at the final check in
+		// block H-1 that height must not be in the past, or the timer is
+		// dropped. A timer for a plan height below H-1 can never succeed. It
+		// would only block other proposals for the whole timelock, so it is
+		// not started.
+		//
+		// Example: block 100 and timelock 150 give H = 250, and a plan height
+		// of 200 gets no timer, because 200 is below 249.
 		msg, reason, err := k.guards(ctx, p, upgradeHeight-1, threshold)
 		if err != nil {
 			return err
@@ -205,12 +227,18 @@ func (k Keeper) emitNotStarted(ctx sdk.Context, proposalID uint64, reason types.
 	))
 }
 
-// closeVoteEarly runs every guard before any gov write. If they all pass, it
-// rewrites the plan height to H and ends the voting period now, so gov's
-// EndBlocker executes the proposal in this block. Gov runs after this module,
-// so a proposal it executes first in this block could change what its tally
-// of ours reads. When another proposal is due, H moves later and every guard
-// runs again on the settled state.
+// closeVoteEarly is the final check at H-1. It runs every check before it
+// writes anything to gov. If all checks pass, it sets the plan height to H
+// and ends the voting period now. Gov's EndBlocker runs after this module and
+// executes the proposal in this same block.
+//
+// Gov processes every proposal that is due in a block, one after the other.
+// If gov executes another proposal before it tallies ours, that proposal can
+// change the validators or gov's params, or schedule an upgrade plan. Gov's
+// result for ours can then differ from the check here. So when another
+// proposal is due in this block, closeVoteEarly does not close the vote. It
+// moves H later and runs the final check again at the new H-1, after gov
+// processed the other proposal.
 func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Timer, postpone uint64, threshold sdkmath.LegacyDec) error {
 	msg, reason, err := k.guards(ctx, p, ctx.BlockHeight(), threshold)
 	if err != nil {
@@ -219,7 +247,7 @@ func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Ti
 	if reason != types.ReasonOK {
 		return k.cancelTimer(ctx, timer, reason)
 	}
-	due, err := k.proposalDue(ctx)
+	due, err := k.anyProposalDue(ctx)
 	if err != nil {
 		return err
 	}
@@ -247,14 +275,16 @@ func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Ti
 	return nil
 }
 
-// proposalDue reports whether gov's EndBlocker ends a voting period in this
-// block. It uses gov's own range over the queue.
-func (k Keeper) proposalDue(ctx sdk.Context) (bool, error) {
+// anyProposalDue reports whether gov's EndBlocker ends a voting period in this
+// block. It uses gov's own range over the queue. The caller's own proposal is
+// not due yet, so a due proposal is always another one, and it postpones ours.
+func (k Keeper) anyProposalDue(ctx sdk.Context) (bool, error) {
 	iter, err := k.gov.ActiveProposalsQueue.Iterate(ctx, collections.NewPrefixUntilPairRange[time.Time, uint64](ctx.BlockTime()))
 	if err != nil {
 		return false, err
 	}
 	defer iter.Close()
+	// Valid is true when the range has at least one proposal due.
 	return iter.Valid(), nil
 }
 

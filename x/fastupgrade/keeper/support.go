@@ -176,8 +176,8 @@ func (k Keeper) supportCheck(ctx sdk.Context, p govv1.Proposal, threshold math.L
 // tallyCheck runs gov's stock Tally on a scratch copy of state that is never
 // written back: Tally deletes every vote it counts.
 func (k Keeper) tallyCheck(ctx sdk.Context, p govv1.Proposal, threshold math.LegacyDec) (types.Reason, error) {
-	scratch, _ := ctx.CacheContext()
-	passes, _, result, err := k.gov.Tally(scratch, p)
+	cacheCtx, _ := ctx.CacheContext()
+	passes, _, result, err := k.gov.Tally(cacheCtx, p)
 	if err != nil {
 		return "", err
 	}
