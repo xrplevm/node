@@ -411,9 +411,12 @@ func New(
 		authAddress,
 	)
 	govRouter := govv1beta1.NewRouter()
+	// ParameterChangeProposal is not routed: x/params was removed in v12. It only
+	// decodes so that historical txs and gov proposals stay readable (app/encoding.go).
 	govRouter.AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler)
 	// Set legacy router for backwards compatibility with gov v1beta1
 	govKeeper.SetLegacyRouter(govRouter)
+
 	app.GovKeeper = *govKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(),
 	)
