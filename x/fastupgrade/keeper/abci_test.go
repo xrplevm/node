@@ -391,21 +391,21 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 		atFinal func(f *fixture, id uint64)
 	}{
 		{
-			name:           "vote change is the veto",
+			name:           "should drop the timer - vote change is the veto",
 			expectedReason: "gate_below_threshold",
 			during: func(f *fixture, id uint64) {
 				f.vote(id, f.vals[0], no())
 			},
 		},
 		{
-			name:           "gov params changed",
+			name:           "should drop the timer - gov params changed",
 			expectedReason: "incompatible_with_gov",
 			during: func(f *fixture, _ uint64) {
 				f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
 			},
 		},
 		{
-			name:           "gate fails and gov params changed",
+			name:           "should drop the timer - gate fails and gov params changed",
 			expectedReason: "gate_below_threshold",
 			during: func(f *fixture, id uint64) {
 				f.vote(id, f.vals[0], no())
@@ -413,21 +413,21 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			},
 		},
 		{
-			name:           "another minor completed",
+			name:           "should drop the timer - another minor completed",
 			expectedReason: "not_eligible",
 			during: func(f *fixture, _ uint64) {
 				f.applyUpgrade("v12.3.0")
 			},
 		},
 		{
-			name:           "plan pending",
+			name:           "should drop the timer - plan pending",
 			expectedReason: "plan_pending",
 			during: func(f *fixture, _ uint64) {
 				require.NoError(f.t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
 			},
 		},
 		{
-			name:           "delegator lowers gov yes count",
+			name:           "should drop the timer - delegator lowers gov yes count",
 			expectedReason: "tally_below_threshold",
 			during: func(f *fixture, id uint64) {
 				f.delegate(f.other, f.vals[0], tokens)
@@ -435,7 +435,7 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			},
 		},
 		{
-			name:           "delegator vetoes",
+			name:           "should drop the timer - delegator vetoes",
 			expectedReason: "gov_tally_rejected",
 			during: func(f *fixture, id uint64) {
 				f.delegate(f.other, f.vals[0], tokens.MulRaw(3))
@@ -443,7 +443,7 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			},
 		},
 		{
-			name:           "natural deadline due",
+			name:           "should drop the timer - natural deadline due",
 			expectedReason: "natural_deadline",
 			atFinal: func(f *fixture, id uint64) {
 				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
@@ -451,7 +451,7 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 		},
 		{
 			// The proposal's own deadline wins over the postponement.
-			name:           "natural deadline due and another proposal due",
+			name:           "should drop the timer - natural deadline due and another proposal due",
 			expectedReason: "natural_deadline",
 			during: func(f *fixture, _ uint64) {
 				period := time.Second
@@ -526,21 +526,21 @@ func TestKeeper_EndBlock_TimerDropped(t *testing.T) {
 		act            func(f *fixture, id uint64, timer types.Timer)
 	}{
 		{
-			name:           "disabled",
+			name:           "should drop the timer - module disabled",
 			expectedReason: "disabled",
 			act: func(f *fixture, _ uint64, _ types.Timer) {
 				f.setParams(false, 150, "0.85")
 			},
 		},
 		{
-			name:           "proposal canceled",
+			name:           "should drop the timer - proposal canceled",
 			expectedReason: "not_voting",
 			act: func(f *fixture, id uint64, _ types.Timer) {
 				require.NoError(f.t, f.app.GovKeeper.CancelProposal(f.ctx, id, f.other.String()))
 			},
 		},
 		{
-			name:           "final check block missed",
+			name:           "should drop the timer - final check block missed",
 			expectedReason: "missed_window",
 			act: func(f *fixture, _ uint64, timer types.Timer) {
 				f.setBlock(timer.UpgradeHeight, f.ctx.BlockTime())
@@ -549,7 +549,7 @@ func TestKeeper_EndBlock_TimerDropped(t *testing.T) {
 		{
 			// The module runs before gov, so it sees the deadline in the
 			// block where gov ends the vote.
-			name:           "deadline before the final check",
+			name:           "should drop the timer - deadline before the final check",
 			expectedReason: "natural_deadline",
 			act: func(f *fixture, id uint64, _ types.Timer) {
 				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
@@ -594,7 +594,7 @@ func TestKeeper_EndBlock_FailureClearsOnlyTheTimer(t *testing.T) {
 		failure func(f *fixture)
 	}{
 		{
-			name: "error: stored threshold is invalid",
+			name: "should drop the timer - error on an invalid stored threshold",
 			failure: func(f *fixture) {
 				require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
 			},
@@ -603,7 +603,7 @@ func TestKeeper_EndBlock_FailureClearsOnlyTheTimer(t *testing.T) {
 			// The fixture's validators have MinSelfDelegation 0, so a removed
 			// one stays bonded with zero shares until staking's EndBlocker,
 			// and gov's Tally divides by those shares.
-			name: "panic: gov tally divides by zero shares",
+			name: "should drop the timer - panic when gov tally divides by zero shares",
 			failure: func(f *fixture) {
 				require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
 			},
@@ -612,7 +612,7 @@ func TestKeeper_EndBlock_FailureClearsOnlyTheTimer(t *testing.T) {
 			// Gov's SetProposal fails after endVotingNow removed the queue
 			// key, so only the discarded scratch copy keeps the proposal
 			// queued.
-			name: "error after a gov write: the proposal cannot be stored",
+			name: "should drop the timer - error after a gov write, the proposal cannot be stored",
 			failure: func(f *fixture) {
 				sb := collections.NewSchemaBuilder(runtime.NewKVStoreService(f.app.GetKey(govtypes.StoreKey)))
 				f.app.GovKeeper.Proposals = collections.NewMap(sb, govtypes.ProposalsKeyPrefix, "proposals", collections.Uint64Key,
@@ -655,30 +655,30 @@ func TestKeeper_EndBlock_ClearsNominations(t *testing.T) {
 		expectedTimer bool
 	}{
 		{
-			name:          "timer started",
+			name:          "should clear the nominations - timer started",
 			voters:        numValidators,
 			expectedTimer: true,
 		},
 		{
-			name:   "below the gate",
+			name:   "should clear the nominations - below the gate",
 			voters: 1,
 		},
 		{
-			name:   "module disabled",
+			name:   "should clear the nominations - module disabled",
 			voters: numValidators,
 			before: func(f *fixture) {
 				f.setParams(false, 150, "0.85")
 			},
 		},
 		{
-			name:   "error: stored threshold is invalid",
+			name:   "should clear the nominations - error on an invalid stored threshold",
 			voters: numValidators,
 			before: func(f *fixture) {
 				require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
 			},
 		},
 		{
-			name:   "panic: gov tally divides by zero shares",
+			name:   "should clear the nominations - panic when gov tally divides by zero shares",
 			voters: numValidators,
 			before: func(f *fixture) {
 				require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
