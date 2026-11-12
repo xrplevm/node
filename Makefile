@@ -156,11 +156,15 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test: test-poa test-integration test-sim-benchmark-simulation test-sim-full-app-fast
+test: test-poa test-app test-integration test-sim-benchmark-simulation test-sim-full-app-fast
 
 test-integration:
 	@echo "--> Running integration testsuite"
 	@go test -mod=readonly -tags=test -v ./tests/integration
+
+test-app:
+	@echo "--> Running app tests"
+	@go test -mod=readonly ./app/...
 
 test-poa:
 	@echo "--> Running POA tests"
