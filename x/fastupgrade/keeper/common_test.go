@@ -44,6 +44,13 @@ const (
 	minorVersion = "v1.1.0"
 )
 
+// TestMain runs one time for the package, before all tests. It sets the
+// address prefixes of the chain.
+func TestMain(m *testing.M) {
+	exrpcommon.SetupSdkConfig()
+	os.Exit(m.Run())
+}
+
 // fixture runs keeper and gov code on a real app context. Blocks are
 // simulated on one context: nextBlock bumps height and time. tests/integration
 // covers real block commits.
@@ -57,21 +64,18 @@ type fixture struct {
 	govAddr string
 }
 
-// newFixture has baseVersion as the last completed upgrade and the module
-// enabled with its default params.
+// newFixture has the module enabled with its default params, and baseVersion
+// as the last completed upgrade.
 func newFixture(t *testing.T) *fixture {
-	f := newFixtureWithoutBaseline(t)
+	t.Helper()
+	f := newFixtureWithoutBaseVersion(t)
 	f.applyUpgrade(baseVersion)
-	f.setParams(true, types.DefaultTimelockBlocks, types.DefaultThreshold.String())
 	return f
 }
 
-func TestMain(m *testing.M) {
-	exrpcommon.SetupSdkConfig()
-	os.Exit(m.Run())
-}
-
-func newFixtureWithoutBaseline(t *testing.T) *fixture {
+// newFixtureWithoutBaseVersion has the module enabled with its default params,
+// and no completed upgrade.
+func newFixtureWithoutBaseVersion(t *testing.T) *fixture {
 	t.Helper()
 	kr := keyring.New(numValidators + 1)
 	operators := kr.GetAllAccAddrs()[:numValidators]
@@ -93,6 +97,7 @@ func newFixtureWithoutBaseline(t *testing.T) *fixture {
 		govAddr: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	}
 	f.ctx = atBlock(net.GetContext(), startHeight, net.GetContext().BlockTime())
+	f.setParams(true, types.DefaultTimelockBlocks, types.DefaultThreshold.String())
 	return f
 }
 

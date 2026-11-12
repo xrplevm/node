@@ -21,9 +21,9 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		nonValidator bool
 		// options is the vote. The default is yes().
 		options govv1.WeightedVoteOptions
-		// noBase uses a fixture with the module enabled and no completed
+		// noBaseVersion uses a fixture with the module enabled and no completed
 		// upgrade.
-		noBase            bool
+		noBaseVersion     bool
 		expectedNominated bool
 	}{
 		{
@@ -77,8 +77,8 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			},
 		},
 		{
-			name:   "should not nominate - no completed upgrade baseline",
-			noBase: true,
+			name:          "should not nominate - no completed upgrade",
+			noBaseVersion: true,
 		},
 		{
 			name: "should not nominate - two messages",
@@ -111,9 +111,9 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			},
 		},
 		{
-			name:   "should not nominate - already completed name",
-			setup:  func(f *fixture) { f.completeUpgrades(minorVersion, baseVersion) },
-			noBase: true,
+			name:          "should not nominate - already completed name",
+			setup:         func(f *fixture) { f.completeUpgrades(minorVersion, baseVersion) },
+			noBaseVersion: true,
 		},
 		{
 			// The last completed upgrade is v1.1.0, the latest by height, and
@@ -123,7 +123,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			propose: func(f *fixture) uint64 {
 				return f.propose(f.upgradeMsg("v1.2.0"))
 			},
-			noBase:            true,
+			noBaseVersion:     true,
 			expectedNominated: true,
 		},
 		{
@@ -132,12 +132,12 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			propose: func(f *fixture) uint64 {
 				return f.propose(f.upgradeMsg("v1.1.5"))
 			},
-			noBase: true,
+			noBaseVersion: true,
 		},
 		{
-			name:   "should not nominate - latest upgrade name is not a version",
-			setup:  func(f *fixture) { f.completeUpgrades(baseVersion, "hotfix") },
-			noBase: true,
+			name:          "should not nominate - latest upgrade name is not a version",
+			setup:         func(f *fixture) { f.completeUpgrades(baseVersion, "hotfix") },
+			noBaseVersion: true,
 		},
 		{
 			name: "should nominate - minor bump with patch",
@@ -175,7 +175,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newHooksFixture(t, tc.noBase)
+			f := newHooksFixture(t, tc.noBaseVersion)
 			if tc.setup != nil {
 				tc.setup(f)
 			}
@@ -198,15 +198,13 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 	}
 }
 
-// newHooksFixture returns the normal fixture. With noBase it returns a fixture
-// with the module enabled and no completed upgrade.
-func newHooksFixture(t *testing.T, noBase bool) *fixture {
-	if !noBase {
-		return newFixture(t)
+// newHooksFixture returns the normal fixture, or with noBaseVersion the one
+// with no completed upgrade.
+func newHooksFixture(t *testing.T, noBaseVersion bool) *fixture {
+	if noBaseVersion {
+		return newFixtureWithoutBaseVersion(t)
 	}
-	f := newFixtureWithoutBaseline(t)
-	f.setParams(true, 150, "0.85")
-	return f
+	return newFixture(t)
 }
 
 func TestHooks_AfterProposalVote_ErrorNeverRejectsVote(t *testing.T) {
