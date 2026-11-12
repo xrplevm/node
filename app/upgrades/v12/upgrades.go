@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 
-	fastupgradekeeper "github.com/xrplevm/node/v12/x/fastupgrade/keeper"
 	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
@@ -20,7 +19,7 @@ func CreateUpgradeHandler(
 	configurator module.Configurator,
 	evmKeeper EvmKeeper,
 	keys map[string]*storetypes.KVStoreKey,
-	fastUpgradeKeeper fastupgradekeeper.Keeper,
+	fastUpgradeKeeper FastUpgradeKeeper,
 ) upgradetypes.UpgradeHandler {
 	return func(c context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
 		ctx := sdk.UnwrapSDKContext(c)

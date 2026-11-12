@@ -14,6 +14,8 @@ import (
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+
+	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
 var _ EvmKeeper = (*mockEvmKeeper)(nil)
@@ -24,6 +26,17 @@ type mockEvmKeeper struct {
 
 func (m *mockEvmKeeper) GetParams(sdk.Context) evmtypes.Params { return m.params }
 func (m *mockEvmKeeper) SetParams(_ sdk.Context, params evmtypes.Params) error {
+	m.params = params
+	return nil
+}
+
+var _ FastUpgradeKeeper = (*mockFastUpgradeKeeper)(nil)
+
+type mockFastUpgradeKeeper struct {
+	params fastupgradetypes.Params
+}
+
+func (m *mockFastUpgradeKeeper) SetParams(_ sdk.Context, params fastupgradetypes.Params) error {
 	m.params = params
 	return nil
 }
@@ -47,8 +60,9 @@ func TestCreateUpgradeHandler(t *testing.T) {
 			evmtypes.BankPrecompileAddress,
 		},
 	}}
+	fastUpgradeKeeper := &mockFastUpgradeKeeper{}
 
-	_, err := CreateUpgradeHandler(module.NewManager(), configurator, keeper, keys)(
+	_, err := CreateUpgradeHandler(module.NewManager(), configurator, keeper, keys, fastUpgradeKeeper)(
 		ctx,
 		upgradetypes.Plan{Name: UpgradeName},
 		module.VersionMap{},
@@ -58,6 +72,10 @@ func TestCreateUpgradeHandler(t *testing.T) {
 	require.Equal(t,
 		[]string{evmtypes.Bech32PrecompileAddress, evmtypes.BankPrecompileAddress},
 		keeper.params.ActiveStaticPrecompiles,
+	)
+	require.Equal(t,
+		fastupgradetypes.Params{Enabled: true, TimelockBlocks: 150, Threshold: "0.850000000000000000", PostponeBlocks: 10},
+		fastUpgradeKeeper.params,
 	)
 	for name, key := range keys {
 		itr := ctx.KVStore(key).Iterator(nil, nil)
