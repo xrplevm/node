@@ -5,19 +5,17 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
+	v121 "github.com/xrplevm/node/v12/app/upgrades/v121"
 )
 
 // setupUpgradeHandlers registers only the current upgrade. Delete the previous
 // app/upgrades/v<version>/ when adding a new one: its release tag keeps it.
 func (app *App) setupUpgradeHandlers() {
 	app.UpgradeKeeper.SetUpgradeHandler(
-		v12.UpgradeName,
-		v12.CreateUpgradeHandler(
+		v121.UpgradeName,
+		v121.CreateUpgradeHandler(
 			app.mm,
 			app.configurator,
-			app.EvmKeeper,
-			app.keys,
 		),
 	)
 
@@ -33,8 +31,7 @@ func (app *App) setupUpgradeHandlers() {
 		return
 	}
 
-	if upgradeInfo.Name == v12.UpgradeName {
-		// Empty: the handler empties the retired stores (v12.RetiredStoreKeys).
+	if upgradeInfo.Name == v121.UpgradeName {
 		storeUpgrades := &storetypes.StoreUpgrades{}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades

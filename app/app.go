@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 	"github.com/xrplevm/node/v12/app/ante"
-	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -269,8 +267,6 @@ func New(
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 		erc20types.StoreKey,
 	)
-	// Mounted only so the v12 upgrade handler can empty them. Remove in the next coordinated upgrade.
-	maps.Copy(keys, storetypes.NewKVStoreKeys(v12.RetiredStoreKeys...))
 	tkeys := storetypes.NewTransientStoreKeys(evmtypes.TransientKey, feemarkettypes.TransientKey)
 
 	app := &App{
