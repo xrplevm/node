@@ -358,6 +358,40 @@ func (f *fixture) requireSingleEvent(eventType string, want map[string]string) {
 	require.Equal(f.t, 1, f.fastUpgradeEvents())
 }
 
+// requireStartOutcome checks the result of a start block for the proposal:
+// a timer with fastupgrade_started, or no timer with fastupgrade_not_started
+// and the reason, or no timer and no event when the reason is empty.
+func (f *fixture) requireStartOutcome(id uint64, started bool, reason string) {
+	f.t.Helper()
+	_, ok := f.timer()
+	require.Equal(f.t, started, ok)
+	proposalID := strconv.FormatUint(id, 10)
+	switch {
+	case started:
+		f.requireSingleEvent(types.EventTypeStarted, map[string]string{types.AttributeKeyProposalID: proposalID})
+	case reason != "":
+		f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{
+			types.AttributeKeyProposalID: proposalID,
+			types.AttributeKeyReason:     reason,
+		})
+	default:
+		require.Zero(f.t, f.fastUpgradeEvents())
+	}
+}
+
+// requireDropped checks that the timer is gone and that the block has one
+// fastupgrade_dropped event with the data of the timer and the reason.
+func (f *fixture) requireDropped(timer types.Timer, reason string) {
+	f.t.Helper()
+	_, ok := f.timer()
+	require.False(f.t, ok)
+	f.requireSingleEvent(types.EventTypeDropped, map[string]string{
+		types.AttributeKeyProposalID:    strconv.FormatUint(timer.ProposalId, 10),
+		types.AttributeKeyUpgradeHeight: strconv.FormatInt(timer.UpgradeHeight, 10),
+		types.AttributeKeyReason:        reason,
+	})
+}
+
 // startTimer has every validator vote Yes and runs the start block.
 func (f *fixture) startTimer(id uint64) types.Timer {
 	f.t.Helper()
