@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -27,8 +28,13 @@ func (m *mockEvmKeeper) SetParams(_ sdk.Context, params evmtypes.Params) error {
 	return nil
 }
 
-func TestCreateUpgradeHandlerDisablesGovPrecompile(t *testing.T) {
-	ctx := sdk.NewContext(nil, cmtproto.Header{}, false, log.NewNopLogger())
+func TestCreateUpgradeHandler(t *testing.T) {
+	keys := storetypes.NewKVStoreKeys(RetiredStoreKeys...)
+	ctx := sdktestutil.DefaultContextWithKeys(keys, nil, nil).WithLogger(log.NewNopLogger())
+	for _, key := range keys {
+		ctx.KVStore(key).Set([]byte("a"), []byte{1})
+		ctx.KVStore(key).Set([]byte("b"), []byte{2})
+	}
 	configurator := module.NewConfigurator(
 		codec.NewProtoCodec(codectypes.NewInterfaceRegistry()),
 		grpc.NewServer(),
@@ -42,7 +48,7 @@ func TestCreateUpgradeHandlerDisablesGovPrecompile(t *testing.T) {
 		},
 	}}
 
-	_, err := CreateUpgradeHandler(module.NewManager(), configurator, keeper)(
+	_, err := CreateUpgradeHandler(module.NewManager(), configurator, keeper, keys)(
 		ctx,
 		upgradetypes.Plan{Name: UpgradeName},
 		module.VersionMap{},
@@ -53,4 +59,9 @@ func TestCreateUpgradeHandlerDisablesGovPrecompile(t *testing.T) {
 		[]string{evmtypes.Bech32PrecompileAddress, evmtypes.BankPrecompileAddress},
 		keeper.params.ActiveStaticPrecompiles,
 	)
+	for name, key := range keys {
+		itr := ctx.KVStore(key).Iterator(nil, nil)
+		require.False(t, itr.Valid(), "store %s is not empty", name)
+		require.NoError(t, itr.Close())
+	}
 }

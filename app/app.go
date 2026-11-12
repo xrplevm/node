@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 	"github.com/xrplevm/node/v12/app/ante"
+	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -267,6 +269,8 @@ func New(
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 		erc20types.StoreKey,
 	)
+	// Mounted only so the v12 upgrade handler can empty them. Remove in the next coordinated upgrade.
+	maps.Copy(keys, storetypes.NewKVStoreKeys(v12.RetiredStoreKeys...))
 	tkeys := storetypes.NewTransientStoreKeys(evmtypes.TransientKey, feemarkettypes.TransientKey)
 
 	app := &App{
@@ -484,7 +488,7 @@ func New(
 		appCodec,
 		runtime.NewKVStoreService(keys[ratelimittypes.StoreKey]),
 		// ratelimit Params has no fields, so SetParamSet in InitGenesis never
-		// opens a store. x/params is not mounted since v12.
+		// opens a store. Nothing reads the x/params store since v12.
 		paramstypes.Subspace{},
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app.BankKeeper,
