@@ -14,6 +14,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -1308,9 +1309,9 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 	}
 }
 
-// Staking msg tests
+// Blocked msg tests
 
-func (s *TestSuite) TestStakingMsgs_UserTx() {
+func (s *TestSuite) TestBlockedMsgs_UserTx() {
 	// Generate a random account
 	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
 	randomAcc := randomAccs[0]
@@ -1350,24 +1351,29 @@ func (s *TestSuite) TestStakingMsgs_UserTx() {
 			expectedError: poaante.ErrTxTypeNotAllowed,
 		},
 		{
-			name:          "delegate - not routed",
+			name:          "delegate - blocked by poa ante",
 			msg:           stakingtypes.NewMsgDelegate(valKey.AccAddr.String(), valAddr.String(), coin),
-			expectedError: sdkerrors.ErrUnknownRequest,
+			expectedError: poaante.ErrTxTypeNotAllowed,
 		},
 		{
-			name:          "undelegate - not routed",
+			name:          "undelegate - blocked by poa ante",
 			msg:           stakingtypes.NewMsgUndelegate(valKey.AccAddr.String(), valAddr.String(), coin),
-			expectedError: sdkerrors.ErrUnknownRequest,
+			expectedError: poaante.ErrTxTypeNotAllowed,
 		},
 		{
-			name:          "begin redelegate - not routed",
+			name:          "begin redelegate - blocked by poa ante",
 			msg:           stakingtypes.NewMsgBeginRedelegate(valKey.AccAddr.String(), valAddr.String(), dstValAddr.String(), coin),
-			expectedError: sdkerrors.ErrUnknownRequest,
+			expectedError: poaante.ErrTxTypeNotAllowed,
 		},
 		{
-			name:          "cancel unbonding delegation - not routed",
+			name:          "cancel unbonding delegation - blocked by poa ante",
 			msg:           stakingtypes.NewMsgCancelUnbondingDelegation(valKey.AccAddr.String(), valAddr.String(), 1, coin),
-			expectedError: sdkerrors.ErrUnknownRequest,
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "fund community pool - blocked by app ante",
+			msg:           distrtypes.NewMsgFundCommunityPool(sdktypes.NewCoins(coin), valKey.AccAddr.String()),
+			expectedError: sdkerrors.ErrUnauthorized,
 		},
 	}
 

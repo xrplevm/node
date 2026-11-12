@@ -15,17 +15,21 @@ func NewPoaDecorator() PoaDecorator {
 	return PoaDecorator{}
 }
 
-// MsgCreateValidator stays routed for genesis gentxs and for x/poa, which
-// creates validators through the msg router. Users must not send it. The other
-// staking delegation msgs are not routed at all (app/msg_filter.go), so baseapp
-// rejects them before the ante handler runs.
+var disallowedMsgs = map[string]struct{}{
+	sdk.MsgTypeURL(&stakingtypes.MsgUndelegate{}):                {},
+	sdk.MsgTypeURL(&stakingtypes.MsgBeginRedelegate{}):           {},
+	sdk.MsgTypeURL(&stakingtypes.MsgDelegate{}):                  {},
+	sdk.MsgTypeURL(&stakingtypes.MsgCancelUnbondingDelegation{}): {},
+	sdk.MsgTypeURL(&stakingtypes.MsgCreateValidator{}):           {},
+}
+
 func (cbd PoaDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	// Allow genutil gentxs at genesis (block height 0) to bootstrap the initial validator set.
 	if ctx.BlockHeight() == 0 {
 		return next(ctx, tx, simulate)
 	}
 	for _, msg := range tx.GetMsgs() {
-		if _, blocked := msg.(*stakingtypes.MsgCreateValidator); blocked {
+		if _, blocked := disallowedMsgs[sdk.MsgTypeURL(msg)]; blocked {
 			return ctx, ErrTxTypeNotAllowed
 		}
 	}
