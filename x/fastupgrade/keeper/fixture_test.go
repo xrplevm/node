@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/xrplevm/node/v12/app"
-	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 	exrpcommon "github.com/xrplevm/node/v12/testutil/integration/exrp/common"
 	exrpintegration "github.com/xrplevm/node/v12/testutil/integration/exrp/integration"
 	"github.com/xrplevm/node/v12/x/fastupgrade/keeper"
@@ -37,6 +36,12 @@ const (
 	numValidators  = 5
 	originalHeight = int64(1_000_000)
 	startHeight    = int64(100)
+
+	// The tests use their own versions, so they do not depend on the upgrade
+	// handler of the node version. baseVersion is the completed upgrade of
+	// newFixture, and minorVersion is its minor bump.
+	baseVersion  = "v1.0.0"
+	minorVersion = "v1.1.0"
 )
 
 // fixture runs keeper and gov code on a real app context. Blocks are
@@ -52,9 +57,12 @@ type fixture struct {
 	govAddr string
 }
 
+// newFixture has baseVersion as the last completed upgrade and the module
+// enabled with its default params.
 func newFixture(t *testing.T) *fixture {
 	f := newFixtureWithoutBaseline(t)
-	f.applyUpgrade(v12.UpgradeName)
+	f.applyUpgrade(baseVersion)
+	f.setParams(true, types.DefaultTimelockBlocks, types.DefaultThreshold.String())
 	return f
 }
 
@@ -117,7 +125,7 @@ func evmGenesis() *evmtypes.GenesisState {
 }
 
 // applyUpgrade marks name completed at the current height through x/upgrade.
-// v12.0.0 runs the real handler; other names use a no-op test handler.
+// A name with no handler in the app gets a no-op test handler.
 func (f *fixture) applyUpgrade(name string) {
 	f.t.Helper()
 	if !f.app.UpgradeKeeper.HasHandler(name) {
@@ -144,7 +152,7 @@ func (f *fixture) propose(msgs ...sdk.Msg) uint64 {
 }
 
 func (f *fixture) proposeMinor() uint64 {
-	return f.propose(f.upgradeMsg("v12.1.0"))
+	return f.propose(f.upgradeMsg(minorVersion))
 }
 
 func (f *fixture) vote(id uint64, voter sdk.AccAddress, options govv1.WeightedVoteOptions) {

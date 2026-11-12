@@ -7,7 +7,6 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/require"
 
-	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 	"github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
@@ -86,7 +85,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		{
 			name: "should not nominate - two messages",
 			propose: func(f *fixture) uint64 {
-				return f.propose(f.upgradeMsg("v12.1.0"), f.upgradeMsg("v12.2.0"))
+				return f.propose(f.upgradeMsg(minorVersion), f.upgradeMsg("v1.2.0"))
 			},
 		},
 		{
@@ -98,19 +97,19 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		{
 			name: "should not nominate - major bump",
 			propose: func(f *fixture) uint64 {
-				return f.propose(f.upgradeMsg("v13.0.0"))
+				return f.propose(f.upgradeMsg("v2.0.0"))
 			},
 		},
 		{
 			name: "should not nominate - patch only",
 			propose: func(f *fixture) uint64 {
-				return f.propose(f.upgradeMsg("v12.0.1"))
+				return f.propose(f.upgradeMsg("v1.0.1"))
 			},
 		},
 		{
 			name: "should not nominate - non-strict name",
 			propose: func(f *fixture) uint64 {
-				return f.propose(f.upgradeMsg("v12.01.0"))
+				return f.propose(f.upgradeMsg("v1.01.0"))
 			},
 		},
 		{
@@ -118,9 +117,9 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			setup: func(f *fixture) {
 				f.setParams(true, 150, "0.85")
 				f.setBlock(10, f.ctx.BlockTime())
-				f.applyUpgrade("v12.1.0")
+				f.applyUpgrade(minorVersion)
 				f.setBlock(20, f.ctx.BlockTime())
-				f.applyUpgrade(v12.UpgradeName)
+				f.applyUpgrade(baseVersion)
 				f.setBlock(startHeight, f.ctx.BlockTime())
 			},
 			noBase: true,
@@ -128,14 +127,14 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		{
 			name: "should nominate - minor bump with patch",
 			propose: func(f *fixture) uint64 {
-				return f.propose(f.upgradeMsg("v12.3.7"))
+				return f.propose(f.upgradeMsg("v1.3.7"))
 			},
 			expectedNominated: true,
 		},
 		{
 			name: "should not nominate - plan fails validation",
 			propose: func(f *fixture) uint64 {
-				msg := f.upgradeMsg("v12.1.0")
+				msg := f.upgradeMsg(minorVersion)
 				msg.Plan.Time = f.ctx.BlockTime().Add(time.Hour)
 				return f.propose(msg)
 			},
@@ -143,7 +142,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		{
 			name: "should not nominate - plan height in the past",
 			propose: func(f *fixture) uint64 {
-				msg := f.upgradeMsg("v12.1.0")
+				msg := f.upgradeMsg(minorVersion)
 				msg.Plan.Height = startHeight - 1
 				return f.propose(msg)
 			},
@@ -151,7 +150,7 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 		{
 			name: "should nominate - plan height is the current height",
 			propose: func(f *fixture) uint64 {
-				msg := f.upgradeMsg("v12.1.0")
+				msg := f.upgradeMsg(minorVersion)
 				msg.Plan.Height = startHeight
 				return f.propose(msg)
 			},
@@ -204,13 +203,13 @@ func TestHooks_AfterProposalVote_LastCompletedUpgradeIsLatestByHeight(t *testing
 		f := newFixtureWithoutBaseline(t)
 		f.setParams(true, 150, "0.85")
 		f.setBlock(10, f.ctx.BlockTime())
-		f.applyUpgrade("v12.5.0")
+		f.applyUpgrade("v1.5.0")
 		f.setBlock(20, f.ctx.BlockTime())
-		f.applyUpgrade("v12.1.0")
+		f.applyUpgrade(minorVersion)
 		f.setBlock(startHeight, f.ctx.BlockTime())
 
-		bump := f.propose(f.upgradeMsg("v12.2.0"))
-		sameMinor := f.propose(f.upgradeMsg("v12.1.5"))
+		bump := f.propose(f.upgradeMsg("v1.2.0"))
+		sameMinor := f.propose(f.upgradeMsg("v1.1.5"))
 		f.vote(bump, f.vals[0], yes())
 		f.vote(sameMinor, f.vals[0], yes())
 		require.True(t, f.nominated(bump))
@@ -221,7 +220,7 @@ func TestHooks_AfterProposalVote_LastCompletedUpgradeIsLatestByHeight(t *testing
 		f := newFixtureWithoutBaseline(t)
 		f.setParams(true, 150, "0.85")
 		f.setBlock(10, f.ctx.BlockTime())
-		f.applyUpgrade("v12.0.0")
+		f.applyUpgrade(baseVersion)
 		f.setBlock(20, f.ctx.BlockTime())
 		f.applyUpgrade("hotfix")
 		f.setBlock(startHeight, f.ctx.BlockTime())
