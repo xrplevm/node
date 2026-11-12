@@ -26,25 +26,25 @@ func TestKeeper_EndBlock_TimerStartKeepsVotesAndTally(t *testing.T) {
 	id := f.proposeMinor()
 	f.votes(id, numValidators, yes())
 
-	scratch, _ := f.ctx.CacheContext()
-	_, _, before, err := f.app.GovKeeper.Tally(scratch, f.proposal(id))
+	cacheCtx, _ := f.ctx.CacheContext()
+	_, _, before, err := f.app.GovKeeper.Tally(cacheCtx, f.proposal(id))
 	require.NoError(t, err)
 
 	f.endBlock()
 
 	timer, ok := f.timer()
 	require.True(t, ok)
-	require.Equal(t, types.Timer{ProposalId: id, UpgradeHeight: startHeight + 150}, timer)
+	require.Equal(t, types.Timer{ProposalId: id, UpgradeHeight: upgradeHeight}, timer)
 	f.requireSingleEvent(types.EventTypeStarted, map[string]string{
-		types.AttributeKeyProposalID:    "1",
+		types.AttributeKeyProposalID:    firstProposalID,
 		types.AttributeKeyPlanName:      minorVersion,
 		types.AttributeKeyPlanInfo:      "info-" + minorVersion,
-		types.AttributeKeyUpgradeHeight: "250",
+		types.AttributeKeyUpgradeHeight: upgradeHeightAttr,
 	})
 
 	require.Equal(t, numValidators, f.storedVotes(id))
-	scratch, _ = f.ctx.CacheContext()
-	_, _, after, err := f.app.GovKeeper.Tally(scratch, f.proposal(id))
+	cacheCtx, _ = f.ctx.CacheContext()
+	_, _, after, err := f.app.GovKeeper.Tally(cacheCtx, f.proposal(id))
 	require.NoError(t, err)
 	require.Equal(t, before, after)
 	require.Equal(t, tokens.MulRaw(numValidators).String(), after.YesCount)
@@ -58,23 +58,23 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 		expectedStarted bool
 	}{
 		{
-			name:      "should fail - 4 of 5 is below 0.85",
+			name:      "should not start the timer - 4 of 5 is below 0.85",
 			threshold: "0.85",
 			votes:     func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
 		},
 		{
-			name:            "should pass - 4 of 5 equals 0.8",
+			name:            "should start the timer - 4 of 5 equals 0.8",
 			threshold:       "0.8",
 			votes:           func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
 			expectedStarted: true,
 		},
 		{
-			name:      "should fail - 4 of 5 is one unit below the threshold",
+			name:      "should not start the timer - 4 of 5 is one unit below the threshold",
 			threshold: "0.800000000000000001",
 			votes:     func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
 		},
 		{
-			name:      "should pass - weighted yes counts its weight",
+			name:      "should start the timer - weighted yes counts its weight",
 			threshold: "0.85",
 			votes: func(f *fixture, id uint64) {
 				f.votes(id, 4, yes())
@@ -83,7 +83,7 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 			expectedStarted: true,
 		},
 		{
-			name:      "should fail - weighted yes is below the threshold",
+			name:      "should not start the timer - weighted yes is below the threshold",
 			threshold: "0.85",
 			votes: func(f *fixture, id uint64) {
 				f.votes(id, 3, yes())
@@ -92,7 +92,7 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 			},
 		},
 		{
-			name:      "should fail - non-validator votes are not counted",
+			name:      "should not start the timer - non-validator votes are not counted",
 			threshold: "0.85",
 			votes: func(f *fixture, id uint64) {
 				f.votes(id, 4, yes())
@@ -100,7 +100,7 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 			},
 		},
 		{
-			name:      "should pass - jailed validator is not in the bonded pool",
+			name:      "should start the timer - jailed validator is not in the bonded pool",
 			threshold: "0.85",
 			votes: func(f *fixture, id uint64) {
 				f.jail(f.vals[4])
@@ -111,7 +111,7 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 		{
 			// One extra base unit per validator makes each weight * tokens
 			// term fractional, while the sum equals threshold * bonded exactly.
-			name:      "should pass - weighted terms are not rounded per validator",
+			name:      "should start the timer - weighted terms are not rounded per validator",
 			threshold: "0.8",
 			votes: func(f *fixture, id uint64) {
 				for _, v := range f.vals {
@@ -139,8 +139,12 @@ func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
 	}
 }
 
+// Two proposals are nominated in one block, and the newest is checked first.
+// These are subtests and not a table: each case sets up the newer proposal
+// in its own way, so a table would need a field that only one case uses for
+// almost every step.
 func TestKeeper_EndBlock_NewestCandidateDecides(t *testing.T) {
-	t.Run("newest ready proposal starts", func(t *testing.T) {
+	t.Run("should start the timer for the newest - both are ready", func(t *testing.T) {
 		f := newFixture(t)
 		older := f.proposeMinor()
 		newer := f.propose(f.upgradeMsg("v1.2.0"))
@@ -152,7 +156,7 @@ func TestKeeper_EndBlock_NewestCandidateDecides(t *testing.T) {
 		require.Equal(t, newer, timer.ProposalId)
 	})
 
-	t.Run("candidate below gate is skipped", func(t *testing.T) {
+	t.Run("should start the timer for the older - the newest is below the gate", func(t *testing.T) {
 		f := newFixture(t)
 		older := f.proposeMinor()
 		newer := f.propose(f.upgradeMsg("v1.2.0"))
@@ -164,7 +168,23 @@ func TestKeeper_EndBlock_NewestCandidateDecides(t *testing.T) {
 		require.Equal(t, older, timer.ProposalId)
 	})
 
-	t.Run("candidate passing the gate decides even when its tally rejects", func(t *testing.T) {
+	// The newest proposal could only drop at H-1, so the older one starts.
+	t.Run("should start the timer for the older - the newest has a plan height below the final check", func(t *testing.T) {
+		f := newFixture(t)
+		older := f.proposeMinor()
+		msg := f.upgradeMsg("v1.2.0")
+		msg.Plan.Height = upgradeHeight - 2
+		newer := f.propose(msg)
+		f.votes(older, numValidators, yes())
+		f.votes(newer, numValidators, yes())
+		f.endBlock()
+		timer, ok := f.timer()
+		require.True(t, ok)
+		require.Equal(t, older, timer.ProposalId)
+		f.requireSingleEvent(types.EventTypeStarted, nil)
+	})
+
+	t.Run("should not start a timer - the newest passes the gate and its tally rejects", func(t *testing.T) {
 		f := newFixture(t)
 		older := f.proposeMinor()
 		newer := f.propose(f.upgradeMsg("v1.2.0"))
@@ -182,6 +202,9 @@ func TestKeeper_EndBlock_NewestCandidateDecides(t *testing.T) {
 	})
 }
 
+// A delegation is the tests' way to make gov's tally differ from the
+// validator gate: a delegator can vote against its validator. Mainnet has no
+// such delegations, so these cases test tallyCheck, not a mainnet state.
 func TestKeeper_EndBlock_DelegatorVotesCanOnlyStopTheStart(t *testing.T) {
 	tt := []struct {
 		name            string
@@ -191,19 +214,19 @@ func TestKeeper_EndBlock_DelegatorVotesCanOnlyStopTheStart(t *testing.T) {
 		expectedReason  string
 	}{
 		{
-			name:            "should pass - delegator yes",
+			name:            "should start the timer - delegator yes",
 			amount:          tokens,
 			option:          govv1.OptionYes,
 			expectedStarted: true,
 		},
 		{
-			name:           "should fail - delegator no lowers gov yes count",
+			name:           "should not start the timer - delegator no lowers gov yes count",
 			amount:         tokens,
 			option:         govv1.OptionNo,
 			expectedReason: "tally_below_threshold",
 		},
 		{
-			name:           "should fail - delegator veto rejects gov tally",
+			name:           "should not start the timer - delegator veto rejects gov tally",
 			amount:         tokens.MulRaw(3),
 			option:         govv1.OptionNoWithVeto,
 			expectedReason: "gov_tally_rejected",
@@ -228,92 +251,102 @@ func TestKeeper_EndBlock_DelegatorVotesCanOnlyStopTheStart(t *testing.T) {
 	}
 }
 
-func TestKeeper_EndBlock_StartSkips(t *testing.T) {
-	t.Run("pending plan", func(t *testing.T) {
-		f := newFixture(t)
-		require.NoError(t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
-		id := f.proposeMinor()
-		f.votes(id, numValidators, yes())
-		f.endBlock()
-		_, ok := f.timer()
-		require.False(t, ok)
-		require.Zero(t, f.fastUpgradeEvents())
-	})
-
-	t.Run("natural deadline due", func(t *testing.T) {
-		f := newFixture(t)
-		id := f.proposeMinor()
-		f.votes(id, numValidators, yes())
-		f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
-		f.endBlock()
-		_, ok := f.timer()
-		require.False(t, ok)
-		require.Zero(t, f.fastUpgradeEvents())
-	})
-
-	t.Run("gov params incompatible", func(t *testing.T) {
-		f := newFixture(t)
-		id := f.proposeMinor()
-		f.votes(id, numValidators, yes())
+// The checks of guards at the timer start, apart from the validator gate.
+func TestKeeper_EndBlock_StartGuards(t *testing.T) {
+	finalCheck := upgradeHeight - 1
+	incompatibleGov := func(f *fixture, _ uint64) {
 		f.setGovParams(func(p *govv1.Params) { p.Threshold = incompatibleGovThreshold })
-		f.endBlock()
-		_, ok := f.timer()
-		require.False(t, ok)
-		f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{
-			types.AttributeKeyProposalID: "1",
-			types.AttributeKeyReason:     "incompatible_with_gov",
+	}
+
+	tt := []struct {
+		name string
+		// planHeight is the plan height of the proposal. The default is
+		// originalHeight.
+		planHeight int64
+		// voters is how many validators vote Yes. The default is all of them.
+		voters int
+		// before runs after the votes, before EndBlock. It is optional.
+		before          func(f *fixture, id uint64)
+		expectedStarted bool
+		// expectedReason is the reason of fastupgrade_not_started. With no
+		// reason, a case with no timer must emit no event.
+		expectedReason string
+	}{
+		{
+			name: "should not start the timer - pending plan",
+			before: func(f *fixture, _ uint64) {
+				require.NoError(f.t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
+			},
+		},
+		{
+			name: "should not start the timer - natural deadline due",
+			before: func(f *fixture, id uint64) {
+				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
+			},
+		},
+		{
+			name:           "should not start the timer - gov params incompatible",
+			before:         incompatibleGov,
+			expectedReason: "incompatible_with_gov",
+		},
+		{
+			// The gate fails first, and that is silent.
+			name:   "should not start the timer - gov params incompatible below the gate",
+			voters: 4,
+			before: incompatibleGov,
+		},
+		{
+			name:            "should start the timer - plan height is the final check",
+			planHeight:      finalCheck,
+			expectedStarted: true,
+		},
+		{
+			name:       "should not start the timer - plan height below the final check",
+			planHeight: finalCheck - 1,
+		},
+		{
+			name:       "should not start the timer - upgrade height overflow",
+			planHeight: math.MaxInt64,
+			before: func(f *fixture, _ uint64) {
+				f.setBlock(math.MaxInt64-10, f.ctx.BlockTime())
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			msg := f.upgradeMsg(minorVersion)
+			if tc.planHeight != 0 {
+				msg.Plan.Height = tc.planHeight
+			}
+			if tc.voters == 0 {
+				tc.voters = numValidators
+			}
+
+			id := f.propose(msg)
+			f.votes(id, tc.voters, yes())
+			if tc.before != nil {
+				tc.before(f, id)
+			}
+			f.endBlock()
+
+			_, ok := f.timer()
+			require.Equal(t, tc.expectedStarted, ok)
+			switch {
+			case tc.expectedStarted:
+				f.requireSingleEvent(types.EventTypeStarted, nil)
+			case tc.expectedReason != "":
+				f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{
+					types.AttributeKeyProposalID: firstProposalID,
+					types.AttributeKeyReason:     tc.expectedReason,
+				})
+			default:
+				require.Zero(t, f.fastUpgradeEvents())
+			}
+			require.Equal(t, tc.voters, f.storedVotes(id))
 		})
-	})
-
-	t.Run("gov params incompatible below the gate stays silent", func(t *testing.T) {
-		f := newFixture(t)
-		id := f.proposeMinor()
-		f.votes(id, 4, yes())
-		f.setGovParams(func(p *govv1.Params) { p.Threshold = incompatibleGovThreshold })
-		f.endBlock()
-		require.Zero(t, f.fastUpgradeEvents())
-	})
-
-	// The newer proposal could only drop at H-1, so the older one starts.
-	t.Run("plan height below the final check", func(t *testing.T) {
-		f := newFixture(t)
-		healthy := f.proposeMinor()
-		msg := f.upgradeMsg("v1.2.0")
-		msg.Plan.Height = startHeight + int64(types.DefaultTimelockBlocks) - 2
-		stale := f.propose(msg)
-		f.votes(healthy, numValidators, yes())
-		f.votes(stale, numValidators, yes())
-		f.endBlock()
-		timer, ok := f.timer()
-		require.True(t, ok)
-		require.Equal(t, healthy, timer.ProposalId)
-		f.requireSingleEvent(types.EventTypeStarted, nil)
-	})
-
-	t.Run("plan height is the final check", func(t *testing.T) {
-		f := newFixture(t)
-		msg := f.upgradeMsg(minorVersion)
-		msg.Plan.Height = startHeight + int64(types.DefaultTimelockBlocks) - 1
-		id := f.propose(msg)
-		f.votes(id, numValidators, yes())
-		f.endBlock()
-		_, ok := f.timer()
-		require.True(t, ok)
-	})
-
-	t.Run("upgrade height overflow falls back", func(t *testing.T) {
-		f := newFixture(t)
-		msg := f.upgradeMsg(minorVersion)
-		msg.Plan.Height = math.MaxInt64
-		id := f.propose(msg)
-		f.votes(id, numValidators, yes())
-		f.setBlock(math.MaxInt64-10, f.ctx.BlockTime())
-		f.endBlock()
-		_, ok := f.timer()
-		require.False(t, ok)
-		require.Zero(t, f.fastUpgradeEvents())
-		require.Equal(t, numValidators, f.storedVotes(id))
-	})
+	}
 }
 
 func TestKeeper_EndBlock_EarlyCloseExecutesInSameBlock(t *testing.T) {
@@ -337,9 +370,9 @@ func TestKeeper_EndBlock_EarlyCloseExecutesInSameBlock(t *testing.T) {
 	_, ok = f.timer()
 	require.False(t, ok)
 	f.requireSingleEvent(types.EventTypeEarlyClose, map[string]string{
-		types.AttributeKeyProposalID:    "1",
+		types.AttributeKeyProposalID:    firstProposalID,
 		types.AttributeKeyPlanName:      minorVersion,
-		types.AttributeKeyUpgradeHeight: "250",
+		types.AttributeKeyUpgradeHeight: upgradeHeightAttr,
 	})
 
 	p := f.proposal(id)
@@ -353,6 +386,26 @@ func TestKeeper_EndBlock_EarlyCloseExecutesInSameBlock(t *testing.T) {
 	plan, err := f.app.UpgradeKeeper.GetUpgradePlan(f.ctx)
 	require.NoError(t, err)
 	require.Equal(t, upgradetypes.Plan{Name: minorVersion, Height: H, Info: "info-" + minorVersion}, plan)
+}
+
+// A No vote during the timelock does not stop the early close while Yes
+// power still meets the threshold.
+func TestKeeper_EndBlock_NoVoteAtThresholdStillClosesEarly(t *testing.T) {
+	f := newFixture(t)
+	f.setParams(true, 150, "0.8")
+	id := f.proposeMinor()
+	timer := f.startTimer(id)
+
+	f.nextBlock()
+	f.vote(id, f.vals[0], no())
+
+	f.advanceTo(timer.UpgradeHeight - 1)
+	f.fullEndBlock()
+
+	f.requireSingleEvent(types.EventTypeEarlyClose, nil)
+	p := f.proposal(id)
+	require.Equal(t, govv1.StatusPassed, p.Status)
+	require.Equal(t, timer.UpgradeHeight, f.planHeight(p))
 }
 
 func TestKeeper_EndBlock_TimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
@@ -374,8 +427,8 @@ func TestKeeper_EndBlock_TimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
 	f.advanceTo(timer.UpgradeHeight - 1)
 	f.fullEndBlock()
 	f.requireSingleEvent(types.EventTypeDropped, map[string]string{
-		types.AttributeKeyProposalID:    "1",
-		types.AttributeKeyUpgradeHeight: "250",
+		types.AttributeKeyProposalID:    firstProposalID,
+		types.AttributeKeyUpgradeHeight: upgradeHeightAttr,
 		types.AttributeKeyReason:        "gate_below_threshold",
 	})
 	require.Equal(t, govv1.StatusVotingPeriod, f.proposal(id).Status)
@@ -443,13 +496,6 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			},
 		},
 		{
-			name:           "should drop the timer - natural deadline due",
-			expectedReason: "natural_deadline",
-			atFinal: func(f *fixture, id uint64) {
-				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
-			},
-		},
-		{
 			// The proposal's own deadline wins over the postponement.
 			name:           "should drop the timer - natural deadline due and another proposal due",
 			expectedReason: "natural_deadline",
@@ -489,8 +535,8 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			_, ok = f.timer()
 			require.False(t, ok)
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
-				types.AttributeKeyProposalID:    "1",
-				types.AttributeKeyUpgradeHeight: "250",
+				types.AttributeKeyProposalID:    firstProposalID,
+				types.AttributeKeyUpgradeHeight: upgradeHeightAttr,
 				types.AttributeKeyReason:        tc.expectedReason,
 			})
 
@@ -568,7 +614,7 @@ func TestKeeper_EndBlock_TimerDropped(t *testing.T) {
 			_, ok := f.timer()
 			require.False(t, ok)
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
-				types.AttributeKeyProposalID: "1",
+				types.AttributeKeyProposalID: firstProposalID,
 				types.AttributeKeyReason:     tc.expectedReason,
 			})
 
@@ -634,8 +680,8 @@ func TestKeeper_EndBlock_FailureClearsOnlyTheTimer(t *testing.T) {
 			_, ok := f.timer()
 			require.False(t, ok)
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
-				types.AttributeKeyProposalID:    "1",
-				types.AttributeKeyUpgradeHeight: "250",
+				types.AttributeKeyProposalID:    firstProposalID,
+				types.AttributeKeyUpgradeHeight: upgradeHeightAttr,
 				types.AttributeKeyReason:        "internal_error",
 			})
 			require.Equal(t, original, f.proposal(id))
@@ -741,8 +787,11 @@ func convertExpedited(f *fixture) govv1.Proposal {
 // An expedited proposal that becomes regular loses its timer at the
 // expedited deadline. Gov deleted its votes, so only new Yes votes start a
 // new timer, with a new H.
+//
+// These are subtests and not a table: after the shared conversion, the two
+// cases are different flows with different checks.
 func TestKeeper_EndBlock_ExpeditedConvertedToRegularDuringTimer(t *testing.T) {
-	t.Run("no new votes, no timer", func(t *testing.T) {
+	t.Run("should not start a timer - no new votes", func(t *testing.T) {
 		f := newFixture(t)
 		converted := convertExpedited(f)
 
@@ -756,7 +805,7 @@ func TestKeeper_EndBlock_ExpeditedConvertedToRegularDuringTimer(t *testing.T) {
 		require.True(t, f.queued(*converted.VotingEndTime, converted.Id))
 	})
 
-	t.Run("validators vote again, new timer and early close", func(t *testing.T) {
+	t.Run("should start a new timer and close early - validators vote again", func(t *testing.T) {
 		f := newFixture(t)
 		converted := convertExpedited(f)
 
@@ -801,7 +850,7 @@ func TestKeeper_EndBlock_OtherProposalDueAtFinalCheckPostponesTimer(t *testing.T
 
 	H := timer.UpgradeHeight + 7
 	f.requireSingleEvent(types.EventTypePostponed, map[string]string{
-		types.AttributeKeyProposalID:    "1",
+		types.AttributeKeyProposalID:    firstProposalID,
 		types.AttributeKeyUpgradeHeight: "257",
 	})
 	postponed, ok := f.timer()

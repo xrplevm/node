@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -37,12 +38,22 @@ const (
 	originalHeight = int64(1_000_000)
 	startHeight    = int64(100)
 
+	// upgradeHeight is H of a timer that starts at startHeight with the
+	// default timelock.
+	upgradeHeight = startHeight + int64(types.DefaultTimelockBlocks)
+
+	// firstProposalID is the id of a test's first proposal, as event text.
+	firstProposalID = "1"
+
 	// The tests use their own versions, so they do not depend on the upgrade
 	// handler of the node version. baseVersion is the completed upgrade of
 	// newFixture, and minorVersion is its minor bump.
 	baseVersion  = "v1.0.0"
 	minorVersion = "v1.1.0"
 )
+
+// upgradeHeightAttr is upgradeHeight as event text.
+var upgradeHeightAttr = strconv.FormatInt(upgradeHeight, 10)
 
 // TestMain runs one time for the package, before all tests. It sets the
 // address prefixes of the chain.
