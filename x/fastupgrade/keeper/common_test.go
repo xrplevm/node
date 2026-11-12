@@ -51,9 +51,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// fixture runs keeper and gov code on a real app context. Blocks are
-// simulated on one context: nextBlock bumps height and time. tests/integration
-// covers real block commits.
+// fixture runs keeper and gov code on a real app, with the real gov, staking,
+// and x/upgrade keepers, not with mocks. Most of the module's logic is its
+// interaction with those modules, for example gov's tally and vote hook. A
+// mock would return only what the test told it, so it would prove nothing.
+//
+// Blocks are simulated on one context: nextBlock bumps height and time.
+// tests/integration covers real block commits.
 type fixture struct {
 	t       *testing.T
 	app     *app.App
@@ -117,12 +121,17 @@ func (f *fixture) nextBlock() {
 	f.setBlock(f.ctx.BlockHeight()+1, f.ctx.BlockTime().Add(time.Second))
 }
 
+// advanceTo moves to the given height, one block and one second at a time.
+// It does not run EndBlock for the blocks it passes: call f.endBlock() where
+// the test needs the module to run.
 func (f *fixture) advanceTo(height int64) {
 	for f.ctx.BlockHeight() < height {
 		f.nextBlock()
 	}
 }
 
+// evmGenesis is only wiring for the test app. The EVM module's default gas
+// coin is aatom, and the app cannot start with a coin it does not have.
 func evmGenesis() *evmtypes.GenesisState {
 	gen := evmtypes.DefaultGenesisState()
 	gen.Params.EvmDenom = app.BaseDenom
@@ -141,9 +150,12 @@ func (f *fixture) applyUpgrade(name string) {
 	require.NoError(f.t, f.app.UpgradeKeeper.ApplyUpgrade(f.ctx, upgradetypes.Plan{Name: name, Height: f.ctx.BlockHeight()}))
 }
 
-// completeUpgrades applies the upgrades in order, at blocks 10, 20, and so
-// on, and then returns to startHeight. The last name is the last completed
-// upgrade.
+// completeUpgrades writes an upgrade history in the past. It goes back from
+// startHeight to blocks 10, 20, and so on, records one upgrade at each, and
+// then returns to startHeight. The last name is the last completed upgrade.
+//
+// Example: completeUpgrades("v1.0.0", "v1.1.0") at block 100 records v1.0.0
+// at block 10 and v1.1.0 at block 20, and the test continues at block 100.
 func (f *fixture) completeUpgrades(names ...string) {
 	f.t.Helper()
 	for i, name := range names {
@@ -172,6 +184,12 @@ func (f *fixture) proposeMinor() uint64 {
 	return f.propose(f.upgradeMsg(minorVersion))
 }
 
+func (f *fixture) votes(id uint64, n int, options govv1.WeightedVoteOptions) {
+	for _, v := range f.vals[:n] {
+		f.vote(id, v, options)
+	}
+}
+
 func (f *fixture) vote(id uint64, voter sdk.AccAddress, options govv1.WeightedVoteOptions) {
 	f.t.Helper()
 	require.NoError(f.t, f.app.GovKeeper.AddVote(f.ctx, id, voter, options, ""))
@@ -187,21 +205,10 @@ func split(yesWeight, noWeight string) govv1.WeightedVoteOptions {
 	}
 }
 
-func (f *fixture) votes(id uint64, n int, options govv1.WeightedVoteOptions) {
-	for _, v := range f.vals[:n] {
-		f.vote(id, v, options)
-	}
-}
-
 func (f *fixture) nominated(id uint64) bool {
 	has, err := f.k.Nominations.Has(f.ctx, id)
 	require.NoError(f.t, err)
 	return has
-}
-
-func (f *fixture) endBlock() {
-	f.t.Helper()
-	require.NoError(f.t, f.k.EndBlock(f.ctx))
 }
 
 // fullEndBlock runs our EndBlocker and then gov's, the app's order.
@@ -211,6 +218,15 @@ func (f *fixture) fullEndBlock() {
 	require.NoError(f.t, gov.EndBlocker(f.ctx, &f.app.GovKeeper))
 }
 
+// endBlock runs the module's EndBlock on demand, at the height and time of
+// f.ctx.
+func (f *fixture) endBlock() {
+	f.t.Helper()
+	require.NoError(f.t, f.k.EndBlock(f.ctx))
+}
+
+// timer returns the current timer. The second value is false when no timer
+// is running.
 func (f *fixture) timer() (types.Timer, bool) {
 	t, err := f.k.Timer.Get(f.ctx)
 	if errors.Is(err, collections.ErrNotFound) {
@@ -237,12 +253,16 @@ func (f *fixture) setGovParams(mutate func(*govv1.Params)) {
 	require.NoError(f.t, f.app.GovKeeper.Params.Set(f.ctx, p))
 }
 
+// proposal fetches the proposal from gov's store. It fails the test when the
+// proposal does not exist.
 func (f *fixture) proposal(id uint64) govv1.Proposal {
 	p, err := f.app.GovKeeper.Proposals.Get(f.ctx, id)
 	require.NoError(f.t, err)
 	return p
 }
 
+// storedVotes returns how many votes gov stores for the proposal with this
+// id.
 func (f *fixture) storedVotes(id uint64) int {
 	iter, err := f.app.GovKeeper.Votes.Iterate(f.ctx, collections.NewPrefixedPairRange[uint64, sdk.AccAddress](id))
 	require.NoError(f.t, err)
@@ -251,12 +271,15 @@ func (f *fixture) storedVotes(id uint64) int {
 	return len(keys)
 }
 
+// queued reports whether gov's active queue has the proposal with this voting
+// end time.
 func (f *fixture) queued(endTime time.Time, id uint64) bool {
 	has, err := f.app.GovKeeper.ActiveProposalsQueue.Has(f.ctx, collections.Join(endTime, id))
 	require.NoError(f.t, err)
 	return has
 }
 
+// planHeight returns the plan height in the proposal's upgrade message.
 func (f *fixture) planHeight(p govv1.Proposal) int64 {
 	msg, ok := p.Messages[0].GetCachedValue().(*upgradetypes.MsgSoftwareUpgrade)
 	require.True(f.t, ok)
@@ -276,6 +299,8 @@ func (f *fixture) jail(operator sdk.AccAddress) {
 	require.NoError(f.t, err)
 }
 
+// delegate bonds amount from delegator to the validator. The delegator then
+// has voting power of its own in gov's tally.
 func (f *fixture) delegate(delegator sdk.AccAddress, validator sdk.AccAddress, amount sdkmath.Int) {
 	f.t.Helper()
 	val, err := f.app.StakingKeeper.GetValidator(f.ctx, sdk.ValAddress(validator))
@@ -284,6 +309,8 @@ func (f *fixture) delegate(delegator sdk.AccAddress, validator sdk.AccAddress, a
 	require.NoError(f.t, err)
 }
 
+// events returns the events of this type in the current block, each as a map
+// of its attributes.
 func (f *fixture) events(eventType string) []map[string]string {
 	all := f.ctx.EventManager().Events()
 	out := make([]map[string]string, 0, len(all))
@@ -300,6 +327,8 @@ func (f *fixture) events(eventType string) []map[string]string {
 	return out
 }
 
+// fastUpgradeEvents returns how many events of the module the current block
+// has, over all five event types.
 func (f *fixture) fastUpgradeEvents() int {
 	n := 0
 	for _, et := range []string{types.EventTypeStarted, types.EventTypeNotStarted, types.EventTypeDropped, types.EventTypePostponed, types.EventTypeEarlyClose} {
@@ -328,4 +357,6 @@ func (f *fixture) startTimer(id uint64) types.Timer {
 	return timer
 }
 
+// tokens is the stake of each validator. The tests use it as the unit for a
+// delegation and for the expected Yes count.
 var tokens = exrpintegration.DefaultBondedAmount

@@ -116,10 +116,9 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			noBaseVersion: true,
 		},
 		{
-			// The last completed upgrade is v1.1.0, the latest by height, and
-			// not v1.5.0, the highest version.
-			name:  "should nominate - minor bump of the latest upgrade by height",
-			setup: func(f *fixture) { f.completeUpgrades("v1.5.0", minorVersion) },
+			// v1.0.0 and then v1.1.0 ran, so the base version is v1.1.0.
+			name:  "should nominate - minor bump of the last completed upgrade",
+			setup: func(f *fixture) { f.completeUpgrades(baseVersion, minorVersion) },
 			propose: func(f *fixture) uint64 {
 				return f.propose(f.upgradeMsg("v1.2.0"))
 			},
@@ -127,8 +126,8 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			expectedNominated: true,
 		},
 		{
-			name:  "should not nominate - same minor as the latest upgrade by height",
-			setup: func(f *fixture) { f.completeUpgrades("v1.5.0", minorVersion) },
+			name:  "should not nominate - same minor as the last completed upgrade",
+			setup: func(f *fixture) { f.completeUpgrades(baseVersion, minorVersion) },
 			propose: func(f *fixture) uint64 {
 				return f.propose(f.upgradeMsg("v1.1.5"))
 			},
