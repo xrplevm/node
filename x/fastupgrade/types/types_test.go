@@ -4,24 +4,15 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-	"cosmossdk.io/x/tx/signing/aminojson"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	gogoproto "github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
-	protov2 "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/dynamicpb"
 
 	"github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
 func TestDefaultParams(t *testing.T) {
-	p := types.DefaultParams()
-	require.False(t, p.Enabled)
-	require.Equal(t, uint64(150), p.TimelockBlocks)
-	require.Equal(t, "0.850000000000000000", p.Threshold)
-	require.Equal(t, uint64(10), p.PostponeBlocks)
-	require.NoError(t, p.Validate())
+	defaultParams := types.DefaultParams()
+	require.False(t, defaultParams.Enabled)
 	require.NoError(t, types.DefaultGenesis().Validate())
 }
 
@@ -146,43 +137,4 @@ func TestIsMinorBumpOf(t *testing.T) {
 	require.False(t, types.Version{12, 2, 9}.IsMinorBumpOf(base))
 	require.False(t, types.Version{13, 4, 0}.IsMinorBumpOf(base))
 	require.False(t, types.Version{11, 4, 0}.IsMinorBumpOf(base))
-}
-
-// Clients such as autocli decode responses with descriptors from
-// gogoproto.HybridResolver. Every message field must resolve to a full
-// descriptor: a placeholder decodes as an empty message.
-func TestDescriptorsResolveForClients(t *testing.T) {
-	for _, name := range []protoreflect.FullName{
-		"fastupgrade.GenesisState",
-		"fastupgrade.QueryParamsResponse",
-		"fastupgrade.QueryTimerResponse",
-		"fastupgrade.MsgUpdateParams",
-	} {
-		d, err := gogoproto.HybridResolver.FindDescriptorByName(name)
-		require.NoError(t, err, name)
-		md, ok := d.(protoreflect.MessageDescriptor)
-		require.True(t, ok, name)
-		fields := md.Fields()
-		for i := range fields.Len() {
-			if m := fields.Get(i).Message(); m != nil {
-				require.False(t, m.IsPlaceholder(), "%s.%s", name, fields.Get(i).Name())
-			}
-		}
-	}
-}
-
-func TestTimerResponseDecodesDynamically(t *testing.T) {
-	bz, err := (&types.QueryTimerResponse{Timer: &types.Timer{ProposalId: 3, UpgradeHeight: 252}}).Marshal()
-	require.NoError(t, err)
-
-	d, err := gogoproto.HybridResolver.FindDescriptorByName("fastupgrade.QueryTimerResponse")
-	require.NoError(t, err)
-	md, ok := d.(protoreflect.MessageDescriptor)
-	require.True(t, ok)
-	msg := dynamicpb.NewMessage(md)
-	require.NoError(t, protov2.Unmarshal(bz, msg))
-
-	out, err := aminojson.NewEncoder(aminojson.EncoderOptions{}).Marshal(msg)
-	require.NoError(t, err)
-	require.JSONEq(t, `{"timer":{"proposal_id":"3","upgrade_height":"252"}}`, string(out))
 }

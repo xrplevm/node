@@ -74,23 +74,23 @@ Reasons:
 
 | Reason | Meaning |
 | --- | --- |
-| `incompatible-with-gov` | Our threshold no longer fits gov's params. The `fast upgrade threshold is incompatible with gov params` log names the conflict. Raise our threshold or restore gov's params. |
-| `gate-below-threshold` | Validator Yes power dropped below the threshold. |
-| `gov-tally-rejected` | Gov's tally would not pass. Unexpected without delegations from other accounts; investigate. |
-| `tally-below-threshold` | Gov's Yes count is below the threshold. Only possible with delegations from other accounts. |
-| `natural-deadline` | The proposal's own deadline arrived before the vote closed early. The timer is dropped in the block of the deadline, and stock gov decides with the original height. If gov converts an expedited proposal to a regular one there, it deletes all votes: a new Yes vote starts a new timer. |
-| `not-minor` | The proposal is no longer eligible: another upgrade completed during the timelock, or the chain passed the plan's original height. |
-| `plan-pending` | Another upgrade plan is scheduled. |
+| `incompatible_with_gov` | Our threshold no longer fits gov's params. The `fast upgrade threshold is incompatible with gov params` log names the conflict. Raise our threshold or restore gov's params. |
+| `gate_below_threshold` | Validator Yes power dropped below the threshold. |
+| `gov_tally_rejected` | Gov's tally would not pass. Unexpected without delegations from other accounts; investigate. |
+| `tally_below_threshold` | Gov's Yes count is below the threshold. Only possible with delegations from other accounts. |
+| `natural_deadline` | The proposal's own deadline arrived before the vote closed early. The timer is dropped in the block of the deadline, and stock gov decides with the original height. If gov converts an expedited proposal to a regular one there, it deletes all votes: a new Yes vote starts a new timer. |
+| `not_eligible` | The proposal is no longer eligible: another upgrade completed during the timelock, or the chain passed the plan's original height. |
+| `plan_pending` | Another upgrade plan is scheduled. |
 | `disabled` | The module was disabled. |
-| `not-voting` | The proposal is no longer in its voting period, for example because the proposer cancelled it. |
-| `missed-window` | The H-1 check did not run. The timer never fires after its own H-1. |
-| `internal-error` | EndBlock hit an internal error or a panic while a timer was running. The `fast upgrade end block failed` log has the error. |
+| `not_voting` | The proposal is no longer in its voting period, for example because the proposer cancelled it. |
+| `missed_window` | The H-1 check did not run. The timer never fires after its own H-1. |
+| `internal_error` | EndBlock hit an internal error or a panic while a timer was running. The `fast upgrade end block failed` log has the error. |
 
 After `fastupgrade_not_started` or `fastupgrade_dropped`, the module does not check the proposal again on its own. To retry, a bonded validator must send its Yes vote again.
 
 While another upgrade plan is scheduled, the module skips the start with no event. It does not check the proposal again after that plan is gone. To retry, a bonded validator must send its Yes vote again.
 
-If EndBlock hits an internal error or a panic, it discards its own changes and logs `fast upgrade end block failed`. If a timer was running, it drops it with `fastupgrade_dropped` and reason `internal-error`. Without a timer it emits no event. Stock gov then decides the proposal.
+If EndBlock hits an internal error or a panic, it discards its own changes and logs `fast upgrade end block failed`. If a timer was running, it drops it with `fastupgrade_dropped` and reason `internal_error`. Without a timer it emits no event. Stock gov then decides the proposal.
 
 Gov runs after this module in the same block. A proposal that gov executes in block H-1 can change gov's params, schedule an upgrade plan, or remove a validator after the module's check, so gov's own tally of an early-closed proposal could then fail. The module therefore postpones H when any other proposal ends in block H-1, and checks again at the new H-1. This can repeat until the proposal's own deadline, after which stock gov decides with the original plan.
 

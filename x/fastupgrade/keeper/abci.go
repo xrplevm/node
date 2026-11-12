@@ -169,7 +169,7 @@ func (k Keeper) checkNominations(ctx sdk.Context, params types.Params, threshold
 		switch reason {
 		case types.ReasonOK:
 			return k.startTimer(ctx, id, msg.Plan, upgradeHeight)
-		case types.ReasonGateBelowThreshold, types.ReasonNaturalDeadline, types.ReasonNotMinor:
+		case types.ReasonGateBelowThreshold, types.ReasonNaturalDeadline, types.ReasonNotEligible:
 			continue
 		case types.ReasonPlanPending:
 			return nil
@@ -292,7 +292,7 @@ func (k Keeper) guards(ctx sdk.Context, p govv1.Proposal, minPlanHeight int64, t
 		return nil, "", err
 	}
 	if msg == nil {
-		return nil, types.ReasonNotMinor, nil
+		return nil, types.ReasonNotEligible, nil
 	}
 	pending, err := k.upgradePlanExists(ctx)
 	if err != nil {

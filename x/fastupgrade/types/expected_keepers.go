@@ -10,6 +10,10 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
+// Gov has no interface here on purpose. The module also depends on gov, and
+// it is the only keeper the module writes to: see Keeper.gov in
+// keeper/keeper.go.
+
 // StakingKeeper is the staking state the module reads.
 type StakingKeeper interface {
 	TotalBondedTokens(ctx context.Context) (math.Int, error)

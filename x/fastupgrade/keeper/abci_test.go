@@ -139,7 +139,7 @@ func TestNewestCandidateDecides(t *testing.T) {
 		require.False(t, ok)
 		f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{
 			types.AttributeKeyProposalID: "2",
-			types.AttributeKeyReason:     "gov-tally-rejected",
+			types.AttributeKeyReason:     "gov_tally_rejected",
 		})
 	})
 }
@@ -153,8 +153,8 @@ func TestDelegatorVotesCanOnlyStopTheStart(t *testing.T) {
 		started bool
 	}{
 		{"delegator yes", tokens, govv1.OptionYes, "", true},
-		{"delegator no lowers gov yes count", tokens, govv1.OptionNo, "tally-below-threshold", false},
-		{"delegator veto rejects gov tally", tokens.MulRaw(3), govv1.OptionNoWithVeto, "gov-tally-rejected", false},
+		{"delegator no lowers gov yes count", tokens, govv1.OptionNo, "tally_below_threshold", false},
+		{"delegator veto rejects gov tally", tokens.MulRaw(3), govv1.OptionNoWithVeto, "gov_tally_rejected", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
@@ -206,7 +206,7 @@ func TestStartSkips(t *testing.T) {
 		require.False(t, ok)
 		f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{
 			types.AttributeKeyProposalID: "1",
-			types.AttributeKeyReason:     "incompatible-with-gov",
+			types.AttributeKeyReason:     "incompatible_with_gov",
 		})
 	})
 
@@ -321,7 +321,7 @@ func TestTimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
 	f.requireSingleEvent(types.EventTypeDropped, map[string]string{
 		types.AttributeKeyProposalID:    "1",
 		types.AttributeKeyUpgradeHeight: "250",
-		types.AttributeKeyReason:        "gate-below-threshold",
+		types.AttributeKeyReason:        "gate_below_threshold",
 	})
 	require.Equal(t, govv1.StatusVotingPeriod, f.proposal(id).Status)
 }
@@ -335,35 +335,35 @@ func TestFinalCheckDropsKeepOriginalProposal(t *testing.T) {
 		// atFinal runs in the H-1 block before EndBlock.
 		atFinal func(f *fixture, id uint64)
 	}{
-		{name: "vote change is the veto", reason: "gate-below-threshold", during: func(f *fixture, id uint64) {
+		{name: "vote change is the veto", reason: "gate_below_threshold", during: func(f *fixture, id uint64) {
 			f.vote(id, f.vals[0], no())
 		}},
-		{name: "gov params changed", reason: "incompatible-with-gov", during: func(f *fixture, _ uint64) {
+		{name: "gov params changed", reason: "incompatible_with_gov", during: func(f *fixture, _ uint64) {
 			f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
 		}},
-		{name: "gate fails and gov params changed", reason: "gate-below-threshold", during: func(f *fixture, id uint64) {
+		{name: "gate fails and gov params changed", reason: "gate_below_threshold", during: func(f *fixture, id uint64) {
 			f.vote(id, f.vals[0], no())
 			f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
 		}},
-		{name: "another minor completed", reason: "not-minor", during: func(f *fixture, _ uint64) {
+		{name: "another minor completed", reason: "not_eligible", during: func(f *fixture, _ uint64) {
 			f.applyUpgrade("v12.3.0")
 		}},
-		{name: "plan pending", reason: "plan-pending", during: func(f *fixture, _ uint64) {
+		{name: "plan pending", reason: "plan_pending", during: func(f *fixture, _ uint64) {
 			require.NoError(f.t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
 		}},
-		{name: "delegator lowers gov yes count", reason: "tally-below-threshold", during: func(f *fixture, id uint64) {
+		{name: "delegator lowers gov yes count", reason: "tally_below_threshold", during: func(f *fixture, id uint64) {
 			f.delegate(f.other, f.vals[0], tokens)
 			f.vote(id, f.other, no())
 		}},
-		{name: "delegator vetoes", reason: "gov-tally-rejected", during: func(f *fixture, id uint64) {
+		{name: "delegator vetoes", reason: "gov_tally_rejected", during: func(f *fixture, id uint64) {
 			f.delegate(f.other, f.vals[0], tokens.MulRaw(3))
 			f.vote(id, f.other, govv1.NewNonSplitVoteOption(govv1.OptionNoWithVeto))
 		}},
-		{name: "natural deadline due", reason: "natural-deadline", atFinal: func(f *fixture, id uint64) {
+		{name: "natural deadline due", reason: "natural_deadline", atFinal: func(f *fixture, id uint64) {
 			f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
 		}},
 		// The proposal's own deadline wins over the postponement.
-		{name: "natural deadline due and another proposal due", reason: "natural-deadline", during: func(f *fixture, _ uint64) {
+		{name: "natural deadline due and another proposal due", reason: "natural_deadline", during: func(f *fixture, _ uint64) {
 			period := time.Second
 			f.setGovParams(func(p *govv1.Params) { p.VotingPeriod = &period })
 			f.propose(f.upgradeMsg("v13.0.0"))
@@ -417,7 +417,7 @@ func TestNaturalDeadlineAtFinalCheckUsesOriginalHeight(t *testing.T) {
 	f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
 	f.fullEndBlock()
 
-	f.requireSingleEvent(types.EventTypeDropped, map[string]string{types.AttributeKeyReason: "natural-deadline"})
+	f.requireSingleEvent(types.EventTypeDropped, map[string]string{types.AttributeKeyReason: "natural_deadline"})
 	p := f.proposal(id)
 	require.Equal(t, govv1.StatusPassed, p.Status)
 	plan, err := f.app.UpgradeKeeper.GetUpgradePlan(f.ctx)
@@ -434,15 +434,15 @@ func TestTimerDroppedByEndBlock(t *testing.T) {
 		{"disabled", "disabled", func(f *fixture, _ uint64, _ types.Timer) {
 			f.setParams(false, 150, "0.85")
 		}},
-		{"proposal canceled", "not-voting", func(f *fixture, id uint64, _ types.Timer) {
+		{"proposal canceled", "not_voting", func(f *fixture, id uint64, _ types.Timer) {
 			require.NoError(f.t, f.app.GovKeeper.CancelProposal(f.ctx, id, f.other.String()))
 		}},
-		{"final check block missed", "missed-window", func(f *fixture, _ uint64, timer types.Timer) {
+		{"final check block missed", "missed_window", func(f *fixture, _ uint64, timer types.Timer) {
 			f.setBlock(timer.UpgradeHeight, f.ctx.BlockTime())
 		}},
 		// The module runs before gov, so it sees the deadline in the block
 		// where gov ends the vote.
-		{"deadline before the final check", "natural-deadline", func(f *fixture, id uint64, _ types.Timer) {
+		{"deadline before the final check", "natural_deadline", func(f *fixture, id uint64, _ types.Timer) {
 			f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
 		}},
 	} {
@@ -512,7 +512,7 @@ func TestEndBlockFailureClearsOnlyTheTimer(t *testing.T) {
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
 				types.AttributeKeyProposalID:    "1",
 				types.AttributeKeyUpgradeHeight: "250",
-				types.AttributeKeyReason:        "internal-error",
+				types.AttributeKeyReason:        "internal_error",
 			})
 			require.Equal(t, original, f.proposal(id))
 			require.True(t, f.queued(*original.VotingEndTime, id))
@@ -582,7 +582,7 @@ func convertExpedited(f *fixture) govv1.Proposal {
 	expeditedEnd := *f.proposal(id).VotingEndTime
 	f.setBlock(f.ctx.BlockHeight(), expeditedEnd)
 	f.fullEndBlock()
-	f.requireSingleEvent(types.EventTypeDropped, map[string]string{types.AttributeKeyReason: "natural-deadline"})
+	f.requireSingleEvent(types.EventTypeDropped, map[string]string{types.AttributeKeyReason: "natural_deadline"})
 
 	converted := f.proposal(id)
 	require.False(f.t, converted.Expedited)
