@@ -13,7 +13,7 @@ import (
 	"github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
-func TestEndBlockerOrder(t *testing.T) {
+func TestModuleManager_FastUpgradeOrder(t *testing.T) {
 	f := newFixture(t)
 	mm := f.app.ModuleManager()
 	index := func(order []string, name string) int {
@@ -30,7 +30,7 @@ func TestEndBlockerOrder(t *testing.T) {
 	require.Less(t, index(mm.OrderInitGenesis, govtypes.ModuleName), index(mm.OrderInitGenesis, types.ModuleName))
 }
 
-func TestUpgradeHandlerEnables(t *testing.T) {
+func TestCreateUpgradeHandler_EnablesFastUpgrade(t *testing.T) {
 	f := newFixtureWithoutBaseline(t)
 	require.Equal(t, []string{types.StoreKey}, v12.StoreUpgrades().Added)
 

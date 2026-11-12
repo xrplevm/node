@@ -21,7 +21,7 @@ import (
 	poatypes "github.com/xrplevm/node/v12/x/poa/types"
 )
 
-func TestTimerStartKeepsVotesAndTally(t *testing.T) {
+func TestKeeper_EndBlock_TimerStartKeepsVotesAndTally(t *testing.T) {
 	f := newFixture(t)
 	id := f.proposeMinor()
 	f.votes(id, numValidators, yes())
@@ -50,42 +50,80 @@ func TestTimerStartKeepsVotesAndTally(t *testing.T) {
 	require.Equal(t, tokens.MulRaw(numValidators).String(), after.YesCount)
 }
 
-func TestValidatorGate(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		threshold string
-		votes     func(f *fixture, id uint64)
-		started   bool
+func TestKeeper_EndBlock_ValidatorGate(t *testing.T) {
+	tt := []struct {
+		name            string
+		threshold       string
+		votes           func(f *fixture, id uint64)
+		expectedStarted bool
 	}{
-		{"4 of 5 below 0.85 is silent", "0.85", func(f *fixture, id uint64) { f.votes(id, 4, yes()) }, false},
-		{"4 of 5 equals 0.8", "0.8", func(f *fixture, id uint64) { f.votes(id, 4, yes()) }, true},
-		{"4 of 5 one unit below threshold", "0.800000000000000001", func(f *fixture, id uint64) { f.votes(id, 4, yes()) }, false},
-		{"weighted yes counts its weight", "0.85", func(f *fixture, id uint64) {
-			f.votes(id, 4, yes())
-			f.vote(id, f.vals[4], split("0.5", "0.5"))
-		}, true},
-		{"weighted yes below threshold", "0.85", func(f *fixture, id uint64) {
-			f.votes(id, 3, yes())
-			f.vote(id, f.vals[3], split("0.5", "0.5"))
-			f.vote(id, f.vals[4], split("0.5", "0.5"))
-		}, false},
-		{"non-validator votes are not counted", "0.85", func(f *fixture, id uint64) {
-			f.votes(id, 4, yes())
-			f.vote(id, f.other, yes())
-		}, false},
-		{"jailed validator is not in the bonded pool", "0.85", func(f *fixture, id uint64) {
-			f.jail(f.vals[4])
-			f.votes(id, 4, yes())
-		}, true},
-		// One extra base unit per validator makes each weight * tokens term
-		// fractional, while the sum equals threshold * bonded exactly.
-		{"weighted terms are not rounded per validator", "0.8", func(f *fixture, id uint64) {
-			for _, v := range f.vals {
-				f.delegate(f.other, v, sdkmath.OneInt())
-			}
-			f.votes(id, numValidators, split("0.8", "0.2"))
-		}, true},
-	} {
+		{
+			name:      "should fail - 4 of 5 is below 0.85",
+			threshold: "0.85",
+			votes:     func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
+		},
+		{
+			name:            "should pass - 4 of 5 equals 0.8",
+			threshold:       "0.8",
+			votes:           func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
+			expectedStarted: true,
+		},
+		{
+			name:      "should fail - 4 of 5 is one unit below the threshold",
+			threshold: "0.800000000000000001",
+			votes:     func(f *fixture, id uint64) { f.votes(id, 4, yes()) },
+		},
+		{
+			name:      "should pass - weighted yes counts its weight",
+			threshold: "0.85",
+			votes: func(f *fixture, id uint64) {
+				f.votes(id, 4, yes())
+				f.vote(id, f.vals[4], split("0.5", "0.5"))
+			},
+			expectedStarted: true,
+		},
+		{
+			name:      "should fail - weighted yes is below the threshold",
+			threshold: "0.85",
+			votes: func(f *fixture, id uint64) {
+				f.votes(id, 3, yes())
+				f.vote(id, f.vals[3], split("0.5", "0.5"))
+				f.vote(id, f.vals[4], split("0.5", "0.5"))
+			},
+		},
+		{
+			name:      "should fail - non-validator votes are not counted",
+			threshold: "0.85",
+			votes: func(f *fixture, id uint64) {
+				f.votes(id, 4, yes())
+				f.vote(id, f.other, yes())
+			},
+		},
+		{
+			name:      "should pass - jailed validator is not in the bonded pool",
+			threshold: "0.85",
+			votes: func(f *fixture, id uint64) {
+				f.jail(f.vals[4])
+				f.votes(id, 4, yes())
+			},
+			expectedStarted: true,
+		},
+		{
+			// One extra base unit per validator makes each weight * tokens
+			// term fractional, while the sum equals threshold * bonded exactly.
+			name:      "should pass - weighted terms are not rounded per validator",
+			threshold: "0.8",
+			votes: func(f *fixture, id uint64) {
+				for _, v := range f.vals {
+					f.delegate(f.other, v, sdkmath.OneInt())
+				}
+				f.votes(id, numValidators, split("0.8", "0.2"))
+			},
+			expectedStarted: true,
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.setParams(true, 150, tc.threshold)
@@ -93,15 +131,15 @@ func TestValidatorGate(t *testing.T) {
 			tc.votes(f, id)
 			f.endBlock()
 			_, ok := f.timer()
-			require.Equal(t, tc.started, ok)
-			if !tc.started {
+			require.Equal(t, tc.expectedStarted, ok)
+			if !tc.expectedStarted {
 				require.Zero(t, f.fastUpgradeEvents())
 			}
 		})
 	}
 }
 
-func TestNewestCandidateDecides(t *testing.T) {
+func TestKeeper_EndBlock_NewestCandidateDecides(t *testing.T) {
 	t.Run("newest ready proposal starts", func(t *testing.T) {
 		f := newFixture(t)
 		older := f.proposeMinor()
@@ -144,18 +182,35 @@ func TestNewestCandidateDecides(t *testing.T) {
 	})
 }
 
-func TestDelegatorVotesCanOnlyStopTheStart(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		amount  sdkmath.Int
-		option  govv1.VoteOption
-		reason  string
-		started bool
+func TestKeeper_EndBlock_DelegatorVotesCanOnlyStopTheStart(t *testing.T) {
+	tt := []struct {
+		name            string
+		amount          sdkmath.Int
+		option          govv1.VoteOption
+		expectedStarted bool
+		expectedReason  string
 	}{
-		{"delegator yes", tokens, govv1.OptionYes, "", true},
-		{"delegator no lowers gov yes count", tokens, govv1.OptionNo, "tally_below_threshold", false},
-		{"delegator veto rejects gov tally", tokens.MulRaw(3), govv1.OptionNoWithVeto, "gov_tally_rejected", false},
-	} {
+		{
+			name:            "should pass - delegator yes",
+			amount:          tokens,
+			option:          govv1.OptionYes,
+			expectedStarted: true,
+		},
+		{
+			name:           "should fail - delegator no lowers gov yes count",
+			amount:         tokens,
+			option:         govv1.OptionNo,
+			expectedReason: "tally_below_threshold",
+		},
+		{
+			name:           "should fail - delegator veto rejects gov tally",
+			amount:         tokens.MulRaw(3),
+			option:         govv1.OptionNoWithVeto,
+			expectedReason: "gov_tally_rejected",
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			id := f.proposeMinor()
@@ -164,16 +219,16 @@ func TestDelegatorVotesCanOnlyStopTheStart(t *testing.T) {
 			f.vote(id, f.other, govv1.NewNonSplitVoteOption(tc.option))
 			f.endBlock()
 			_, ok := f.timer()
-			require.Equal(t, tc.started, ok)
-			if !tc.started {
-				f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{types.AttributeKeyReason: tc.reason})
+			require.Equal(t, tc.expectedStarted, ok)
+			if !tc.expectedStarted {
+				f.requireSingleEvent(types.EventTypeNotStarted, map[string]string{types.AttributeKeyReason: tc.expectedReason})
 			}
 			require.Equal(t, numValidators+1, f.storedVotes(id))
 		})
 	}
 }
 
-func TestStartSkips(t *testing.T) {
+func TestKeeper_EndBlock_StartSkips(t *testing.T) {
 	t.Run("pending plan", func(t *testing.T) {
 		f := newFixture(t)
 		require.NoError(t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
@@ -261,7 +316,7 @@ func TestStartSkips(t *testing.T) {
 	})
 }
 
-func TestEarlyCloseExecutesInSameBlock(t *testing.T) {
+func TestKeeper_EndBlock_EarlyCloseExecutesInSameBlock(t *testing.T) {
 	f := newFixture(t)
 	id := f.proposeMinor()
 	original := f.proposal(id)
@@ -300,7 +355,7 @@ func TestEarlyCloseExecutesInSameBlock(t *testing.T) {
 	require.Equal(t, upgradetypes.Plan{Name: "v12.1.0", Height: H, Info: "info-v12.1.0"}, plan)
 }
 
-func TestTimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
+func TestKeeper_EndBlock_TimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
 	f := newFixture(t)
 	f.setParams(true, 150, "0.8")
 	id := f.proposeMinor()
@@ -326,51 +381,90 @@ func TestTimelockAndThresholdUpdatesDuringTimer(t *testing.T) {
 	require.Equal(t, govv1.StatusVotingPeriod, f.proposal(id).Status)
 }
 
-func TestFinalCheckDropsKeepOriginalProposal(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		reason string
-		// during runs after the timer started, before H-1.
+func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
+	tt := []struct {
+		name           string
+		expectedReason string
+		// during runs after the timer started, before H-1. It is optional.
 		during func(f *fixture, id uint64)
-		// atFinal runs in the H-1 block before EndBlock.
+		// atFinal runs in the H-1 block before EndBlock. It is optional.
 		atFinal func(f *fixture, id uint64)
 	}{
-		{name: "vote change is the veto", reason: "gate_below_threshold", during: func(f *fixture, id uint64) {
-			f.vote(id, f.vals[0], no())
-		}},
-		{name: "gov params changed", reason: "incompatible_with_gov", during: func(f *fixture, _ uint64) {
-			f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
-		}},
-		{name: "gate fails and gov params changed", reason: "gate_below_threshold", during: func(f *fixture, id uint64) {
-			f.vote(id, f.vals[0], no())
-			f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
-		}},
-		{name: "another minor completed", reason: "not_eligible", during: func(f *fixture, _ uint64) {
-			f.applyUpgrade("v12.3.0")
-		}},
-		{name: "plan pending", reason: "plan_pending", during: func(f *fixture, _ uint64) {
-			require.NoError(f.t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
-		}},
-		{name: "delegator lowers gov yes count", reason: "tally_below_threshold", during: func(f *fixture, id uint64) {
-			f.delegate(f.other, f.vals[0], tokens)
-			f.vote(id, f.other, no())
-		}},
-		{name: "delegator vetoes", reason: "gov_tally_rejected", during: func(f *fixture, id uint64) {
-			f.delegate(f.other, f.vals[0], tokens.MulRaw(3))
-			f.vote(id, f.other, govv1.NewNonSplitVoteOption(govv1.OptionNoWithVeto))
-		}},
-		{name: "natural deadline due", reason: "natural_deadline", atFinal: func(f *fixture, id uint64) {
-			f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
-		}},
-		// The proposal's own deadline wins over the postponement.
-		{name: "natural deadline due and another proposal due", reason: "natural_deadline", during: func(f *fixture, _ uint64) {
-			period := time.Second
-			f.setGovParams(func(p *govv1.Params) { p.VotingPeriod = &period })
-			f.propose(f.upgradeMsg("v13.0.0"))
-		}, atFinal: func(f *fixture, id uint64) {
-			f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
-		}},
-	} {
+		{
+			name:           "vote change is the veto",
+			expectedReason: "gate_below_threshold",
+			during: func(f *fixture, id uint64) {
+				f.vote(id, f.vals[0], no())
+			},
+		},
+		{
+			name:           "gov params changed",
+			expectedReason: "incompatible_with_gov",
+			during: func(f *fixture, _ uint64) {
+				f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
+			},
+		},
+		{
+			name:           "gate fails and gov params changed",
+			expectedReason: "gate_below_threshold",
+			during: func(f *fixture, id uint64) {
+				f.vote(id, f.vals[0], no())
+				f.setGovParams(func(p *govv1.Params) { p.ExpeditedThreshold = incompatibleGovThreshold })
+			},
+		},
+		{
+			name:           "another minor completed",
+			expectedReason: "not_eligible",
+			during: func(f *fixture, _ uint64) {
+				f.applyUpgrade("v12.3.0")
+			},
+		},
+		{
+			name:           "plan pending",
+			expectedReason: "plan_pending",
+			during: func(f *fixture, _ uint64) {
+				require.NoError(f.t, f.app.UpgradeKeeper.ScheduleUpgrade(f.ctx, upgradetypes.Plan{Name: "other", Height: 5000}))
+			},
+		},
+		{
+			name:           "delegator lowers gov yes count",
+			expectedReason: "tally_below_threshold",
+			during: func(f *fixture, id uint64) {
+				f.delegate(f.other, f.vals[0], tokens)
+				f.vote(id, f.other, no())
+			},
+		},
+		{
+			name:           "delegator vetoes",
+			expectedReason: "gov_tally_rejected",
+			during: func(f *fixture, id uint64) {
+				f.delegate(f.other, f.vals[0], tokens.MulRaw(3))
+				f.vote(id, f.other, govv1.NewNonSplitVoteOption(govv1.OptionNoWithVeto))
+			},
+		},
+		{
+			name:           "natural deadline due",
+			expectedReason: "natural_deadline",
+			atFinal: func(f *fixture, id uint64) {
+				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
+			},
+		},
+		{
+			// The proposal's own deadline wins over the postponement.
+			name:           "natural deadline due and another proposal due",
+			expectedReason: "natural_deadline",
+			during: func(f *fixture, _ uint64) {
+				period := time.Second
+				f.setGovParams(func(p *govv1.Params) { p.VotingPeriod = &period })
+				f.propose(f.upgradeMsg("v13.0.0"))
+			},
+			atFinal: func(f *fixture, id uint64) {
+				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
+			},
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			id := f.proposeMinor()
@@ -397,7 +491,7 @@ func TestFinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
 				types.AttributeKeyProposalID:    "1",
 				types.AttributeKeyUpgradeHeight: "250",
-				types.AttributeKeyReason:        tc.reason,
+				types.AttributeKeyReason:        tc.expectedReason,
 			})
 
 			p := f.proposal(id)
@@ -409,7 +503,7 @@ func TestFinalCheckDropsKeepOriginalProposal(t *testing.T) {
 	}
 }
 
-func TestNaturalDeadlineAtFinalCheckUsesOriginalHeight(t *testing.T) {
+func TestKeeper_EndBlock_NaturalDeadlineAtFinalCheckUsesOriginalHeight(t *testing.T) {
 	f := newFixture(t)
 	id := f.proposeMinor()
 	timer := f.startTimer(id)
@@ -425,27 +519,45 @@ func TestNaturalDeadlineAtFinalCheckUsesOriginalHeight(t *testing.T) {
 	require.Equal(t, originalHeight, plan.Height)
 }
 
-func TestTimerDroppedByEndBlock(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		reason string
-		act    func(f *fixture, id uint64, timer types.Timer)
+func TestKeeper_EndBlock_TimerDropped(t *testing.T) {
+	tt := []struct {
+		name           string
+		expectedReason string
+		act            func(f *fixture, id uint64, timer types.Timer)
 	}{
-		{"disabled", "disabled", func(f *fixture, _ uint64, _ types.Timer) {
-			f.setParams(false, 150, "0.85")
-		}},
-		{"proposal canceled", "not_voting", func(f *fixture, id uint64, _ types.Timer) {
-			require.NoError(f.t, f.app.GovKeeper.CancelProposal(f.ctx, id, f.other.String()))
-		}},
-		{"final check block missed", "missed_window", func(f *fixture, _ uint64, timer types.Timer) {
-			f.setBlock(timer.UpgradeHeight, f.ctx.BlockTime())
-		}},
-		// The module runs before gov, so it sees the deadline in the block
-		// where gov ends the vote.
-		{"deadline before the final check", "natural_deadline", func(f *fixture, id uint64, _ types.Timer) {
-			f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
-		}},
-	} {
+		{
+			name:           "disabled",
+			expectedReason: "disabled",
+			act: func(f *fixture, _ uint64, _ types.Timer) {
+				f.setParams(false, 150, "0.85")
+			},
+		},
+		{
+			name:           "proposal canceled",
+			expectedReason: "not_voting",
+			act: func(f *fixture, id uint64, _ types.Timer) {
+				require.NoError(f.t, f.app.GovKeeper.CancelProposal(f.ctx, id, f.other.String()))
+			},
+		},
+		{
+			name:           "final check block missed",
+			expectedReason: "missed_window",
+			act: func(f *fixture, _ uint64, timer types.Timer) {
+				f.setBlock(timer.UpgradeHeight, f.ctx.BlockTime())
+			},
+		},
+		{
+			// The module runs before gov, so it sees the deadline in the
+			// block where gov ends the vote.
+			name:           "deadline before the final check",
+			expectedReason: "natural_deadline",
+			act: func(f *fixture, id uint64, _ types.Timer) {
+				f.setBlock(f.ctx.BlockHeight(), *f.proposal(id).VotingEndTime)
+			},
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			id := f.proposeMinor()
@@ -457,7 +569,7 @@ func TestTimerDroppedByEndBlock(t *testing.T) {
 			require.False(t, ok)
 			f.requireSingleEvent(types.EventTypeDropped, map[string]string{
 				types.AttributeKeyProposalID: "1",
-				types.AttributeKeyReason:     tc.reason,
+				types.AttributeKeyReason:     tc.expectedReason,
 			})
 
 			f.nextBlock()
@@ -476,28 +588,40 @@ func (failingEncode) Encode(govv1.Proposal) ([]byte, error) {
 	return nil, errors.New("encode failed")
 }
 
-func TestEndBlockFailureClearsOnlyTheTimer(t *testing.T) {
-	for _, tc := range []struct {
+func TestKeeper_EndBlock_FailureClearsOnlyTheTimer(t *testing.T) {
+	tt := []struct {
 		name    string
 		failure func(f *fixture)
 	}{
-		{"error: stored threshold is invalid", func(f *fixture) {
-			require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
-		}},
-		// The fixture's validators have MinSelfDelegation 0, so a removed one
-		// stays bonded with zero shares until staking's EndBlocker, and gov's
-		// Tally divides by those shares.
-		{"panic: gov tally divides by zero shares", func(f *fixture) {
-			require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
-		}},
-		// Gov's SetProposal fails after endVotingNow removed the queue key, so
-		// only the discarded scratch copy keeps the proposal queued.
-		{"error after a gov write: the proposal cannot be stored", func(f *fixture) {
-			sb := collections.NewSchemaBuilder(runtime.NewKVStoreService(f.app.GetKey(govtypes.StoreKey)))
-			f.app.GovKeeper.Proposals = collections.NewMap(sb, govtypes.ProposalsKeyPrefix, "proposals", collections.Uint64Key,
-				collcodec.ValueCodec[govv1.Proposal](failingEncode{codec.CollValue[govv1.Proposal](f.app.AppCodec())}))
-		}},
-	} {
+		{
+			name: "error: stored threshold is invalid",
+			failure: func(f *fixture) {
+				require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
+			},
+		},
+		{
+			// The fixture's validators have MinSelfDelegation 0, so a removed
+			// one stays bonded with zero shares until staking's EndBlocker,
+			// and gov's Tally divides by those shares.
+			name: "panic: gov tally divides by zero shares",
+			failure: func(f *fixture) {
+				require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
+			},
+		},
+		{
+			// Gov's SetProposal fails after endVotingNow removed the queue
+			// key, so only the discarded scratch copy keeps the proposal
+			// queued.
+			name: "error after a gov write: the proposal cannot be stored",
+			failure: func(f *fixture) {
+				sb := collections.NewSchemaBuilder(runtime.NewKVStoreService(f.app.GetKey(govtypes.StoreKey)))
+				f.app.GovKeeper.Proposals = collections.NewMap(sb, govtypes.ProposalsKeyPrefix, "proposals", collections.Uint64Key,
+					collcodec.ValueCodec[govv1.Proposal](failingEncode{codec.CollValue[govv1.Proposal](f.app.AppCodec())}))
+			},
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			id := f.proposeMinor()
@@ -522,25 +646,47 @@ func TestEndBlockFailureClearsOnlyTheTimer(t *testing.T) {
 
 // Nominations are in the committed KV store, so EndBlock must clear them on
 // every path: a leftover would be checked again in the next block.
-func TestEndBlockClearsNominations(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		voters    int
-		before    func(f *fixture) // runs after the votes
-		wantTimer bool
+func TestKeeper_EndBlock_ClearsNominations(t *testing.T) {
+	tt := []struct {
+		name   string
+		voters int
+		// before runs after the votes. It is optional.
+		before        func(f *fixture)
+		expectedTimer bool
 	}{
-		{name: "timer started", voters: numValidators, wantTimer: true},
-		{name: "below the gate", voters: 1},
-		{name: "module disabled", voters: numValidators, before: func(f *fixture) {
-			f.setParams(false, 150, "0.85")
-		}},
-		{name: "error: stored threshold is invalid", voters: numValidators, before: func(f *fixture) {
-			require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
-		}},
-		{name: "panic: gov tally divides by zero shares", voters: numValidators, before: func(f *fixture) {
-			require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
-		}},
-	} {
+		{
+			name:          "timer started",
+			voters:        numValidators,
+			expectedTimer: true,
+		},
+		{
+			name:   "below the gate",
+			voters: 1,
+		},
+		{
+			name:   "module disabled",
+			voters: numValidators,
+			before: func(f *fixture) {
+				f.setParams(false, 150, "0.85")
+			},
+		},
+		{
+			name:   "error: stored threshold is invalid",
+			voters: numValidators,
+			before: func(f *fixture) {
+				require.NoError(f.t, f.k.Params.Set(f.ctx, types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "bad"}))
+			},
+		},
+		{
+			name:   "panic: gov tally divides by zero shares",
+			voters: numValidators,
+			before: func(f *fixture) {
+				require.NoError(f.t, f.app.PoaKeeper.ExecuteRemoveValidator(f.ctx, f.vals[0].String()))
+			},
+		},
+	}
+
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			id := f.proposeMinor()
@@ -553,9 +699,9 @@ func TestEndBlockClearsNominations(t *testing.T) {
 			f.endBlock()
 			require.False(t, f.nominated(id))
 			_, ok := f.timer()
-			require.Equal(t, tc.wantTimer, ok)
+			require.Equal(t, tc.expectedTimer, ok)
 			// A failed start check has no timer to retract, so it emits nothing.
-			if !tc.wantTimer {
+			if !tc.expectedTimer {
 				require.Zero(t, f.fastUpgradeEvents())
 			}
 		})
@@ -595,7 +741,7 @@ func convertExpedited(f *fixture) govv1.Proposal {
 // An expedited proposal that becomes regular loses its timer at the
 // expedited deadline. Gov deleted its votes, so only new Yes votes start a
 // new timer, with a new H.
-func TestExpeditedConvertedToRegularDuringTimer(t *testing.T) {
+func TestKeeper_EndBlock_ExpeditedConvertedToRegularDuringTimer(t *testing.T) {
 	t.Run("no new votes, no timer", func(t *testing.T) {
 		f := newFixture(t)
 		converted := convertExpedited(f)
@@ -632,7 +778,7 @@ func TestExpeditedConvertedToRegularDuringTimer(t *testing.T) {
 // Gov runs after this module. A removal that gov executes in block H-1 leaves
 // the validator bonded with zero shares until staking's EndBlocker, and gov's
 // tally of a proposal closed early in that block would divide by them.
-func TestOtherProposalDueAtFinalCheckPostponesTimer(t *testing.T) {
+func TestKeeper_EndBlock_OtherProposalDueAtFinalCheckPostponesTimer(t *testing.T) {
 	f := newFixture(t)
 	params := types.DefaultParams()
 	params.Enabled = true
