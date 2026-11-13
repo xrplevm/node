@@ -103,6 +103,9 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 
 	"github.com/xrplevm/node/v12/docs"
+	fastupgrade "github.com/xrplevm/node/v12/x/fastupgrade"
+	fastupgradekeeper "github.com/xrplevm/node/v12/x/fastupgrade/keeper"
+	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 	poakeeper "github.com/xrplevm/node/v12/x/poa/keeper"
 	poatypes "github.com/xrplevm/node/v12/x/poa/types"
 
@@ -215,7 +218,8 @@ type App struct {
 	Erc20Keeper     erc20keeper.Keeper
 
 	// exrp keepers
-	PoaKeeper poakeeper.Keeper
+	PoaKeeper         poakeeper.Keeper
+	FastUpgradeKeeper fastupgradekeeper.Keeper
 
 	// mm is the module manager
 	mm                 *module.Manager
@@ -268,6 +272,7 @@ func New(
 		// Ethermint
 		evmtypes.StoreKey, feemarkettypes.StoreKey,
 		erc20types.StoreKey,
+		fastupgradetypes.StoreKey,
 	)
 	// Mounted only so the v12 upgrade handler can empty them. Remove in the next coordinated upgrade.
 	maps.Copy(keys, storetypes.NewKVStoreKeys(v12.RetiredStoreKeys...))
@@ -417,8 +422,19 @@ func New(
 	// Set legacy router for backwards compatibility with gov v1beta1
 	govKeeper.SetLegacyRouter(govRouter)
 
+	// The fast upgrade keeper reads app.GovKeeper through a pointer, so it can
+	// be built before the gov keeper that holds its hooks.
+	app.FastUpgradeKeeper = fastupgradekeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[fastupgradetypes.StoreKey]),
+		authAddress,
+		&app.GovKeeper,
+		app.StakingKeeper,
+		app.UpgradeKeeper,
+	)
+
 	app.GovKeeper = *govKeeper.SetHooks(
-		govtypes.NewMultiGovHooks(),
+		govtypes.NewMultiGovHooks(app.FastUpgradeKeeper.Hooks()),
 	)
 
 	// Ethermint keepers
@@ -592,6 +608,7 @@ func New(
 
 		// exrp app modules
 		poa.NewAppModule(appCodec, app.PoaKeeper, app.BankKeeper, app.StakingKeeper, app.AccountKeeper, app.interfaceRegistry),
+		fastupgrade.NewAppModule(app.FastUpgradeKeeper),
 	)
 
 	// BasicModuleManager defines the module BasicManager which is in charge of setting up basic,
@@ -634,7 +651,10 @@ func New(
 		ratelimittypes.ModuleName,
 	)
 
+	// fastupgrade runs first: it may close a proposal's vote, gov then executes
+	// it in the same block, and staking changes the validator set after both.
 	app.mm.SetOrderEndBlockers(
+		fastupgradetypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		poatypes.ModuleName,
@@ -664,6 +684,7 @@ func New(
 		upgradetypes.ModuleName,
 		// Evmos
 		poatypes.ModuleName,
+		fastupgradetypes.ModuleName,
 		ratelimittypes.ModuleName,
 	}
 

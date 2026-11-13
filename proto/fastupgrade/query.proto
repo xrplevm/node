@@ -1,0 +1,40 @@
+syntax = "proto3";
+package fastupgrade;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "fastupgrade/fastupgrade.proto";
+
+option go_package = "github.com/xrplevm/node/v12/x/fastupgrade/types";
+
+// Query defines the gRPC querier service.
+service Query {
+  // Params queries the parameters of the module.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/exrp/fastupgrade/params";
+  }
+  // Timer queries the running timer, if any.
+  rpc Timer(QueryTimerRequest) returns (QueryTimerResponse) {
+    option (google.api.http).get = "/exrp/fastupgrade/timer";
+  }
+}
+
+// QueryParamsRequest is the request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is the response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params holds all the parameters of this module.
+  Params params = 1
+      [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
+}
+
+// QueryTimerRequest is the request type for the Query/Timer RPC method.
+message QueryTimerRequest {}
+
+// QueryTimerResponse is the response type for the Query/Timer RPC method.
+message QueryTimerResponse {
+  // timer is the running timer. It is unset when no timer is running.
+  Timer timer = 1;
+}

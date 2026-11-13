@@ -1,0 +1,32 @@
+syntax = "proto3";
+package fastupgrade;
+
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+
+option go_package = "github.com/xrplevm/node/v12/x/fastupgrade/types";
+
+// Params defines the fastupgrade module parameters.
+message Params {
+  option (amino.name) = "fastupgrade/Params";
+
+  // enabled turns the fast path on or off.
+  bool enabled = 1;
+  // timelock_blocks is the number of blocks between the timer start and the
+  // upgrade height.
+  uint64 timelock_blocks = 2;
+  // threshold is the minimum fraction of bonded tokens that must vote Yes.
+  string threshold = 3 [ (cosmos_proto.scalar) = "cosmos.Dec" ];
+  // postpone_blocks is the number of blocks the upgrade height moves later
+  // when another proposal ends in the block of the final check.
+  uint64 postpone_blocks = 4;
+}
+
+// Timer is the running timelock of a fast-tracked upgrade proposal.
+message Timer {
+  // proposal_id is the proposal being fast-tracked.
+  uint64 proposal_id = 1;
+  // upgrade_height is the height the upgrade runs at. The final check runs at
+  // upgrade_height - 1.
+  int64 upgrade_height = 2;
+}

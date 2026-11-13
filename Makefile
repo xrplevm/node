@@ -156,7 +156,7 @@ mocks:
 	@echo "--> Generating mocks"
 	@./scripts/mockgen.sh
 
-test: test-poa test-app test-integration test-sim-benchmark-simulation test-sim-full-app-fast
+test: test-poa test-fastupgrade test-app test-integration test-sim-benchmark-simulation test-sim-full-app-fast
 
 test-integration:
 	@echo "--> Running integration testsuite"
@@ -169,6 +169,10 @@ test-app:
 test-poa:
 	@echo "--> Running POA tests"
 	@go test $(EXCLUDED_POA_PACKAGES) 
+
+test-fastupgrade:
+	@echo "--> Running fastupgrade tests"
+	@go test -mod=readonly -tags=test ./x/fastupgrade/...
 
 # Fixed so a simulation failure is reproducible. The SDK defaults -GenesisTime to the current time,
 # so the seed alone does not reproduce a run. Seed 1 keeps a validator set for all blocks
@@ -194,7 +198,7 @@ test-sim-full-app-fast:
 
 coverage-unit:
 	@echo "--> Running unit coverage"
-	@go test $(EXCLUDED_UNIT_PACKAGES) -coverprofile=coverage_unit.out > /dev/null
+	@go test -tags=test $(EXCLUDED_UNIT_PACKAGES) -coverprofile=coverage_unit.out > /dev/null
 	@go tool cover -func=coverage_unit.out
 
 coverage-poa:

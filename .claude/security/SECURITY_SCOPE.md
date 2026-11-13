@@ -16,6 +16,7 @@ This is a **Cosmos SDK-based blockchain node** that runs an EVM-compatible sidec
 |---|---|---|
 | Ante handlers | `app/ante/` | Transaction validation gate — bypasses here affect all txs |
 | POA module | `x/poa/` | Authority checks for validator management |
+| Fast upgrade module | `x/fastupgrade/` | Gov vote hook and EndBlocker that close gov votes early and rewrite upgrade plan heights; a bug can schedule or block a chain upgrade |
 | App wiring | `app/app.go` | Module registration, keeper initialization, upgrade handlers |
 | Upgrade handlers | `app/upgrades/` | State migrations run during chain upgrades — bugs here can corrupt state, brick the chain, or open exploit windows post-upgrade |
 | CLI entry point | `cmd/exrpd/` | Node configuration, default values, TLS setup |
@@ -124,6 +125,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | Area | Components | What to look for |
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
+| **Fast upgrade module** | Fast upgrade module, App wiring | Proposal eligibility (a single `MsgSoftwareUpgrade`, a strict minor bump of the last completed upgrade), validator gate and tally check correctness (delegations, jailed validators, validator set changes in the same block), vote hook safety on every vote path that the app routes (never rejects a vote, writes only the module KV store), EndBlocker order before gov and staking, early close (only the plan height and the voting end time change), postponement and deadline handling, error and panic handling that must not halt the chain, stale timer or nominations, `MsgUpdateParams` authority check and gov compatibility, non-determinism |
 | **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
 | **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention, a fee granter accepted by `DeductFeeDecorator` (x/feegrant removed in v12) |
 | **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, registration of a static precompile outside the v12 allow list (Ethereum native, P256, Bech32, Bank), in particular the staking precompile or any static precompile that calls a Cosmos msg server. The allow list does not cover the dynamic ERC20 token precompiles, which are supported |
