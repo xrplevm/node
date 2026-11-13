@@ -1,24 +1,43 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
-set -eo pipefail
+# Generates docs/static/openapi.yml from the query services whose REST routes
+# the app registers. docs/swagger-config.json lists them: each url names the
+# swagger file that buf generates from one proto file. The Makefile passes the
+# proto root of each dependency, as pinned in go.mod.
+# TestSwaggerConfig_MatchesServedQueryServices in app/ checks the list against
+# the services that the app serves.
 
-mkdir -p ./tmp-swagger-gen
-cd proto
-proto_dirs=$(find ./ -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
-for dir in $proto_dirs; do
-  # generate swagger files (filter query files)
-  query_file=$(find "${dir}" -maxdepth 1 \( -name 'query.proto' -o -name 'service.proto' \))
-  if [[ ! -z "$query_file" ]]; then
-    buf generate --template buf.gen.swagger.yaml $query_file
+set -eu
+
+: "${SDK_PROTO:?}" "${EVM_PROTO:?}" "${IBC_PROTO:?}" "${RATELIMIT_PROTO:?}"
+
+out=tmp-swagger-gen
+rm -rf "$out"
+trap 'rm -rf "$out"' EXIT
+
+protos=$(node -e '
+for (const { url } of require("./docs/swagger-config.json").apis) {
+  const m = url.match(/^\.\/tmp-swagger-gen\/(.+)\.swagger\.json$/);
+  if (!m) throw new Error(`unexpected url: ${url}`);
+  console.log(`${m[1]}.proto`);
+}')
+
+for file in $protos; do
+  root=
+  for candidate in proto "$SDK_PROTO" "$IBC_PROTO" "$RATELIMIT_PROTO" "$EVM_PROTO"; do
+    [ -f "$candidate/$file" ] || continue
+    if [ -n "$root" ]; then
+      echo "$file is in $root and $candidate" >&2
+      exit 1
+    fi
+    root=$candidate
+  done
+  if [ -z "$root" ]; then
+    echo "$file is in no proto root" >&2
+    exit 1
   fi
+  buf generate "$root" --template proto/buf.gen.swagger.yaml --path "$root/$file" -o .
 done
 
-cd ..
-
-# combine swagger files
-# uses nodejs package `swagger-combine`.
-# all the individual swagger files need to be configured in `config.json` for merging
-swagger-combine ./docs/client/config.json -o ./docs/client/swagger-ui/swagger.yaml -f yaml --continueOnConflictingPaths true --includeDefinitions true
-
-# clean swagger files
-rm -rf ./tmp-swagger-gen
+swagger-combine docs/swagger-config.json -o docs/static/openapi.yml -f yaml \
+  --continueOnConflictingPaths true --includeDefinitions true
