@@ -242,8 +242,10 @@ proto-swagger-gen:
 		-e RATELIMIT_PROTO=$(call swaggerModRoot,github.com/cosmos/ibc-apps/modules/rate-limiting/v10) \
 		$(protoImageName) sh ./proto/scripts/protoc-swagger-gen.sh
 
+# proto/ethermint and proto/evmos are copies of upstream files in the upstream style. Do not reformat them.
 proto-format:
-	@$(protoImage) find ./ -name "*.proto" -exec clang-format -i {} \;
+	@$(protoImage) find ./ -name "*.proto" -not -path "./proto/ethermint/*" -not -path "./proto/evmos/*" \
+		-exec clang-format -i {} \;
 
 proto-lint:
 	@$(protoImage) buf lint --error-format=json
