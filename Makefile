@@ -213,6 +213,7 @@ coverage-integration:
 
 protoVer=0.13.1
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+HTTPS_GIT=https://github.com/xrplevm/node.git
 # Rootless Docker maps container root to the host user. On rootful Docker, run as the host user, because the image's
 # default user cannot write the mounted repo. buf needs a writable HOME for its cache, and that uid has no home.
 protoUser=$(if $(findstring rootless,$(shell $(DOCKER) info --format '{{.SecurityOptions}}' 2>/dev/null)),--user 0,--user $(shell id -u):$(shell id -g) -e HOME=/tmp)
