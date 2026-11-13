@@ -1,0 +1,45 @@
+name: "OpenAPI"
+
+on:
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - "proto/**"
+            - "docs/**"
+            - "Makefile"
+            - "go.mod"
+            - "go.sum"
+            - ".github/workflows/openapi.yml"
+    push:
+        branches:
+            - "main"
+
+permissions: {}
+
+concurrency:
+    # Cancel old runs if there is a new commit in the same branch
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    up-to-date:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+                with:
+                    go-version-file: go.mod
+            # The proto roots of the dependencies have their own buf.lock, and go.sum pins those roots
+            -   uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+                with:
+                    path: ~/.cache/buf
+                    key: buf-${{ hashFiles('proto/buf.lock', 'go.sum') }}
+                    restore-keys: buf-
+            -   name: Regenerate docs/static/openapi.yml
+                run: make proto-swagger-gen BUF_CACHE_DIR="$HOME/.cache/buf"
+            -   name: Fail if docs/static/openapi.yml is stale
+                run: git diff --exit-code docs/static/openapi.yml

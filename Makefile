@@ -213,8 +213,9 @@ coverage-integration:
 
 protoVer=0.13.1
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
-# Rootless Docker maps container root to the host user. The image's default user cannot write the mounted repo.
-protoUser=$(if $(findstring rootless,$(shell $(DOCKER) info --format '{{.SecurityOptions}}' 2>/dev/null)),--user 0)
+# Rootless Docker maps container root to the host user. On rootful Docker, run as the host user, because the image's
+# default user cannot write the mounted repo. buf needs a writable HOME for its cache, and that uid has no home.
+protoUser=$(if $(findstring rootless,$(shell $(DOCKER) info --format '{{.SecurityOptions}}' 2>/dev/null)),--user 0,--user $(shell id -u):$(shell id -g) -e HOME=/tmp)
 protoImage=$(DOCKER) run --rm $(protoUser) -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 
 proto-all: proto-format proto-lint proto-gen
@@ -227,9 +228,13 @@ proto-gen:
 # pinned versions and never a local go.work checkout.
 swaggerModRoot=$(shell GOWORK=off go mod download $(1) && GOWORK=off go list -m -f '{{.Dir}}' $(1))/proto
 
+# Set BUF_CACHE_DIR to a host directory to keep the buf module cache between runs.
+bufCache=$(if $(BUF_CACHE_DIR),-v $(BUF_CACHE_DIR):/buf-cache -e BUF_CACHE_DIR=/buf-cache)
+
 proto-swagger-gen:
 	@echo "Generating Protobuf Swagger"
-	@$(DOCKER) run --rm $(protoUser) -v $(CURDIR):/workspace --workdir /workspace \
+	@$(if $(BUF_CACHE_DIR),mkdir -p $(BUF_CACHE_DIR))
+	@$(DOCKER) run --rm $(protoUser) $(bufCache) -v $(CURDIR):/workspace --workdir /workspace \
 		-v $(shell go env GOMODCACHE):$(shell go env GOMODCACHE):ro \
 		-e SDK_PROTO=$(call swaggerModRoot,github.com/cosmos/cosmos-sdk) \
 		-e EVM_PROTO=$(call swaggerModRoot,github.com/cosmos/evm) \
