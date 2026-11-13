@@ -239,6 +239,20 @@ func TestPrepareCurrentOnGenesis(t *testing.T) {
 			danglingCurrent(t, home, genesisName)
 			return home
 		}, testUpgradeDir},
+		{"genesis aliasing a deleted upgrade", func(t *testing.T, home string) string {
+			danglingCurrent(t, home, genesisName)
+			if err := os.Symlink(testUpgradeDir, filepath.Join(home, "cosmovisor", genesisName)); err != nil {
+				t.Fatal(err)
+			}
+			return home
+		}, testUpgradeDir},
+		{"genesis aliasing a deleted unknown directory", func(t *testing.T, home string) string {
+			danglingCurrent(t, home, genesisName)
+			if err := os.Symlink(filepath.Join("upgrades", "v9.0.0"), filepath.Join(home, "cosmovisor", genesisName)); err != nil {
+				t.Fatal(err)
+			}
+			return home
+		}, testGenesisDir},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b := testBundle(t)
@@ -381,7 +395,7 @@ func TestPrepareRefusalWritesNothing(t *testing.T) {
 
 		// A chain only moves forward: an unknown directory most likely belongs to a
 		// later plan, and genesis is the oldest binary of the bundle.
-		{"deleted unknown dir", homeSetup{current: "upgrades/v12.1.0", dangling: true}, "does not exist and is not part of this exrpd"},
+		{"deleted unknown dir", homeSetup{current: "upgrades/v12.1.0", dangling: true}, "does not exist and is not part of this exrpd. This exrpd runs plans v11.3.0, v12.0.0. Point it at upgrades/<plan> of the plan this node's data needs, or delete it only if the data needs plan v11.3.0:"},
 		{"foreign dir recording a later plan", homeSetup{current: "custom", record: v121}, "names plan v12.1.0"},
 		{"foreign dir recording an earlier plan", homeSetup{current: "custom", record: upgradeInfoJSON("v11.1.0")}, "names plan v11.1.0"},
 		{"foreign dir with a broken record", homeSetup{current: "custom", record: "{"}, "does not name a plan"},
@@ -477,18 +491,53 @@ func TestDataFileBeingWritten(t *testing.T) {
 // Two directories of the bundle that are one directory, through a symlink made by hand,
 // would get both binaries in turn and run the wrong one.
 func TestPrepareRefusesAliasedDirectories(t *testing.T) {
-	b := testBundle(t)
-	home := homeSetup{current: testUpgradeDir}.build(t)
-	root := filepath.Join(home, "cosmovisor")
-	if err := os.Symlink(filepath.Base(testUpgradeDir), filepath.Join(root, testGenesisDir)); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name  string
+		dir   string            // directory that exists, relative to cosmovisor, "" for none
+		links map[string]string // symlink to its target, both relative to cosmovisor
+	}{
+		{
+			name:  "plan directory links to the other plan directory",
+			dir:   testUpgradeDir,
+			links: map[string]string{testGenesisDir: testUpgradeDir},
+		},
+		{
+			name:  "both bin directories link to one directory",
+			dir:   "shared",
+			links: map[string]string{testGenesisDir + "/bin": "shared", testUpgradeDir + "/bin": "shared"},
+		},
+		{
+			name:  "plan directory links to the other plan directory, not there yet",
+			links: map[string]string{testUpgradeDir: testGenesisDir},
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := testBundle(t)
+			n := testNode(b, t.TempDir())
+			if tt.dir != "" {
+				if err := os.MkdirAll(filepath.Join(n.Root, tt.dir), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for link, target := range tt.links {
+				if err := os.MkdirAll(filepath.Dir(filepath.Join(n.Root, link)), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(filepath.Join(n.Root, target), filepath.Join(n.Root, link)); err != nil {
+					t.Fatal(err)
+				}
+			}
 
-	err := b.prepare(testNode(b, home))
-	if err == nil || !strings.Contains(err.Error(), "are the same directory") {
-		t.Fatalf("prepare() error = %v, want a refusal", err)
-	}
-	if entries, _ := os.ReadDir(filepath.Join(root, testUpgradeDir)); len(entries) != 0 {
-		t.Errorf("a refused start wrote %v", entries)
+			err := b.prepare(n)
+			if err == nil || !strings.Contains(err.Error(), "are the same directory") {
+				t.Fatalf("prepare() error = %v, want a refusal", err)
+			}
+			for _, dir := range []string{testGenesisDir, testUpgradeDir} {
+				if _, err := os.Stat(n.bin(dir)); err == nil {
+					t.Errorf("a refused start wrote %s", n.bin(dir))
+				}
+			}
+		})
 	}
 }

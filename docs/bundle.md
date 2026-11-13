@@ -122,8 +122,9 @@ sha256sum -c --ignore-missing exrpd-bundle_11.3.0-12.0.0_checksums.txt  # must p
 tar -xzf exrpd-bundle_11.3.0-12.0.0_Linux_amd64.tar.gz exrpd
 ```
 
-On macOS, use `shasum -a 256 -c` instead of `sha256sum -c`. The binaries are not signed,
-so remove the quarantine attribute (`xattr -d com.apple.quarantine`) after download.
+On macOS, replace `sha256sum` with `shasum -a 256` in that command and keep the other
+flags. The binaries are not signed, so remove the quarantine attribute
+(`xattr -d com.apple.quarantine`) after download.
 
 Each path below installs this `exrpd` at its own step.
 

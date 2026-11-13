@@ -46,12 +46,23 @@ func (b bundle) install(l Layout) error {
 	return nil
 }
 
+// distinctDirs refuses when two releases have the same bin directory. It compares the
+// paths after symlinks are followed, so a symlink to a directory that does not exist yet
+// counts, and the identity of the directories that exist, so a second mount of one
+// directory counts too.
 func distinctDirs(l Layout, releases []Release) error {
-	for i, a := range releases {
-		for _, b := range releases[i+1:] {
-			if sameFile(filepath.Join(l.Root, a.dir()), filepath.Join(l.Root, b.dir())) {
-				return fmt.Errorf("%s and %s are the same directory. Each needs its own binary: replace the symlink with a real directory",
-					filepath.Join(l.Root, a.dir()), filepath.Join(l.Root, b.dir()))
+	resolved := make([]string, len(releases))
+	for i, r := range releases {
+		dir := filepath.Dir(l.bin(r.dir()))
+		var err error
+		if resolved[i], err = resolveDangling(dir); err != nil {
+			return err
+		}
+		for j, o := range releases[:i] {
+			other := filepath.Dir(l.bin(o.dir()))
+			if resolved[j] == resolved[i] || sameFile(other, dir) || sameFile(filepath.Dir(other), filepath.Dir(dir)) {
+				return fmt.Errorf("%s and %s are the same directory. Each needs its own binary: give each a real directory of its own",
+					other, dir)
 			}
 		}
 	}

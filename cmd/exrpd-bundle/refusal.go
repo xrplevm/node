@@ -164,10 +164,16 @@ func singleBundleRuns(plan string, m Manifest) string {
 		m.Genesis.Plan, m.Genesis.Plan, m.Genesis.Version, plan)
 }
 
+// currentChoices tells where to point `current`, and when to delete it.
+func currentChoices(b bundle) string {
+	return fmt.Sprintf("This exrpd runs plans %s. Point it at upgrades/<plan> of the plan this node's data needs, or delete it only if the data needs plan %s: without it, this exrpd runs that plan",
+		b.plans(), b.m.Genesis.Plan)
+}
+
 // errCurrentMissing refuses a `current` on a missing directory outside the bundle.
-func errCurrentMissing(l Layout, target string) error {
-	return fmt.Errorf("%s points at %s, which does not exist and is not part of this exrpd. Point it at the right directory, or delete it to start from genesis",
-		l.Current(), target)
+func errCurrentMissing(l Layout, target string, b bundle) error {
+	return fmt.Errorf("%s points at %s, which does not exist and is not part of this exrpd. %s",
+		l.Current(), target, currentChoices(b))
 }
 
 // errCurrentUnknownPlan refuses a `current` whose record names a plan the bundle does
@@ -179,7 +185,7 @@ func errCurrentUnknownPlan(l Layout, target, plan string, b bundle) error {
 
 // errCurrentNotInBundle refuses a `current` on a directory that names no plan of the
 // bundle.
-func errCurrentNotInBundle(l Layout, target string) error {
-	return fmt.Errorf("%s points at %s, which has no upgrade-info.json and is not part of this exrpd. Point it at the directory of the plan this node's data needs, or delete it to start from genesis",
-		l.Current(), target)
+func errCurrentNotInBundle(l Layout, target string, b bundle) error {
+	return fmt.Errorf("%s points at %s, which has no upgrade-info.json and is not part of this exrpd. %s",
+		l.Current(), target, currentChoices(b))
 }

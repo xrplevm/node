@@ -151,6 +151,16 @@ func (b bundle) fromCurrent(l Layout, target string, hasCurrent bool) (decision,
 		return keep(r), nil
 	}
 
+	// A link to a deleted plan directory is that plan, like a `current` on it.
+	dangling, err := resolveDangling(resolved)
+	if err != nil {
+		return decision{}, err
+	}
+	danglingRel, _ := filepath.Rel(root, dangling)
+	if r, ok := b.releaseIn(danglingRel); ok {
+		return keep(r), nil
+	}
+
 	// genesis that is not a plan directory under another name: stock Cosmovisor's own,
 	// named by the link text or reached through another path.
 	if rel == genesisName || sameFile(abs, filepath.Join(l.Root, genesisName)) {
@@ -158,7 +168,7 @@ func (b bundle) fromCurrent(l Layout, target string, hasCurrent bool) (decision,
 	}
 
 	if _, err := os.Stat(abs); errors.Is(err, fs.ErrNotExist) {
-		return decision{}, errCurrentMissing(l, target)
+		return decision{}, errCurrentMissing(l, target, b)
 	} else if err != nil {
 		return decision{}, err
 	}
@@ -191,7 +201,7 @@ func (b bundle) fromForeignDir(l Layout, target, abs string) (decision, error) {
 		}
 	}
 
-	return decision{}, errCurrentNotInBundle(l, target)
+	return decision{}, errCurrentNotInBundle(l, target, b)
 }
 
 // keep leaves `current` on the directory of r, a plan directory of the bundle, and makes
@@ -226,6 +236,33 @@ func resolveExistingPrefix(path string) (string, error) {
 			return "", err
 		}
 	}
+}
+
+// resolveDangling resolves path like resolveExistingPrefix, and also follows a symlink
+// whose target does not exist, so a link to a deleted directory resolves to that directory.
+func resolveDangling(path string) (string, error) {
+	// EvalSymlinks does not see a loop that passes through a name that does not exist.
+	for range 32 {
+		resolved, err := resolveExistingPrefix(path)
+		if err != nil {
+			return "", err
+		}
+		// The first missing element of resolved is a symlink only when it dangles.
+		link := resolved
+		target, err := os.Readlink(link)
+		for err != nil {
+			if _, statErr := os.Lstat(link); statErr == nil || filepath.Dir(link) == link {
+				return resolved, nil
+			}
+			link = filepath.Dir(link)
+			target, err = os.Readlink(link)
+		}
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(filepath.Dir(link), target)
+		}
+		path = filepath.Join(target, resolved[len(link):])
+	}
+	return "", fmt.Errorf("%s: too many symlinks", path)
 }
 
 // apply carries out d after install: it writes the record of the plan and points
