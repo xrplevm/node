@@ -14,6 +14,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -21,6 +22,7 @@ import (
 	"github.com/cosmos/evm/testutil/keyring"
 	"github.com/stretchr/testify/require"
 	"github.com/xrplevm/node/v12/testutil/integration/exrp/utils"
+	poaante "github.com/xrplevm/node/v12/x/poa/ante"
 	poatypes "github.com/xrplevm/node/v12/x/poa/types"
 )
 
@@ -1303,6 +1305,89 @@ func (s *TestSuite) TestRemoveValidator_ExistingValidator_Tombstoned() {
 			if tc.afterRun != nil {
 				tc.afterRun()
 			}
+		})
+	}
+}
+
+// Blocked msg tests
+
+func (s *TestSuite) TestBlockedMsgs_UserTx() {
+	// Generate a random account
+	randomAccs := simtypes.RandomAccounts(rand.New(rand.NewSource(time.Now().UnixNano())), 1) //nolint:gosec
+	randomAcc := randomAccs[0]
+
+	valIndex := 0
+	validators := s.Network().GetValidators()
+	valAddr, err := sdktypes.ValAddressFromBech32(validators[valIndex].OperatorAddress)
+	require.NoError(s.T(), err)
+	dstValAddr, err := sdktypes.ValAddressFromBech32(validators[valIndex+1].OperatorAddress)
+	require.NoError(s.T(), err)
+
+	valKey := s.keyring.GetKey(valIndex)
+	require.Equal(s.T(), valAddr, sdktypes.ValAddress(valKey.AccAddr))
+
+	coin := sdktypes.NewCoin(s.Network().GetBondDenom(), sdkmath.OneInt())
+
+	createValidatorMsg, err := stakingtypes.NewMsgCreateValidator(
+		valAddr.String(),
+		randomAcc.ConsKey.PubKey(),
+		coin,
+		stakingtypes.Description{
+			Moniker: "test",
+		},
+		stakingtypes.NewCommissionRates(sdkmath.LegacyZeroDec(), sdkmath.LegacyZeroDec(), sdkmath.LegacyZeroDec()),
+		sdkmath.OneInt(),
+	)
+	require.NoError(s.T(), err)
+
+	tt := []struct {
+		name          string
+		msg           sdktypes.Msg
+		expectedError error
+	}{
+		{
+			name:          "create validator - blocked by poa ante",
+			msg:           createValidatorMsg,
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "delegate - blocked by poa ante",
+			msg:           stakingtypes.NewMsgDelegate(valKey.AccAddr.String(), valAddr.String(), coin),
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "undelegate - blocked by poa ante",
+			msg:           stakingtypes.NewMsgUndelegate(valKey.AccAddr.String(), valAddr.String(), coin),
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "begin redelegate - blocked by poa ante",
+			msg:           stakingtypes.NewMsgBeginRedelegate(valKey.AccAddr.String(), valAddr.String(), dstValAddr.String(), coin),
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "cancel unbonding delegation - blocked by poa ante",
+			msg:           stakingtypes.NewMsgCancelUnbondingDelegation(valKey.AccAddr.String(), valAddr.String(), 1, coin),
+			expectedError: poaante.ErrTxTypeNotAllowed,
+		},
+		{
+			name:          "fund community pool - blocked by app ante",
+			msg:           distrtypes.NewMsgFundCommunityPool(sdktypes.NewCoins(coin), valKey.AccAddr.String()),
+			expectedError: sdkerrors.ErrUnauthorized,
+		},
+	}
+
+	for _, tc := range tt {
+		s.Run(tc.name, func() {
+			gas := uint64(1_000_000)
+			res, err := s.factory.CommitCosmosTx(valKey.Priv, factory.CosmosTxArgs{
+				Msgs: []sdktypes.Msg{tc.msg},
+				Gas:  &gas,
+			})
+			// Check if the block was committed even though the tx failed
+			require.NoError(s.T(), err)
+			require.NotEqual(s.T(), uint32(0), res.Code)
+			require.Contains(s.T(), res.Log, tc.expectedError.Error())
 		})
 	}
 }

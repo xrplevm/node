@@ -9,13 +9,11 @@ import (
 	"strconv"
 
 	errorsmod "cosmossdk.io/errors"
-	"cosmossdk.io/math"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"github.com/cosmos/evm/testutil/integration/base/factory"
 	"github.com/cosmos/evm/testutil/keyring"
 	exrpintegration "github.com/xrplevm/node/v12/testutil/integration/exrp/integration"
@@ -40,27 +38,6 @@ func SubmitProposal(tf factory.BaseTxFactory, network exrpintegration.Network, p
 
 	txArgs := factory.CosmosTxArgs{
 		Msgs: []sdk.Msg{proposal},
-	}
-
-	return submitProposal(tf, network, proposerPriv, txArgs)
-}
-
-// SubmitLegacyProposal is a helper function to submit a governance proposal and
-// return the proposal ID.
-func SubmitLegacyProposal(tf factory.BaseTxFactory, network exrpintegration.Network, proposerPriv cryptotypes.PrivKey, proposal govv1beta1.Content) (uint64, error) {
-	proposerAccAddr := sdk.AccAddress(proposerPriv.PubKey().Address())
-
-	msgSubmitProposal, err := govv1beta1.NewMsgSubmitProposal(
-		proposal,
-		sdk.NewCoins(sdk.NewCoin(network.GetBaseDenom(), math.NewInt(1e18))),
-		proposerAccAddr,
-	)
-	if err != nil {
-		return 0, err
-	}
-
-	txArgs := factory.CosmosTxArgs{
-		Msgs: []sdk.Msg{msgSubmitProposal},
 	}
 
 	return submitProposal(tf, network, proposerPriv, txArgs)

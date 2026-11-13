@@ -17,6 +17,7 @@ This is a **Cosmos SDK-based blockchain node** that runs an EVM-compatible sidec
 | Ante handlers | `app/ante/` | Transaction validation gate — bypasses here affect all txs |
 | POA module | `x/poa/` | Authority checks for validator management |
 | App wiring | `app/app.go` | Module registration, keeper initialization, upgrade handlers |
+| Blocked user msgs | `app/ante/blocked_msgs.go` | Msgs that a user tx must not carry. They stay routed for gov and for modules. A removed entry reopens a msg path for users |
 | Upgrade handlers | `app/upgrades/` | State migrations run during chain upgrades — bugs here can corrupt state, brick the chain, or open exploit windows post-upgrade |
 | CLI entry point | `cmd/exrpd/` | Node configuration, default values, TLS setup |
 
@@ -124,7 +125,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | Area | Components | What to look for |
 |---|---|---|
 | **POA module** | POA module | Authority check correctness (`msg.Authority == k.authority`), keeper initialization, genesis state validation, alternative code paths to modify the validator set, Bech32 address validation. Cross-module interactions: token minting/burning via BankKeeper (correct module accounts and pool names), staking state mutations (delegation removal, unbonding slashing with correct slash factor, validator token removal, status-based pool routing for Bonded vs Unbonding/Unbonded), staking hooks invocation order (BeforeValidatorModified, BeforeValidatorSlashed), and edge cases around existing delegations/unbondings during add/remove flows |
-| **Authorization & access control** | App wiring | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12) |
+| **Authorization & access control** | App wiring, Blocked user msgs | Missing permission checks, privilege escalation via `gov`, keeper exposure across module boundaries, reintroduction of `authz` (removed in v12), a removed entry in `blockedUserMsgs` (`app/ante/blocked_msgs.go`) or `disallowedMsgs` (`x/poa/ante/poa.go`), or a msg that carries nested msgs past the decorators |
 | **Transaction validation** | Ante handlers, App wiring | Ante handler routing between EVM/Cosmos, extension option validation, signature bypass, fee circumvention, a fee granter accepted by `DeductFeeDecorator` (x/feegrant removed in v12) |
 | **EVM integration** | Ante handlers, App wiring | EVM tx routing, gas metering between Cosmos and EVM layers, precompile registration, registration of a static precompile outside the v12 allow list (Ethereum native, P256, Bech32, Bank), in particular the staking precompile or any static precompile that calls a Cosmos msg server. The allow list does not cover the dynamic ERC20 token precompiles, which are supported |
 | **IBC & cross-chain** | App wiring | Rate limiting config, IBC message validation, channel security, reintroduction of ICA host (removed in v12) or any IBC app that executes messages |
@@ -132,7 +133,7 @@ Each audit should spawn a separate agent per focus area below. All areas are rev
 | **Configuration & secrets** | CLI entry point, App configuration, Encoding config | Hardcoded secrets, insecure defaults, TLS config, env var handling |
 | **Consensus & state machine** | App wiring, POA module, Type definitions | Non-determinism (map iteration, goroutines, `time.Now()`), module account permissions (Minter/Burner scoping), genesis state validation, address prefix correctness |
 | **API surface** | Protocol buffers, Ante handlers | Protobuf message validation, unexpected fields, gRPC/REST endpoint exposure, query handler authorization |
-| **Dependency audit** | Go module dependencies | Known CVEs, pinned vs floating versions, dependency confusion |
+| **Dependency audit** | Go module dependencies | Known CVEs, pinned vs floating versions, dependency confusion, a new Msg method in a dependency bump that reopens a blocked msg path |
 | **Infrastructure & CI** | CI workflows, Release pipeline, Dockerfiles, Makefile, Branch protection, CODEOWNERS | Secret exposure, unpinned base images, build reproducibility, CI permission scoping |
 | **Test coverage** | Test utilities, Integration tests, Linter/coverage config | Test coverage gaps, security linters enabled (e.g., `gosec`), test helpers that mask real bugs |
 

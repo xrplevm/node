@@ -15,7 +15,7 @@ This is the only threat model for this repository. Internal AI-assisted audits a
 - `x/poa/`: our own module. It adds and removes validators.
   - `MsgAddValidator` and `MsgRemoveValidator`: the signer must be the module authority (the gov module account). The add flow mints the bond tokens to the validator. The remove flow slashes 100%, unbonds, and burns.
   - `MsgSelfRemoveValidator`: a validator removes itself. The signer is the validator account.
-  - `x/poa/ante/poa.go`: blocks `MsgDelegate`, `MsgUndelegate`, `MsgBeginRedelegate`, `MsgCancelUnbondingDelegation` and `MsgCreateValidator` after height 0. Users must not change the validator set or stake through staking messages.
+  - `x/poa/ante/poa.go`: blocks `MsgDelegate`, `MsgUndelegate`, `MsgBeginRedelegate`, `MsgCancelUnbondingDelegation` and `MsgCreateValidator` in user txs after height 0. Users must not change the validator set or stake through staking messages.
 - `app/upgrades/`: the state migration for the current chain upgrade (`v12`). The release tags contain the earlier handlers.
 - `cmd/exrpd/`: CLI, node config defaults, and `in-place-testnet`.
 
@@ -41,7 +41,7 @@ A single validator is trusted only for its own node. Report it if one validator 
 These must always hold. Verify them in every audit.
 
 1. Only the authority can add or remove another validator. `x/poa` handlers check `msg.Authority == k.authority` before any validator set change. `MsgSelfRemoveValidator` can remove only the signer's own validator.
-2. No account can change the validator set or bonded stake by any path except `x/poa`. Check every path that changes stake or the validator set.
+2. No account can change the validator set or bonded stake by any path except `x/poa`. Check every path that changes stake or the validator set. The one exception is a passed gov proposal: gov is trusted and the staking msgs stay routed, so a proposal can carry them with the gov account as signer.
 3. Every transaction goes through the ante chain for its route. No path skips the signature, fee and sequence checks of that route. Unknown extension options are rejected.
 4. Tokens are not created or destroyed except by the intended mint and burn paths. Watch the `x/poa` add and remove flows, the bond pool routing (Bonded vs NotBonded), the EVM module (Minter and Burner), erc20 conversion, and IBC transfer escrow.
 5. The state machine is deterministic. No map iteration that writes state, no goroutines, no `time.Now()`, no floats in consensus code.
@@ -234,7 +234,13 @@ These must always hold. Verify them in every audit.
 - Gov module message allowlist is configured (if applicable) to restrict dangerous message types
 - Parameter boundaries prevent unsafe values
 - `authz` has no keeper or message handler: `MsgGrant` and `MsgExec` decode only so that historical txs stay readable (`app/encoding.go`). They must fail at execution, and gov must reject them at proposal submission
-- The legacy gov router routes only text proposals. `ParameterChangeProposal` is not routed (v12), so gov rejects it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`
+- The legacy gov router has only the stock gov route (v12), which runs a legacy `TextProposal` as a no-op. Other legacy content such as `ParameterChangeProposal` decodes, but gov rejects a proposal that carries it at submission with `ErrNoProposalHandlerExists`. Module params change only through each module's `MsgUpdateParams`. A v1 proposal that carries a `MsgExecLegacyContent` without `content` panics in the SDK at submission (`v1.LegacyContentFromMessage` reads the nil `Content`). Baseapp recovers the panic, so the tx fails and no proposal is stored. This is SDK behavior, and it is a finding only if the panic is not recovered
+- `app/ante/blocked_msgs.go` rejects a user tx that carries one of these msgs: `MsgFundCommunityPool`, `MsgDepositValidatorRewardsPool`, `MsgSubmitEvidence`, the gov v1beta1 msgs, `v1.MsgVoteWeighted`, `MsgChannelCloseInit`, the channel v2 msgs and `MsgRegisterCounterparty`. `x/poa/ante/poa.go` rejects the staking delegation msgs and `MsgCreateValidator`. All these msgs stay routed, so a module that sends one through the msg router still works. Removing an entry is a policy change, so review it in the diff. On a dependency bump, check that no new Msg method reopens one of these paths. `MsgCommunityPoolSpend` is not blocked. Only gov can send it, so the community pool stays recoverable. `MsgExecLegacyContent` is not blocked either: its handler accepts only the gov account as signer
+- Both decorators check only the top-level msgs of a Cosmos tx. These paths do not go through them:
+  - A gov proposal. Gov is trusted: a passed proposal can reach the handler of any of these msgs with the gov account as signer, including the staking delegation msgs. `MsgSubmitEvidence` panics there, because no evidence router is set. Gov recovers the panic and the proposal fails
+  - A module that sends a msg through the msg router. IBC transfer sends channel v2 `MsgSendPacket` for a `MsgTransfer` whose source is not a v1 channel. No v2 router is set, so this tx must fail: in `MsgSendPacket` validation (`ErrInvalidTimeout` for a zero timeout timestamp), with `ErrCounterpartyNotFound`, or with a panic that baseapp recovers if a counterparty exists for the client
+  - A msg that wraps other msgs, such as authz `MsgExec`. No such msg has a handler in v12. If `authz`, ICA host or a similar module returns, both decorators must check the nested msgs
+  - A precompile that calls a msg server directly, for example the gov precompile (`0x805`) with `voteWeighted`. No such static precompile is registered in v12 (see "EVM Execution"). Any precompile that is registered later must be checked against both lists
 - POA's GovKeeper interface is minimal and cannot be used to submit arbitrary proposals
 
 ## Cosmos SDK-Specific Concerns

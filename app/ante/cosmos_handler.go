@@ -21,6 +21,7 @@ func newCosmosAnteHandler(ctx sdk.Context, options baseevmante.HandlerOptions) s
 
 	return sdk.ChainAnteDecorators(
 		cosmosante.NewRejectMessagesDecorator(), // reject MsgEthereumTxs
+		blockedMsgsDecorator{},
 		ante.NewSetUpContextDecorator(),
 		ante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
 		ante.NewValidateBasicDecorator(),
