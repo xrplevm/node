@@ -76,8 +76,9 @@ func MakeEncodingConfig(evmChainID uint64) sdktestutil.TestEncodingConfig {
 
 	// x/authz was removed in v12. Keep its types so historical txs still decode.
 	authz.RegisterInterfaces(interfaceRegistry)
-	// ICA host was removed in v12. Keep the ICS-27 types so historical txs and
-	// interchain accounts in the auth store still decode.
+	// ICA host was removed in v12. Keep the ICS-27 types so historical txs,
+	// interchain accounts in the auth store, and gov proposals that carry an ICA
+	// host msg (mainnet proposal 36) still decode.
 	ica.AppModuleBasic{}.RegisterInterfaces(interfaceRegistry)
 	// x/feegrant was removed in v12. Keep its types so historical txs still decode.
 	feegrant.RegisterInterfaces(interfaceRegistry)
