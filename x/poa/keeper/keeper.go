@@ -15,7 +15,6 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/xrplevm/node/v12/x/poa/types"
@@ -33,40 +32,32 @@ func NewQuerier(keeper Keeper) Querier {
 
 type (
 	Keeper struct {
-		cdc        codec.Codec
-		paramstore paramtypes.Subspace
-		authority  string                    // the address capable of executing a poa change. Usually the gov module account
-		router     *baseapp.MsgServiceRouter // Msg server router
-		bk         types.BankKeeper
-		sk         types.StakingKeeper
+		cdc       codec.Codec
+		authority string                    // the address capable of executing a poa change. Usually the gov module account
+		router    *baseapp.MsgServiceRouter // Msg server router
+		bk        types.BankKeeper
+		sk        types.StakingKeeper
 	}
 )
 
 func NewKeeper(
 	cdc codec.Codec,
-	ps paramtypes.Subspace,
 	router *baseapp.MsgServiceRouter,
 	bk types.BankKeeper,
 	sk types.StakingKeeper,
 	authority string,
 ) *Keeper {
-	// set KeyTable if it has not already been set
-	if !ps.HasKeyTable() {
-		ps = ps.WithKeyTable(types.ParamKeyTable())
-	}
-
 	_, err := sdk.AccAddressFromBech32(authority)
 	if err != nil {
 		panic(err)
 	}
 
 	return &Keeper{
-		cdc:        cdc,
-		paramstore: ps,
-		authority:  authority,
-		router:     router,
-		bk:         bk,
-		sk:         sk,
+		cdc:       cdc,
+		authority: authority,
+		router:    router,
+		bk:        bk,
+		sk:        sk,
 	}
 }
 

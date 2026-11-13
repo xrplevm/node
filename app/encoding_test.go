@@ -10,6 +10,9 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	paramsproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	legacytypes "github.com/cosmos/evm/rpc/types/legacy"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/types"
@@ -166,4 +169,40 @@ func TestMakeEncodingConfig_DecodesRemovedCrisisMsgs(t *testing.T) {
 		require.NoError(t, err, sdk.MsgTypeURL(msg))
 		require.Equal(t, []sdk.Msg{msg}, tx.GetMsgs())
 	}
+}
+
+// x/params was removed in v12. Gov proposals stored before v12 can carry a
+// ParameterChangeProposal, and gov queries and genesis export must still
+// decode them.
+func TestMakeEncodingConfig_DecodesRemovedParamsProposal(t *testing.T) {
+	content := paramsproposal.NewParameterChangeProposal("title", "description",
+		[]paramsproposal.ParamChange{paramsproposal.NewParamChange("transfer", "SendEnabled", "true")})
+	msg, err := govv1.NewLegacyContent(content, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	require.NoError(t, err)
+	submitTime := time.Unix(2_000_000_000, 0).UTC()
+	proposal, err := govv1.NewProposal([]sdk.Msg{msg}, 1, submitTime, submitTime.Add(time.Hour),
+		"", "title", "summary", sdk.AccAddress("proposer____________"), false)
+	require.NoError(t, err)
+
+	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
+	// The app registers gov through its module manager, not MakeEncodingConfig.
+	govv1.RegisterInterfaces(encodingConfig.InterfaceRegistry)
+	bz, err := encodingConfig.Codec.Marshal(&proposal)
+	require.NoError(t, err)
+	var decoded govv1.Proposal
+	require.NoError(t, encodingConfig.Codec.Unmarshal(bz, &decoded))
+	require.Equal(t, proposal, decoded)
+}
+
+// x/params was removed in v12. EIP-712 sign bytes come from the legacy amino
+// codec, so a tx that carries a ParameterChangeProposal must keep its amino
+// type name.
+func TestMakeEncodingConfig_KeepsParamsProposalAminoName(t *testing.T) {
+	content := paramsproposal.NewParameterChangeProposal("title", "description",
+		[]paramsproposal.ParamChange{paramsproposal.NewParamChange("transfer", "SendEnabled", "true")})
+
+	encodingConfig := app.MakeEncodingConfig(constants.LocalnetChainID.EVMChainID)
+	bz, err := encodingConfig.Amino.MarshalJSON(content)
+	require.NoError(t, err)
+	require.Contains(t, string(bz), `"type":"cosmos-sdk/ParameterChangeProposal"`)
 }
