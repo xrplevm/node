@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"cosmossdk.io/store"
 	storetypes "cosmossdk.io/store/types"
@@ -114,7 +115,7 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			// sets the RPC client needed for SIGN_MODE_TEXTUAL. This sign mode
 			// is only available if the client is online.
 			if !initClientCtx.Offline {
-				enabledSignModes := append(tx.DefaultSignModes, signing.SignMode_SIGN_MODE_TEXTUAL) //nolint:gocritic
+				enabledSignModes := append(slices.Clone(app.EnabledSignModes), signing.SignMode_SIGN_MODE_TEXTUAL)
 				txConfigOpts := tx.ConfigOptions{
 					EnabledSignModes:           enabledSignModes,
 					TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(initClientCtx),
@@ -143,9 +144,14 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 			}
 			customAppTemplate, customAppConfig := InitAppConfig(app.BaseDenom, chainID)
 			customTMConfig := initTendermintConfig()
-			return sdkserver.InterceptConfigsPreRunHandler(
+			if err := sdkserver.InterceptConfigsPreRunHandler(
 				cmd, customAppTemplate, customAppConfig, customTMConfig,
-			)
+			); err != nil {
+				return err
+			}
+			// InterceptConfigsPreRunHandler sets unset flags from env and app.toml,
+			// so check --aux after it.
+			return checkAuxSignMode(cmd)
 		},
 	}
 
@@ -160,6 +166,20 @@ func NewRootCmd() (*cobra.Command, sdktestutil.TestEncodingConfig) {
 	}
 
 	return rootCmd, encodingConfig
+}
+
+// checkAuxSignMode rejects --aux when its sign mode is not enabled.
+// Without --sign-mode, --aux uses SIGN_MODE_DIRECT_AUX.
+func checkAuxSignMode(cmd *cobra.Command) error {
+	if aux, _ := cmd.Flags().GetBool(flags.FlagAux); !aux {
+		return nil
+	}
+	mode, _ := cmd.Flags().GetString(flags.FlagSignMode)
+	if (mode == "" || mode == flags.SignModeDirectAux) &&
+		!slices.Contains(app.EnabledSignModes, signing.SignMode_SIGN_MODE_DIRECT_AUX) {
+		return fmt.Errorf("sign mode %s is not enabled", flags.SignModeDirectAux)
+	}
+	return nil
 }
 
 // initTendermintConfig helps to override default Tendermint Config values.
