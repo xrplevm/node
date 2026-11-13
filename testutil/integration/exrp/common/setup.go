@@ -102,8 +102,6 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 	// Create exrp app
 	loadLatest := true
 
-	invCheckPeriod := uint(5)
-
 	evmChainID, err := cmd.CosmosChainIDToEvmChainID(chainID)
 	if err != nil {
 		panic(err)
@@ -115,7 +113,6 @@ func CreateExrpApp(chainID string, customBaseAppOptions ...func(*baseapp.BaseApp
 		nil,
 		loadLatest,
 		map[int64]bool{},
-		invCheckPeriod,
 		evmChainID,
 		simutils.NewAppOptionsWithFlagHome(MustGetIntegrationTestNodeHome()),
 		append(customBaseAppOptions, baseapp.SetChainID(chainID))...,

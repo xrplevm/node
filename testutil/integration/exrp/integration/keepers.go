@@ -2,7 +2,6 @@ package exrpintegration
 
 import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
@@ -45,10 +44,6 @@ func (n *IntegrationNetwork) DistrKeeper() distrkeeper.Keeper {
 
 func (n *IntegrationNetwork) AccountKeeper() authkeeper.AccountKeeper {
 	return n.app.AccountKeeper
-}
-
-func (n *IntegrationNetwork) AuthzKeeper() authzkeeper.Keeper {
-	return n.app.AuthzKeeper
 }
 
 func (n *IntegrationNetwork) FeeMarketKeeper() feemarketkeeper.Keeper {

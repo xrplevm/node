@@ -2,7 +2,6 @@ package integration
 
 import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -57,10 +56,6 @@ func (n *Network) GetFeeMarketClient() feemarkettypes.QueryClient {
 
 func (n *Network) GetAuthClient() authtypes.QueryClient {
 	return exrpcommon.GetAuthClient(n)
-}
-
-func (n *Network) GetAuthzClient() authz.QueryClient {
-	return exrpcommon.GetAuthzClient(n)
 }
 
 func (n *Network) GetStakingClient() stakingtypes.QueryClient {
