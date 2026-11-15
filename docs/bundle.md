@@ -654,7 +654,9 @@ state before starting a validator, or it can sign the same height twice.
 
    > **Custom paths:** Check `db_dir` in `$home/config/config.toml`. Resolve relative
    > paths under `$home`. The default is `data`; the application database always
-   > stays in `$home/data`.
+   > stays in `$home/data`. If `db_dir` contains `config/`, the validator key file or
+   > `resync-backup`, for example when it is `$home` or a parent of it, stop: the
+   > reset deletes that whole directory.
    >
    > If the signing-state file is in a subdirectory of `db_dir`, the reset deletes
    > its parent and cannot save the reset state. A file directly in `db_dir` is
