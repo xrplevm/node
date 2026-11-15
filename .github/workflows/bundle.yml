@@ -1,0 +1,389 @@
+name: Bundle
+on:
+  workflow_dispatch:
+    inputs:
+      target_tag:
+        description: Release for a single bundle, or the release after the upgrade for a two-binary bundle (vX.Y.Z)
+        required: true
+      genesis_tag:
+        description: Release before the upgrade for a two-binary bundle. Leave empty for a single bundle.
+        required: false
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.target_tag }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      target_version: ${{ steps.plan.outputs.target_version }}
+      target_plan: ${{ steps.plan.outputs.target_plan }}
+      genesis_version: ${{ steps.plan.outputs.genesis_version }}
+      single_assets: ${{ steps.plan.outputs.single_assets }}
+      two_binary_assets: ${{ steps.plan.outputs.two_binary_assets }}
+      missing_images: ${{ steps.plan.outputs.missing_images }}
+    env:
+      TARGET_TAG: ${{ inputs.target_tag }}
+      GENESIS_TAG: ${{ inputs.genesis_tag }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Resolve plans and missing assets and images
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version_re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          for tag in "$TARGET_TAG" ${GENESIS_TAG:+"$GENESIS_TAG"}; do
+            if [[ ! $tag =~ $version_re ]]; then
+              echo "::error::tag $tag is not vX.Y.Z"
+              exit 1
+            fi
+            if [[ $(gh release view "$tag" --json isDraft --jq .isDraft) != false ]]; then
+              echo "::error::release $tag is not published"
+              exit 1
+            fi
+          done
+
+          target_version=${TARGET_TAG#v}
+          genesis_version=${GENESIS_TAG#v}
+          target_plan=$(scripts/bundle/plan.sh release "$target_version")
+
+          source scripts/bundle/publication.sh
+          missing_images='[]'
+          # Add the image to the build matrix only if it is missing from the registry.
+          queue_image() {
+            local name=$1 genesis=$2
+            image_state "peersyst/exrp:bundle-$name"
+            [[ $state == build ]] || return 0
+            missing_images=$(jq -c \
+              --arg name "$name" \
+              --arg genesis "$genesis" \
+              --arg version "$target_version" \
+              '. + [{name: $name, genesis: $genesis, version: $version}]' \
+              <<<"$missing_images")
+          }
+
+          # Release assets and Docker images are checked independently.
+          asset_state "$TARGET_TAG" "$target_version"
+          single_assets=$state
+          queue_image "$target_version" "$target_version"
+
+          # A genesis release also requests a two-binary bundle and image.
+          two_binary_assets=''
+          if [[ -n $genesis_version ]]; then
+            bundle_set="$genesis_version-$target_version"
+            asset_state "$TARGET_TAG" "$bundle_set"
+            two_binary_assets=$state
+            queue_image "$bundle_set" "$genesis_version"
+          fi
+
+          echo "::notice::$TARGET_TAG: plan $target_plan, genesis ${genesis_version:-none}"
+          {
+            echo "target_version=$target_version"
+            echo "target_plan=$target_plan"
+            echo "genesis_version=$genesis_version"
+            echo "single_assets=$single_assets"
+            echo "two_binary_assets=$two_binary_assets"
+            echo "missing_images=$missing_images"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.single_assets == 'build' || needs.plan.outputs.two_binary_assets == 'build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    outputs:
+      artifact_id: ${{ steps.artifacts.outputs.artifact-id }}
+    env:
+      GOWORK: "off"
+      TARGET_TAG: ${{ inputs.target_tag }}
+      GENESIS_TAG: ${{ inputs.genesis_tag }}
+      TARGET_VERSION: ${{ needs.plan.outputs.target_version }}
+      TARGET_PLAN: ${{ needs.plan.outputs.target_plan }}
+      GENESIS_VERSION: ${{ needs.plan.outputs.genesis_version }}
+      SINGLE: ${{ needs.plan.outputs.single_assets }}
+      TWO_BINARY: ${{ needs.plan.outputs.two_binary_assets }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          # No cache: these artifacts will be published, so do not restore caches from other runs.
+          cache: false
+      # golangci-lint for check.sh. skip-cache: no lint cache either, for the same reason.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          install-only: true
+          version-file: .golangci-lint-version
+          skip-cache: true
+      - name: Launcher and patched Cosmovisor checks
+        run: scripts/bundle/check.sh
+      - name: Download target release archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TARGET_TAG" \
+            --dir dist/standalone \
+            --pattern "node_${TARGET_VERSION}_Linux_*.tar.gz" \
+            --pattern "node_${TARGET_VERSION}_Darwin_*.tar.gz" \
+            --pattern checksums.txt
+      - name: Download genesis release archives
+        if: env.TWO_BINARY == 'build'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$GENESIS_TAG" \
+            --dir dist/genesis \
+            --pattern "node_${GENESIS_VERSION}_Linux_*.tar.gz" \
+            --pattern "node_${GENESIS_VERSION}_Darwin_*.tar.gz" \
+            --pattern checksums.txt
+      - name: Build the single set
+        if: env.SINGLE == 'build'
+        run: |
+          scripts/bundle/release.sh \
+            --version "$TARGET_VERSION" \
+            --plan "$TARGET_PLAN" \
+            --standalone-dir dist/standalone \
+            --out-dir dist/single
+      - name: Build the two-binary set
+        if: env.TWO_BINARY == 'build'
+        run: |
+          scripts/bundle/release.sh \
+            --version "$TARGET_VERSION" \
+            --plan "$TARGET_PLAN" \
+            --genesis-version "$GENESIS_VERSION" \
+            --standalone-dir dist/standalone \
+            --genesis-dir dist/genesis \
+            --out-dir dist/two-binary
+      - name: Build stock Cosmovisor for migration E2E
+        if: env.TWO_BINARY == 'build'
+        run: |
+          source scripts/bundle/cosmovisor/cosmovisor.env
+          GOBIN="$RUNNER_TEMP/stock-cosmovisor" go install "$COSMOVISOR_MODULE/cmd/cosmovisor@$COSMOVISOR_VERSION"
+          mkdir -p dist/e2e-tools
+          tar -C "$RUNNER_TEMP/stock-cosmovisor" -czf dist/e2e-tools/stock-cosmovisor.tar.gz cosmovisor
+      - name: Upload build artifacts
+        id: artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-bundles-${{ github.run_attempt }}
+          # Stock Cosmovisor is for migration E2E only, not release publication.
+          path: |
+            dist/single/*.tar.gz
+            dist/single/*_checksums.txt
+            dist/two-binary/*.tar.gz
+            dist/two-binary/*_checksums.txt
+            dist/e2e-tools/stock-cosmovisor.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  e2e:
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      TARGET_TAG: ${{ inputs.target_tag }}
+      TARGET_VERSION: ${{ needs.plan.outputs.target_version }}
+      TARGET_PLAN: ${{ needs.plan.outputs.target_plan }}
+      GENESIS_VERSION: ${{ needs.plan.outputs.genesis_version }}
+      SINGLE: ${{ needs.plan.outputs.single_assets }}
+      TWO_BINARY: ${{ needs.plan.outputs.two_binary_assets }}
+      E2E_INPUTS: ${{ github.workspace }}/dist/e2e
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: dist
+          merge-multiple: true
+      - name: Download E2E release inputs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          genesis_version=$GENESIS_VERSION
+          if [[ -z $genesis_version ]]; then
+            genesis_version=$(scripts/bundle/plan.sh genesis "$TARGET_PLAN")
+          fi
+
+          gh release download "$TARGET_TAG" \
+            --dir dist/standalone \
+            --pattern "node_${TARGET_VERSION}_Linux_amd64.tar.gz" \
+            --pattern checksums.txt
+          gh release download "v$genesis_version" \
+            --dir dist/genesis \
+            --pattern "node_${genesis_version}_Linux_amd64.tar.gz" \
+            --pattern checksums.txt
+          echo "E2E_GENESIS_VERSION=$genesis_version" >> "$GITHUB_ENV"
+      - name: Extract the standalone target node
+        run: |
+          source scripts/bundle/lib.sh
+          archive="dist/standalone/node_${TARGET_VERSION}_Linux_amd64.tar.gz"
+          verify_archive dist/standalone/checksums.txt "$archive" >/dev/null
+          mkdir -p "$E2E_INPUTS/standalone"
+          tar -xzf "$archive" -C "$E2E_INPUTS/standalone" bin/exrpd
+      - name: Extract the single bundle
+        if: env.SINGLE == 'build'
+        run: |
+          source scripts/bundle/lib.sh
+          archive="dist/single/exrpd-bundle_${TARGET_VERSION}_Linux_amd64.tar.gz"
+          checksums="dist/single/exrpd-bundle_${TARGET_VERSION}_checksums.txt"
+          verify_archive "$checksums" "$archive" >/dev/null
+          mkdir -p "$E2E_INPUTS/single"
+          tar -xzf "$archive" -C "$E2E_INPUTS/single" exrpd
+      - name: Extract the two-binary bundle and stock Cosmovisor
+        if: env.TWO_BINARY == 'build'
+        run: |
+          source scripts/bundle/lib.sh
+          archive="dist/two-binary/exrpd-bundle_${GENESIS_VERSION}-${TARGET_VERSION}_Linux_amd64.tar.gz"
+          checksums="dist/two-binary/exrpd-bundle_${GENESIS_VERSION}-${TARGET_VERSION}_checksums.txt"
+          verify_archive "$checksums" "$archive" >/dev/null
+          mkdir -p "$E2E_INPUTS/two-binary" "$E2E_INPUTS/stock"
+          tar -xzf "$archive" -C "$E2E_INPUTS/two-binary" exrpd
+          tar -xzf dist/e2e-tools/stock-cosmovisor.tar.gz -C "$E2E_INPUTS/stock" cosmovisor
+      - name: Run E2E
+        run: |
+          bundle_args=()
+          if [[ $SINGLE == build ]]; then
+            bundle_args+=(--single-bundle "$E2E_INPUTS/single/exrpd")
+          fi
+          if [[ $TWO_BINARY == build ]]; then
+            bundle_args+=(
+              --bundle "$E2E_INPUTS/two-binary/exrpd"
+              --stock-cosmovisor "$E2E_INPUTS/stock/cosmovisor"
+            )
+          fi
+
+          E2E_DIR="$E2E_INPUTS/run" scripts/bundle/e2e.sh \
+            --genesis-archive "dist/genesis/node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" \
+            --genesis-checksums dist/genesis/checksums.txt \
+            --upgrade-exrpd "$E2E_INPUTS/standalone/bin/exrpd" \
+            --upgrade-version "$TARGET_VERSION" \
+            --plan "$TARGET_PLAN" \
+            "${bundle_args[@]}"
+
+  publish:
+    needs: [plan, build, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TARGET_TAG: ${{ inputs.target_tag }}
+      TARGET_VERSION: ${{ needs.plan.outputs.target_version }}
+      GENESIS_VERSION: ${{ needs.plan.outputs.genesis_version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: dist
+          merge-multiple: true
+      # Never replace published assets: gh fails when an asset already exists. The checksums
+      # go last, so a set whose checksums are on the release is complete.
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source scripts/bundle/publication.sh
+          for bundle_dir in dist/single dist/two-binary; do
+            [[ -d $bundle_dir ]] || continue
+            if [[ $bundle_dir == dist/single ]]; then
+              bundle_set=$TARGET_VERSION
+            else
+              bundle_set=$GENESIS_VERSION-$TARGET_VERSION
+            fi
+
+            asset_state "$TARGET_TAG" "$bundle_set"
+            [[ $state == build ]] || continue
+            gh release upload "$TARGET_TAG" "$bundle_dir"/*.tar.gz
+            gh release upload "$TARGET_TAG" "$bundle_dir"/*_checksums.txt
+          done
+
+  image:
+    needs: [plan, build, e2e, publish]
+    # Build missing images after publication, or from existing assets when no bundle build was needed.
+    if: >-
+      !cancelled() && needs.plan.result == 'success'
+      && needs.plan.outputs.missing_images != '[]'
+      && (needs.publish.result == 'success'
+        || (needs.publish.result == 'skipped' && needs.build.result == 'skipped' && needs.e2e.result == 'skipped'
+          && needs.plan.outputs.single_assets != 'build' && needs.plan.outputs.two_binary_assets != 'build'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        set: ${{ fromJSON(needs.plan.outputs.missing_images) }}
+    env:
+      # Tags include the v prefix. Versions and bundle set names do not.
+      TARGET_TAG: ${{ inputs.target_tag }}
+      BUNDLE_SET: ${{ matrix.set.name }}
+      GENESIS_VERSION: ${{ matrix.set.genesis }}
+      TARGET_VERSION: ${{ matrix.set.version }}
+      IMAGE: peersyst/exrp:bundle-${{ matrix.set.name }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      # The image is built from the published linux/amd64 asset, not from a rebuild.
+      - name: Download and verify the published bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          archive="exrpd-bundle_${BUNDLE_SET}_Linux_amd64.tar.gz"
+          checksums="exrpd-bundle_${BUNDLE_SET}_checksums.txt"
+          gh release download "$TARGET_TAG" \
+            --dir dist \
+            --pattern "$archive" \
+            --pattern "$checksums"
+
+          source scripts/bundle/lib.sh
+          verify_archive "dist/$checksums" "dist/$archive" >/dev/null
+          mkdir -p dist/image
+          tar -xzf "dist/$archive" -C dist/image exrpd LICENSE
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PUSH_TOKEN }}
+      - name: Build the image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: Dockerfile.bundle
+          target: bundle
+          build-contexts: bundle-files=dist/image
+          platforms: linux/amd64
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          tags: ${{ env.IMAGE }}
+      - name: Smoke test
+        run: scripts/bundle/image-smoke.sh "$IMAGE" "$GENESIS_VERSION" "$TARGET_VERSION"
+      - name: Push the image
+        run: |
+          source scripts/bundle/publication.sh
+          image_state "$IMAGE"
+          if [[ $state == build ]]; then
+            docker push "$IMAGE"
+          fi

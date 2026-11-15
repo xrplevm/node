@@ -12,3 +12,8 @@ release/
 *.html
 
 bin/
+.e2e/
+.e2e.lock
+cmd/exrpd-bundle/payload/*
+!cmd/exrpd-bundle/payload/.gitkeep
+/cmd/exrpd-bundle/exrpd-bundle

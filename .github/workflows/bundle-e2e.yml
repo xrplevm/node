@@ -1,0 +1,144 @@
+name: "Bundle checks"
+
+on:
+    pull_request:
+        types: [opened, synchronize]
+        paths: &bundle-paths
+            - 'cmd/exrpd/**'
+            - 'cmd/exrpd-bundle/**'
+            - 'scripts/bundle/**'
+            - 'app/upgrades/**'
+            - 'app/upgrades.go'
+            - 'app/app.go'
+            - 'go.mod'
+            - 'go.sum'
+            - '.golangci.yml'
+            - '.golangci-lint-version'
+            - '.github/workflows/bundle-e2e.yml'
+    push:
+        branches: [main]
+        paths: *bundle-paths
+
+permissions: {}
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    bundle:
+        name: "Bundle: unit tests"
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+                    # Covers the launcher module and the Cosmovisor pins and patch built below
+                    cache-dependency-path: |
+                        cmd/exrpd-bundle/go.mod
+                        scripts/bundle/cosmovisor/cosmovisor.env
+                        scripts/bundle/cosmovisor/*.patch
+            # check.sh lints the launcher module, which the root lint job skips (nested go.mod).
+            # The action keys its lint cache on the working directory, so this job's cache stays
+            # apart from the root lint job's.
+            -   uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+                with:
+                    install-only: true
+                    working-directory: cmd/exrpd-bundle
+                    version-file: ../../.golangci-lint-version
+            -   name: Launcher and patched Cosmovisor checks
+                run: scripts/bundle/check.sh
+
+    bundle-e2e:
+        name: "Bundle: E2E"
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        env:
+            GOWORK: "off"
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+                with:
+                    go-version-file: go.mod
+            -   name: Resolve E2E inputs
+                env:
+                    GH_TOKEN: ${{ github.token }}
+                    GH_REPO: ${{ github.repository }}
+                run: |
+                    plan=$(scripts/bundle/plan.sh checkout)
+                    genesis_version=$(scripts/bundle/plan.sh genesis "$plan")
+                    target_version=${plan#v}
+
+                    {
+                        echo "E2E_INPUTS=$RUNNER_TEMP/bundle-e2e-inputs"
+                        echo "E2E_GENESIS_VERSION=$genesis_version"
+                        echo "E2E_UPGRADE_VERSION=$target_version"
+                        echo "E2E_PLAN=$plan"
+                    } >> "$GITHUB_ENV"
+            -   name: Build the target node and archive
+                run: |
+                    make build VERSION="$E2E_UPGRADE_VERSION"
+
+                    standalone_dir="$E2E_INPUTS/standalone"
+                    archive="node_${E2E_UPGRADE_VERSION}_Linux_amd64.tar.gz"
+                    mkdir -p "$standalone_dir/bin"
+                    cp bin/exrpd "$standalone_dir/bin/exrpd"
+                    tar -C "$standalone_dir" -czf "$standalone_dir/$archive" bin/exrpd
+                    (
+                        cd "$standalone_dir"
+                        sha256sum "$archive" > checksums.txt
+                    )
+            -   name: Download the genesis node
+                env:
+                    GH_TOKEN: ${{ github.token }}
+                    GH_REPO: ${{ github.repository }}
+                run: |
+                    gh release download "v$E2E_GENESIS_VERSION" \
+                        --dir "$E2E_INPUTS/genesis" \
+                        --pattern "node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" \
+                        --pattern checksums.txt
+            -   name: Build E2E bundles
+                run: |
+                    scripts/bundle/build.sh \
+                        --genesis-version "$E2E_GENESIS_VERSION" \
+                        --genesis-archive "$E2E_INPUTS/genesis/node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" \
+                        --genesis-checksums "$E2E_INPUTS/genesis/checksums.txt" \
+                        --upgrade-exrpd "$E2E_INPUTS/standalone/bin/exrpd" \
+                        --upgrade-version "$E2E_UPGRADE_VERSION" \
+                        --plan "$E2E_PLAN" \
+                        --goos linux \
+                        --goarch amd64 \
+                        --out "$E2E_INPUTS/two-binary/exrpd"
+
+                    scripts/bundle/build.sh \
+                        --genesis-version "$E2E_UPGRADE_VERSION" \
+                        --genesis-archive "$E2E_INPUTS/standalone/node_${E2E_UPGRADE_VERSION}_Linux_amd64.tar.gz" \
+                        --genesis-checksums "$E2E_INPUTS/standalone/checksums.txt" \
+                        --goos linux \
+                        --goarch amd64 \
+                        --out "$E2E_INPUTS/single/exrpd"
+            -   name: Build stock Cosmovisor for migration E2E
+                run: |
+                    source scripts/bundle/cosmovisor/cosmovisor.env
+                    GOBIN="$E2E_INPUTS/stock" go install "$COSMOVISOR_MODULE/cmd/cosmovisor@$COSMOVISOR_VERSION"
+            -   name: Run E2E
+                run: |
+                    E2E_DIR="$RUNNER_TEMP/bundle-e2e-run" scripts/bundle/e2e.sh \
+                        --genesis-archive "$E2E_INPUTS/genesis/node_${E2E_GENESIS_VERSION}_Linux_amd64.tar.gz" \
+                        --genesis-checksums "$E2E_INPUTS/genesis/checksums.txt" \
+                        --upgrade-exrpd "$E2E_INPUTS/standalone/bin/exrpd" \
+                        --upgrade-version "$E2E_UPGRADE_VERSION" \
+                        --plan "$E2E_PLAN" \
+                        --bundle "$E2E_INPUTS/two-binary/exrpd" \
+                        --single-bundle "$E2E_INPUTS/single/exrpd" \
+                        --stock-cosmovisor "$E2E_INPUTS/stock/cosmovisor"
