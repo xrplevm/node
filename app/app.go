@@ -519,6 +519,7 @@ func New(
 		DisplayDenom:  Denom,
 		Decimals:      18,
 	})
+	DisableOsaka()
 
 	// ERC20 Keeper
 	app.Erc20Keeper = erc20keeper.NewKeeper(
