@@ -25,7 +25,7 @@ jobs:
             -   name: Configure private EVM access
                 uses: ./.github/actions/private-evm-ssh
                 with:
-                    ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_NOV_2026 }}
+                    ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_DEC_2026 }}
             # Build docker image
             - name: Build docker image
               uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0

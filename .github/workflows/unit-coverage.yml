@@ -22,7 +22,7 @@ jobs:
       - name: Configure private EVM access
         uses: ./.github/actions/private-evm-ssh
         with:
-          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_NOV_2026 }}
+          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_DEC_2026 }}
           configure-go: "true"
 
       - name: Generate unit test coverage
