@@ -1,8 +1,11 @@
 package types_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/xrplevm/node/v12/x/fastupgrade/types"
@@ -11,7 +14,24 @@ import (
 func TestDefaultParams(t *testing.T) {
 	defaultParams := types.DefaultParams()
 	require.False(t, defaultParams.Enabled)
+	require.Empty(t, defaultParams.Proposers)
 	require.NoError(t, types.DefaultGenesis().Validate())
+}
+
+// These tests do not set the chain's address prefix, so the addresses have
+// the SDK's default prefix.
+var (
+	proposerA = sdk.AccAddress("proposer-a__________").String()
+	proposerB = sdk.AccAddress("proposer-b__________").String()
+)
+
+// proposers returns n different addresses.
+func proposers(n int) []string {
+	list := make([]string, n)
+	for i := range list {
+		list[i] = sdk.AccAddress(fmt.Sprintf("proposer-%02d_________", i)).String()
+	}
+	return list
 }
 
 func TestParams_Validate(t *testing.T) {
@@ -92,6 +112,38 @@ func TestParams_Validate(t *testing.T) {
 		{
 			name:        "should fail - threshold is not a number",
 			mutate:      func(p *types.Params) { p.Threshold = "abc" },
+			expectedErr: types.ErrInvalidParams,
+		},
+		{
+			name:   "should pass - two proposers",
+			mutate: func(p *types.Params) { p.Proposers = []string{proposerA, proposerB} },
+		},
+		{
+			// Only the decode error rejects this entry: a failed decode gives
+			// an empty address, which prints as "".
+			name:        "should fail - empty proposer",
+			mutate:      func(p *types.Params) { p.Proposers = []string{""} },
+			expectedErr: types.ErrInvalidParams,
+		},
+		{
+			// Gov stores the proposer in lower case, so this entry would
+			// never match.
+			name:        "should fail - proposer in upper case",
+			mutate:      func(p *types.Params) { p.Proposers = []string{strings.ToUpper(proposerA)} },
+			expectedErr: types.ErrInvalidParams,
+		},
+		{
+			name:        "should fail - duplicate proposer",
+			mutate:      func(p *types.Params) { p.Proposers = []string{proposerA, proposerB, proposerA} },
+			expectedErr: types.ErrInvalidParams,
+		},
+		{
+			name:   "should pass - proposers at the maximum",
+			mutate: func(p *types.Params) { p.Proposers = proposers(16) },
+		},
+		{
+			name:        "should fail - proposers above the maximum",
+			mutate:      func(p *types.Params) { p.Proposers = proposers(17) },
 			expectedErr: types.ErrInvalidParams,
 		},
 	}

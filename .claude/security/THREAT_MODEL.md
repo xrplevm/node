@@ -51,7 +51,7 @@ These must always hold. Verify them in every audit.
 5. The state machine is deterministic. No map iteration that writes state, no goroutines, no `time.Now()`, no floats in consensus code.
 6. Upgrade handlers run once, at their height, and change only the state they are meant to change.
 7. The rate limiting middleware stays in the IBC transfer stack. ICA host is removed in v12: the IBC router does not route the `icahost` port on any network.
-8. Apart from a proposer's cancel, only `x/fastupgrade` ends a vote before its deadline, and only for a proposal with exactly one `MsgSoftwareUpgrade` whose plan name is a minor bump of the last completed upgrade. It needs bonded validators with at least `threshold` of the bonded tokens voting Yes, and gov's own tally passing in the same block. An unprivileged account can delay a fast upgrade but cannot start one.
+8. Apart from a proposer's cancel, only `x/fastupgrade` ends a vote before its deadline, and only for a proposal with exactly one `MsgSoftwareUpgrade` whose plan name is a minor bump of the last completed upgrade, and whose proposer is in the `proposers` param. An empty list allows nobody. It needs bonded validators with at least `threshold` of the bonded tokens voting Yes, and gov's own tally passing in the same block. An unprivileged account can delay a fast upgrade but cannot start one.
 9. `x/fastupgrade` changes only the plan height and the voting end time of that proposal. Gov executes it and `x/upgrade` schedules the plan. Its vote hook never rejects a vote, and its EndBlocker never halts the chain: on an error or a panic it discards its changes and drops the timer, and stock gov decides.
 
 ## Assets
@@ -258,7 +258,7 @@ These must always hold. Verify them in every audit.
 **Key files**: `x/fastupgrade/keeper/hooks.go`, `x/fastupgrade/keeper/abci.go`, `x/fastupgrade/keeper/support.go`, `x/fastupgrade/keeper/msg_server.go`, `x/fastupgrade/types/params.go`, `x/fastupgrade/types/compat.go`, `x/fastupgrade/types/version.go`, EndBlocker order in `app/app.go`, enablement in `app/upgrades/v12/`
 
 **What to check**:
-- Eligibility: one message, a strict `vMAJOR.MINOR.PATCH` name, the same major and a higher minor than the last completed upgrade, a name that has not run, and a valid plan
+- Eligibility: a proposer in the `proposers` param (an empty list allows nobody), one message, a strict `vMAJOR.MINOR.PATCH` name, the same major and a higher minor than the last completed upgrade, a name that has not run, and a valid plan
 - The validator gate counts only the operator votes of bonded validators, weighted by bonded tokens. The tally check runs gov's `Tally` on a scratch context that is never written
 - The fastupgrade EndBlocker runs before gov's and staking's
 - Another proposal that ends in block H-1 postpones H. The proposal's own deadline always wins

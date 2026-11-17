@@ -294,6 +294,12 @@ func TestKeeper_EndBlock_StartGuards(t *testing.T) {
 			},
 		},
 		{
+			name: "should not start the timer - proposer removed from the list",
+			before: func(f *fixture, _ uint64) {
+				f.setProposers(f.vals[0])
+			},
+		},
+		{
 			name:           "should not start the timer - gov params incompatible",
 			before:         incompatibleGov,
 			expectedReason: "incompatible_with_gov",
@@ -489,6 +495,13 @@ func TestKeeper_EndBlock_FinalCheckDropsKeepOriginalProposal(t *testing.T) {
 			expectedReason: "not_eligible",
 			during: func(f *fixture, _ uint64) {
 				f.applyUpgrade("v1.3.0")
+			},
+		},
+		{
+			name:           "should drop the timer - proposer removed from the list",
+			expectedReason: "not_eligible",
+			during: func(f *fixture, _ uint64) {
+				f.setProposers(f.vals[0])
 			},
 		},
 		{
@@ -843,8 +856,8 @@ func TestKeeper_EndBlock_OtherProposalDueAtFinalCheckPostponesTimer(t *testing.T
 
 	// The upgrade proposal gets its timer.
 	f := newFixture(t)
-	params := types.DefaultParams()
-	params.Enabled = true
+	params, err := f.k.Params.Get(f.ctx)
+	require.NoError(t, err)
 	params.PostponeBlocks = postponeBlocks
 	require.NoError(t, f.k.SetParams(f.ctx, params))
 	id := f.proposeMinor()
@@ -864,7 +877,7 @@ func TestKeeper_EndBlock_OtherProposalDueAtFinalCheckPostponesTimer(t *testing.T
 	// on a chain, and it takes the removed validator out of the set.
 	f.advanceTo(finalCheck)
 	f.fullEndBlock()
-	_, err := f.app.StakingKeeper.EndBlocker(f.ctx)
+	_, err = f.app.StakingKeeper.EndBlocker(f.ctx)
 	require.NoError(t, err)
 
 	// The module moved H and announced it. Gov executed the removal, and

@@ -65,6 +65,20 @@ func TestHooks_AfterProposalVote(t *testing.T) {
 			},
 		},
 		{
+			// f.other submits the proposals of the fixture.
+			name:              "should nominate - proposer is the second in the list",
+			setup:             func(f *fixture) { f.setProposers(f.vals[0], f.other) },
+			expectedNominated: true,
+		},
+		{
+			name:  "should not nominate - proposer not in the list",
+			setup: func(f *fixture) { f.setProposers(f.vals[0]) },
+		},
+		{
+			name:  "should not nominate - empty proposers list",
+			setup: func(f *fixture) { f.setProposers() },
+		},
+		{
 			name: "should not nominate - jailed validator yes",
 			setup: func(f *fixture) {
 				f.jail(f.vals[0])

@@ -79,8 +79,9 @@ type fixture struct {
 	govAddr string
 }
 
-// newFixture has the module enabled with its default params, and baseVersion
-// as the last completed upgrade.
+// newFixture has the module enabled with its default params and f.other, who
+// submits the fixture's proposals, as the only proposer. baseVersion is the
+// last completed upgrade.
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := newFixtureWithoutBaseVersion(t)
@@ -247,13 +248,29 @@ func (f *fixture) timer() (types.Timer, bool) {
 	return t, true
 }
 
+// setParams keeps f.other as the only proposer.
 func (f *fixture) setParams(enabled bool, timelock uint64, threshold string) {
 	f.t.Helper()
 	_, err := keeper.NewMsgServerImpl(f.k).UpdateParams(f.ctx, &types.MsgUpdateParams{
 		Authority: f.govAddr,
-		Params:    types.Params{Enabled: enabled, TimelockBlocks: timelock, Threshold: threshold, PostponeBlocks: types.DefaultPostponeBlocks},
+		Params: types.Params{
+			Enabled: enabled, TimelockBlocks: timelock, Threshold: threshold, PostponeBlocks: types.DefaultPostponeBlocks,
+			Proposers: []string{f.other.String()},
+		},
 	})
 	require.NoError(f.t, err)
+}
+
+// setProposers keeps the other params and replaces the proposers list.
+func (f *fixture) setProposers(proposers ...sdk.AccAddress) {
+	f.t.Helper()
+	params, err := f.k.Params.Get(f.ctx)
+	require.NoError(f.t, err)
+	params.Proposers = nil
+	for _, proposer := range proposers {
+		params.Proposers = append(params.Proposers, proposer.String())
+	}
+	require.NoError(f.t, f.k.SetParams(f.ctx, params))
 }
 
 func (f *fixture) setGovParams(mutate func(*govv1.Params)) {

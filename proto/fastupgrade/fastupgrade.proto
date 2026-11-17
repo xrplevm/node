@@ -20,6 +20,10 @@ message Params {
   // postpone_blocks is the number of blocks the upgrade height moves later
   // when another proposal ends in the block of the final check.
   uint64 postpone_blocks = 4;
+  // proposers is the list of accounts whose proposals can use the fast path.
+  // With an empty list no proposal can use the fast path.
+  repeated string proposers = 5
+      [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
 }
 
 // Timer is the running timelock of a fast-tracked upgrade proposal.

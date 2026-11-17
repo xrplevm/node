@@ -13,6 +13,11 @@ import (
 
 const (
 	UpgradeName = "v12.0.0"
+
+	// FastUpgradeProposer is the account that submitted the upgrade proposals
+	// on mainnet and testnet since v9.0.0. The upgrade makes it the only
+	// account whose proposals can use the fast path.
+	FastUpgradeProposer = "ethm1z4f0lx5t3mwxq9799nlefpz7v0s0t0eed7w3w8"
 )
 
 // RetiredStoreKeys are the stores of the modules removed in v12. They stay

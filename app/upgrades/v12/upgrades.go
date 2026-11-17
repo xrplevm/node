@@ -43,19 +43,26 @@ func CreateUpgradeHandler(
 		}
 
 		// RunMigrations initialized x/fastupgrade with its disabled defaults.
-		// Enable it with the same validation as MsgUpdateParams. With an
-		// incompatible gov configuration the module stays disabled, and gov
-		// can enable it later with MsgUpdateParams.
+		// Enable it for the proposals of FastUpgradeProposer, with the same
+		// validation as MsgUpdateParams. With an incompatible gov
+		// configuration the module stays disabled but keeps the proposers
+		// list, and gov can enable it later with MsgUpdateParams.
 		params := fastupgradetypes.DefaultParams()
 		params.Enabled = true
+		params.Proposers = []string{FastUpgradeProposer}
 		err = fastUpgradeKeeper.SetParams(ctx, params)
 		switch {
 		case errors.Is(err, fastupgradetypes.ErrIncompatibleWithGov):
 			logger.Error("x/fastupgrade stays disabled", "error", err)
+			// SetParams stored nothing. Disabled params skip the gov check.
+			params.Enabled = false
+			if err := fastUpgradeKeeper.SetParams(ctx, params); err != nil {
+				return nil, err
+			}
 		case err != nil:
 			return nil, err
 		default:
-			logger.Info("Enabled x/fastupgrade", "timelock_blocks", params.TimelockBlocks, "threshold", params.Threshold)
+			logger.Info("Enabled x/fastupgrade", "timelock_blocks", params.TimelockBlocks, "threshold", params.Threshold, "proposers", params.Proposers)
 		}
 
 		return vm, nil

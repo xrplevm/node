@@ -83,7 +83,7 @@ func (k Keeper) nominate(ctx sdk.Context, proposalID uint64, voter sdk.AccAddres
 	if err != nil || !voting {
 		return err
 	}
-	msg, err := k.eligibleMinorMessage(ctx, p, ctx.BlockHeight())
+	msg, err := k.eligibleMinorMessage(ctx, p, params.Proposers, ctx.BlockHeight())
 	if err != nil || msg == nil {
 		return err
 	}

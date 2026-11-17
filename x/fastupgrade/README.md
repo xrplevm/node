@@ -2,12 +2,13 @@
 
 Fast-tracks single-message minor software upgrades once bonded validators holding at least `threshold` of bonded tokens vote Yes. This README contains the full operator contract.
 
-The v12.0.0 upgrade enables the module with `timelock_blocks` 150, `threshold` 0.85, and `postpone_blocks` 10. If gov's params are incompatible with that threshold at the upgrade, the module stays disabled and the node logs `x/fastupgrade stays disabled`. Gov can then enable it with `MsgUpdateParams`. A generic genesis has it disabled. An exported genesis keeps the exported params, including `enabled`, but holds no timer and no completed-upgrade markers. Neither chain can start the fast path until x/upgrade completes a real upgrade on it.
+The v12.0.0 upgrade enables the module with `timelock_blocks` 150, `threshold` 0.85, `postpone_blocks` 10, and one entry in `proposers`: `ethm1z4f0lx5t3mwxq9799nlefpz7v0s0t0eed7w3w8`, the account that submits the upgrade proposals on mainnet and testnet. If gov's params are incompatible with that threshold at the upgrade, the module stays disabled with the same params, including `proposers`, and the node logs `x/fastupgrade stays disabled`. Gov can then enable it with `MsgUpdateParams`. A generic genesis has it disabled, with an empty `proposers` list: gov must also add a proposer before the fast path can start. An exported genesis keeps the exported params, including `enabled`, but holds no timer and no completed-upgrade markers. Neither chain can start the fast path until x/upgrade completes a real upgrade on it.
 
 ## What qualifies
 
 A proposal is eligible when all of these hold:
 
+- Its proposer is in `proposers`. With an empty list, no proposal is eligible.
 - It has exactly one message, a `MsgSoftwareUpgrade`.
 - The plan is valid for x/upgrade: a positive height that is not below the current height, no `time`, and no `upgraded_client_state`.
 - The plan name is strict `vMAJOR.MINOR.PATCH`: digits only, no leading zeros, no suffix.
@@ -28,7 +29,7 @@ Anything else, including patch-only and major upgrades, uses stock governance.
 ## Queries and transactions
 
 ```bash
-exrpd q fastupgrade params -o json   # {"params":{"enabled":true,"timelock_blocks":"150","threshold":"0.850000000000000000","postpone_blocks":"10"}}
+exrpd q fastupgrade params -o json   # {"params":{"enabled":true,"timelock_blocks":"150","threshold":"0.850000000000000000","postpone_blocks":"10","proposers":["ethm1..."]}}
 exrpd q fastupgrade timer -o json    # {} with no timer, else {"timer":{"proposal_id":"N","upgrade_height":"H"}}
 ```
 
@@ -41,7 +42,7 @@ Only gov can change params, through a `MsgUpdateParams` proposal. The module has
   "messages": [{
     "@type": "/fastupgrade.MsgUpdateParams",
     "authority": "<gov module address>",
-    "params": {"enabled": true, "timelock_blocks": "150", "threshold": "0.850000000000000000", "postpone_blocks": "10"}
+    "params": {"enabled": true, "timelock_blocks": "150", "threshold": "0.850000000000000000", "postpone_blocks": "10", "proposers": ["<proposer address>"]}
   }],
   "deposit": "<deposit>",
   "title": "Update fastupgrade params",
@@ -49,14 +50,15 @@ Only gov can change params, through a `MsgUpdateParams` proposal. The module has
 }
 ```
 
-All params must be supplied:
+All params must be supplied. With a `proposers` list that is omitted or empty, no proposal can use the fast path:
 
 - `timelock_blocks` must be in [2, 100000].
 - `threshold` must be in (0, 1] with at most 18 decimals.
 - `postpone_blocks` must be in [1, 100000].
+- `proposers` must hold at most 16 account addresses (`ethm1...`) in lower case, each one time.
 - With `enabled` true, `threshold` must stay compatible with gov's params: greater than `threshold` and `expedited_threshold`, and at least `quorum` and `1 - veto_threshold`. With `enabled` false, this is not checked, so gov can always turn the module off.
 
-A new threshold applies at the next check, including a running timer's H-1 check. A new timelock affects only timers started later. A new `postpone_blocks` applies at the next postponement. To turn the module off, set `enabled` to false; a running timer is dropped at the next block.
+A new threshold applies at the next check, including a running timer's H-1 check. A new `proposers` list also applies at the next check: a running timer whose proposer is no longer in the list is dropped at H-1 with `not_eligible`. A new timelock affects only timers started later. A new `postpone_blocks` applies at the next postponement. To turn the module off, set `enabled` to false; a running timer is dropped at the next block.
 
 ## Events
 
@@ -79,7 +81,7 @@ Reasons:
 | `gov_tally_rejected` | Gov's tally would not pass. Unexpected without delegations from other accounts; investigate. |
 | `tally_below_threshold` | Gov's Yes count is below the threshold. Possible with delegations from other accounts. Also possible with a weighted validator vote when Yes power is within one token unit of the threshold, because gov truncates its Yes count. |
 | `natural_deadline` | The proposal's own deadline arrived before the vote closed early. The timer is dropped in the block of the deadline, and stock gov decides with the original height. If gov converts an expedited proposal to a regular one there, it deletes all votes: a new Yes vote starts a new timer. |
-| `not_eligible` | The proposal is no longer eligible: another upgrade completed during the timelock, or the chain passed the plan's original height. |
+| `not_eligible` | The proposal is no longer eligible: another upgrade completed during the timelock, the chain passed the plan's original height, or gov removed the proposer from `proposers`. |
 | `plan_pending` | Another upgrade plan is scheduled. |
 | `disabled` | The module was disabled. |
 | `not_voting` | The proposal is no longer in its voting period, for example because the proposer cancelled it. |

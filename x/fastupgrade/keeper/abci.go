@@ -105,7 +105,7 @@ func (k Keeper) endBlock(ctx sdk.Context) error {
 		return err
 	}
 	if running {
-		return k.resolveTimer(ctx, timer, params.PostponeBlocks, threshold)
+		return k.resolveTimer(ctx, timer, params, threshold)
 	}
 	return k.checkNominations(ctx, params, threshold)
 }
@@ -113,7 +113,7 @@ func (k Keeper) endBlock(ctx sdk.Context) error {
 // resolveTimer waits until H-1, then tries to close the vote early. A timer
 // does not outlive its proposal's deadline: gov ends that vote later in this
 // block, and stock gov decides.
-func (k Keeper) resolveTimer(ctx sdk.Context, timer types.Timer, postpone uint64, threshold sdkmath.LegacyDec) error {
+func (k Keeper) resolveTimer(ctx sdk.Context, timer types.Timer, params types.Params, threshold sdkmath.LegacyDec) error {
 	p, voting, err := k.votingProposal(ctx, timer.ProposalId)
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func (k Keeper) resolveTimer(ctx sdk.Context, timer types.Timer, postpone uint64
 	}
 	// Here the proposal is in its voting period, its deadline is in the
 	// future, and this block is exactly H-1.
-	return k.closeVoteEarly(ctx, p, timer, postpone, threshold)
+	return k.closeVoteEarly(ctx, p, timer, params, threshold)
 }
 
 // cancelTimer removes the timer without firing and emits Dropped.
@@ -184,7 +184,7 @@ func (k Keeper) checkNominations(ctx sdk.Context, params types.Params, threshold
 		//
 		// Example: block 100 and timelock 150 give H = 250, and a plan height
 		// of 200 gets no timer, because 200 is below 249.
-		msg, reason, err := k.guards(ctx, p, upgradeHeight-1, threshold)
+		msg, reason, err := k.guards(ctx, p, params.Proposers, upgradeHeight-1, threshold)
 		if err != nil {
 			return err
 		}
@@ -239,8 +239,8 @@ func (k Keeper) emitNotStarted(ctx sdk.Context, proposalID uint64, reason types.
 // proposal is due in this block, closeVoteEarly does not close the vote. It
 // moves H later and runs the final check again at the new H-1, after gov
 // processed the other proposal.
-func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Timer, postpone uint64, threshold sdkmath.LegacyDec) error {
-	msg, reason, err := k.guards(ctx, p, ctx.BlockHeight(), threshold)
+func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Timer, params types.Params, threshold sdkmath.LegacyDec) error {
+	msg, reason, err := k.guards(ctx, p, params.Proposers, ctx.BlockHeight(), threshold)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (k Keeper) closeVoteEarly(ctx sdk.Context, p govv1.Proposal, timer types.Ti
 		return err
 	}
 	if due {
-		return k.postponeTimer(ctx, timer, postpone)
+		return k.postponeTimer(ctx, timer, params.PostponeBlocks)
 	}
 
 	if err := k.Timer.Remove(ctx); err != nil {
@@ -313,11 +313,11 @@ func addBlocks(height int64, blocks uint64) (int64, error) {
 }
 
 // guards runs the fast-path checks shared by timer start and H-1.
-func (k Keeper) guards(ctx sdk.Context, p govv1.Proposal, minPlanHeight int64, threshold sdkmath.LegacyDec) (*upgradetypes.MsgSoftwareUpgrade, types.Reason, error) {
+func (k Keeper) guards(ctx sdk.Context, p govv1.Proposal, proposers []string, minPlanHeight int64, threshold sdkmath.LegacyDec) (*upgradetypes.MsgSoftwareUpgrade, types.Reason, error) {
 	if !p.VotingEndTime.After(ctx.BlockTime()) {
 		return nil, types.ReasonNaturalDeadline, nil
 	}
-	msg, err := k.eligibleMinorMessage(ctx, p, minPlanHeight)
+	msg, err := k.eligibleMinorMessage(ctx, p, proposers, minPlanHeight)
 	if err != nil {
 		return nil, "", err
 	}

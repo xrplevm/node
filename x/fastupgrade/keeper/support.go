@@ -3,6 +3,7 @@ package keeper
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/math"
@@ -15,12 +16,16 @@ import (
 )
 
 // eligibleMinorMessage returns the proposal's upgrade message when the
-// proposal holds exactly one MsgSoftwareUpgrade whose plan is valid and not
-// below minPlanHeight, whose plan name is a strict vMAJOR.MINOR.PATCH with
-// the same major and a higher minor than the last completed upgrade, and
-// whose plan name has not already completed. It returns nil when the proposal
-// is not eligible.
-func (k Keeper) eligibleMinorMessage(ctx sdk.Context, p govv1.Proposal, minPlanHeight int64) (*upgradetypes.MsgSoftwareUpgrade, error) {
+// proposer is in proposers, which allows nobody when it is empty, and the
+// proposal holds exactly one MsgSoftwareUpgrade whose plan is valid and not below
+// minPlanHeight, whose plan name is a strict vMAJOR.MINOR.PATCH with the same
+// major and a higher minor than the last completed upgrade, and whose plan
+// name has not already completed. It returns nil when the proposal is not
+// eligible.
+func (k Keeper) eligibleMinorMessage(ctx sdk.Context, p govv1.Proposal, proposers []string, minPlanHeight int64) (*upgradetypes.MsgSoftwareUpgrade, error) {
+	if !slices.Contains(proposers, p.Proposer) {
+		return nil, nil
+	}
 	if len(p.Messages) != 1 {
 		return nil, nil
 	}

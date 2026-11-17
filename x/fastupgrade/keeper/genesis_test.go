@@ -15,7 +15,10 @@ func TestKeeper_ExportGenesis(t *testing.T) {
 
 	gs, err := f.k.ExportGenesis(f.ctx)
 	require.NoError(t, err)
-	require.Equal(t, &types.GenesisState{Params: types.Params{Enabled: true, TimelockBlocks: 150, Threshold: "0.850000000000000000", PostponeBlocks: 10}}, gs)
+	require.Equal(t, &types.GenesisState{Params: types.Params{
+		Enabled: true, TimelockBlocks: 150, Threshold: "0.850000000000000000", PostponeBlocks: 10,
+		Proposers: []string{f.other.String()},
+	}}, gs)
 }
 
 func TestKeeper_InitGenesis(t *testing.T) {

@@ -54,6 +54,8 @@ func (s *TestSuite) enableFastUpgrade() {
 	})
 	params := fastupgradetypes.DefaultParams()
 	params.Enabled = true
+	// Key 0 submits the proposals of these tests.
+	params.Proposers = []string{s.keyring.GetKey(0).AccAddr.String()}
 
 	// x/upgrade panics if a plan with a handler is pending before its
 	// height: gov schedules the plan at h+4 and the upgrade runs at h+5.
@@ -71,15 +73,6 @@ func (s *TestSuite) enableFastUpgrade() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), fastUpgradeBaseName, name)
 	require.Equal(s.T(), planHeight, height)
-}
-
-func (s *TestSuite) proposeMinorUpgrade() uint64 {
-	id, err := utils.SubmitProposal(s.factory, s.Network(), s.keyring.GetKey(0).Priv, fastUpgradeMinorName, &upgradetypes.MsgSoftwareUpgrade{
-		Authority: s.govAuthority(),
-		Plan:      upgradetypes.Plan{Name: fastUpgradeMinorName, Height: fastUpgradePlanHeight, Info: fastUpgradePlanInfo},
-	})
-	require.NoError(s.T(), err)
-	return id
 }
 
 // voteInOneBlock commits one block holding a vote from each given key index,
@@ -219,6 +212,29 @@ func (s *TestSuite) TestFastUpgrade_EarlyCloseInCommittedBlocks() {
 	require.False(s.T(), ok)
 }
 
+// TestFastUpgrade_ProposerNotInListUsesStockGov checks the proposers list in
+// committed blocks: the same upgrade from a key that is not in the list gets
+// no timer when every validator votes Yes, and stock gov passes it at the
+// original deadline and height.
+func (s *TestSuite) TestFastUpgrade_ProposerNotInListUsesStockGov() {
+	s.enableFastUpgrade()
+	id := s.proposeMinorUpgradeFrom(1)
+
+	res := s.voteInOneBlock(id, govv1.OptionYes, s.allValidators()...)
+	require.Empty(s.T(), blockEvents(res, fastupgradetypes.EventTypeStarted))
+	require.Empty(s.T(), blockEvents(res, fastupgradetypes.EventTypeNotStarted))
+	_, ok := s.committedTimer()
+	require.False(s.T(), ok)
+	require.Equal(s.T(), govv1.StatusVotingPeriod, s.committedProposal(id).Status)
+
+	require.NoError(s.T(), s.Network().NextBlockAfter(votingPeriod))
+
+	require.Equal(s.T(), govv1.StatusPassed, s.committedProposal(id).Status)
+	plan, err := s.Network().UpgradeKeeper().GetUpgradePlan(s.Network().GetContext())
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), upgradetypes.Plan{Name: fastUpgradeMinorName, Height: fastUpgradePlanHeight, Info: fastUpgradePlanInfo}, plan)
+}
+
 // TestFastUpgrade_VoteChangeFallsBackToStockGov checks the veto in committed
 // blocks: a validator switches to No during the timelock, the timer drops at
 // H-1, and gov later tallies every vote at the original deadline and height.
@@ -304,4 +320,18 @@ func (s *TestSuite) TestFastUpgrade_RemovalAtFinalCheckPostponesTimer() {
 	plan, err := s.Network().UpgradeKeeper().GetUpgradePlan(s.Network().GetContext())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), H, plan.Height)
+}
+
+func (s *TestSuite) proposeMinorUpgrade() uint64 {
+	return s.proposeMinorUpgradeFrom(0)
+}
+
+// proposeMinorUpgradeFrom submits the minor upgrade with the key at index.
+func (s *TestSuite) proposeMinorUpgradeFrom(index int) uint64 {
+	id, err := utils.SubmitProposal(s.factory, s.Network(), s.keyring.GetKey(index).Priv, fastUpgradeMinorName, &upgradetypes.MsgSoftwareUpgrade{
+		Authority: s.govAuthority(),
+		Plan:      upgradetypes.Plan{Name: fastUpgradeMinorName, Height: fastUpgradePlanHeight, Info: fastUpgradePlanInfo},
+	})
+	require.NoError(s.T(), err)
+	return id
 }
