@@ -32,14 +32,14 @@ jobs:
       - name: Configure private EVM access
         uses: ./.github/actions/private-evm-ssh
         with:
-          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_NOV_2026 }}
+          ssh-key: ${{ secrets.EVM_FORK_SSH_KEY_DEC_2026 }}
       # Build and push docker image
       - name: Run go releaser
         run: |
           docker run --rm \
             -e CGO_ENABLED \
             -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e GOPRIVATE=github.com/xrplevm/cosmos-evm-priv-nov-1-2026 \
+            -e GOPRIVATE=github.com/xrplevm/cosmos-evm-priv-dec-1-2026 \
             -e SSH_AUTH_SOCK=/ssh-agent \
             -v "$SSH_AUTH_SOCK:/ssh-agent" \
             -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
@@ -49,5 +49,5 @@ jobs:
             --entrypoint /bin/sh \
             goreleaser/goreleaser-cross:v1.22 -c \
             'git config --global --add safe.directory /go/src/exrp && \
-             git config --global url."ssh://git@github.com/xrplevm/cosmos-evm-priv-nov-1-2026".insteadOf "https://github.com/xrplevm/cosmos-evm-priv-nov-1-2026" && \
+             git config --global url."ssh://git@github.com/xrplevm/cosmos-evm-priv-dec-1-2026".insteadOf "https://github.com/xrplevm/cosmos-evm-priv-dec-1-2026" && \
              goreleaser release --clean --skip validate'
