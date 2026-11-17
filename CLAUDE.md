@@ -16,15 +16,16 @@ go vet ./...              # Vet all packages
 ## Project Structure
 
 ```
-cmd/exrpd/          # CLI entry point and node configuration
-app/                # Cosmos SDK app wiring, ante handlers, upgrade handlers
-app/ante/           # Transaction validation (routes EVM vs Cosmos txs)
-x/poa/              # Proof-of-Authority module (validator add/remove)
-proto/              # Protobuf definitions (gRPC API surface)
-types/              # Core types (address prefixes, denominations)
-testutil/           # Test helpers
-tests/              # Integration tests
-security/           # Security audit scope and threat model
+cmd/exrpd/              # CLI entry point and node configuration
+app/                    # Cosmos SDK app wiring, ante handlers, upgrade handlers
+app/ante/               # Transaction validation (routes EVM vs Cosmos txs)
+x/poa/                  # Proof-of-Authority module (validator add/remove)
+x/fastupgrade/          # Fast-track minor upgrades (README.md), gov hook + EndBlocker
+proto/                  # Protobuf definitions (gRPC API surface)
+types/                  # Core types (address prefixes, denominations)
+testutil/               # Test helpers
+tests/                  # Integration tests
+security/               # Security audit scope and threat model
 ```
 
 ## Security Audits

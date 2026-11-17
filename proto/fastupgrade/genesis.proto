@@ -1,0 +1,15 @@
+syntax = "proto3";
+package fastupgrade;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "fastupgrade/fastupgrade.proto";
+
+option go_package = "github.com/xrplevm/node/v12/x/fastupgrade/types";
+
+// GenesisState defines the fastupgrade module's genesis state.
+message GenesisState {
+  // params defines the module parameters.
+  Params params = 1
+      [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
+}

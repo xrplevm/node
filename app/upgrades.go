@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 
-	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	v12 "github.com/xrplevm/node/v12/app/upgrades/v12"
 )
@@ -18,6 +17,7 @@ func (app *App) setupUpgradeHandlers() {
 			app.configurator,
 			app.EvmKeeper,
 			app.keys,
+			app.FastUpgradeKeeper,
 		),
 	)
 
@@ -34,10 +34,9 @@ func (app *App) setupUpgradeHandlers() {
 	}
 
 	if upgradeInfo.Name == v12.UpgradeName {
-		// Empty: the handler empties the retired stores (v12.RetiredStoreKeys).
-		storeUpgrades := &storetypes.StoreUpgrades{}
+		storeUpgrades := v12.StoreUpgrades()
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 }

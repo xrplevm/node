@@ -407,6 +407,7 @@ func setAuthGenesisState(app *app.App, genesisState testutil.GenesisState, custo
 type GovCustomGenesisState struct {
 	denom         string
 	minDepositAmt sdkmath.Int
+	votingPeriod  time.Duration
 }
 
 // setDefaultGovGenesisState sets the default gov genesis state
@@ -416,6 +417,9 @@ func setDefaultGovGenesisState(app *app.App, genesisState testutil.GenesisState,
 	minDepositAmt := overwriteParams.minDepositAmt
 	updatedParams.MinDeposit = sdktypes.NewCoins(sdktypes.NewCoin(overwriteParams.denom, minDepositAmt))
 	updatedParams.ExpeditedMinDeposit = sdktypes.NewCoins(sdktypes.NewCoin(overwriteParams.denom, minDepositAmt.MulRaw(2)))
+	if overwriteParams.votingPeriod > 0 {
+		updatedParams.VotingPeriod = &overwriteParams.votingPeriod
+	}
 	govGen.Params = updatedParams
 	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGen)
 	return genesisState

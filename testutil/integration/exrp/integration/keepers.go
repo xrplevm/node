@@ -1,6 +1,7 @@
 package exrpintegration
 
 import (
+	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
@@ -13,6 +14,7 @@ import (
 	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
 	transferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
+	fastupgradekeeper "github.com/xrplevm/node/v12/x/fastupgrade/keeper"
 	poakeeper "github.com/xrplevm/node/v12/x/poa/keeper"
 )
 
@@ -62,4 +64,12 @@ func (n *IntegrationNetwork) TransferKeeper() transferkeeper.Keeper {
 
 func (n *IntegrationNetwork) IBCKeeper() *ibckeeper.Keeper {
 	return n.app.IBCKeeper
+}
+
+func (n *IntegrationNetwork) FastUpgradeKeeper() fastupgradekeeper.Keeper {
+	return n.app.FastUpgradeKeeper
+}
+
+func (n *IntegrationNetwork) UpgradeKeeper() *upgradekeeper.Keeper {
+	return n.app.UpgradeKeeper
 }

@@ -1,15 +1,23 @@
 package v12
 
 import (
+	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/feegrant"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
+
+	fastupgradetypes "github.com/xrplevm/node/v12/x/fastupgrade/types"
 )
 
 const (
 	UpgradeName = "v12.0.0"
+
+	// FastUpgradeProposer is the account that submitted the upgrade proposals
+	// on mainnet and testnet since v9.0.0. The upgrade makes it the only
+	// account whose proposals can use the fast path.
+	FastUpgradeProposer = "ethm1z4f0lx5t3mwxq9799nlefpz7v0s0t0eed7w3w8"
 )
 
 // RetiredStoreKeys are the stores of the modules removed in v12. They stay
@@ -24,4 +32,11 @@ var RetiredStoreKeys = []string{
 	feegrant.StoreKey,
 	crisistypes.StoreKey,
 	paramstypes.StoreKey,
+}
+
+// StoreUpgrades returns the stores v12.0.0 adds.
+func StoreUpgrades() storetypes.StoreUpgrades {
+	return storetypes.StoreUpgrades{
+		Added: []string{fastupgradetypes.StoreKey},
+	}
 }
