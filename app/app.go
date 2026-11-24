@@ -519,7 +519,7 @@ func New(
 		DisplayDenom:  Denom,
 		Decimals:      18,
 	})
-	DisableOsaka()
+	SetOsakaTime(evmChainID)
 
 	// ERC20 Keeper
 	app.Erc20Keeper = erc20keeper.NewKeeper(
@@ -926,7 +926,7 @@ func (app *App) BlockedModuleAccountAddrs() map[string]bool {
 	}
 
 	blockedPrecompilesHex := evmtypes.AvailableStaticPrecompiles
-	for _, addr := range vm.PrecompiledAddressesPrague {
+	for _, addr := range vm.PrecompiledAddressesOsaka {
 		blockedPrecompilesHex = append(blockedPrecompilesHex, addr.Hex())
 	}
 
