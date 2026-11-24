@@ -39,13 +39,26 @@ func NewDefaultGenesisState(app *App) GenesisState {
 
 // NewEVMGenesisState returns the default genesis state for the EVM module.
 //
-// NOTE: for the example chain implementation we need to set the default EVM denomination,
-// enable ALL precompiles, and include default preinstalls.
+// NOTE: for the example chain implementation we need to set the default EVM denomination
+// and include default preinstalls.
 func NewEVMGenesisState() *evmtypes.GenesisState {
-	evmGenState := evmtypes.DefaultGenesisState()
+	evmGenState := newDefaultEVMGenesisState()
 	evmGenState.Params.EvmDenom = BaseDenom
-	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
 	evmGenState.Preinstalls = evmtypes.DefaultPreinstalls
+
+	return evmGenState
+}
+
+// newDefaultEVMGenesisState returns the EVM module default genesis state with
+// the static precompiles that App.DefaultGenesis enables. The init command
+// does not use it. The Ethereum precompiles, P256VERIFY included, need no
+// entry in the list.
+func newDefaultEVMGenesisState() *evmtypes.GenesisState {
+	evmGenState := evmtypes.DefaultGenesisState()
+	evmGenState.Params.ActiveStaticPrecompiles = []string{
+		evmtypes.Bech32PrecompileAddress,
+		evmtypes.BankPrecompileAddress,
+	}
 
 	return evmGenState
 }

@@ -1,7 +1,9 @@
 package app_test
 
 import (
+	"math/big"
 	"testing"
+	"time"
 
 	evmtypes "github.com/cosmos/evm/x/vm/types"
 	"github.com/stretchr/testify/require"
@@ -17,18 +19,54 @@ func resetChainConfig(t *testing.T) {
 	require.NoError(t, evmtypes.SetChainConfig(evmtypes.DefaultChainConfig(evmtypes.DefaultEVMChainID)))
 }
 
-func TestDisableOsaka(t *testing.T) {
+// TestSetOsakaTime verifies that SetOsakaTime writes the expected Osaka
+// activation timestamp for each chain ID, keeps the EVM chain config valid,
+// and flips IsOsaka from false at t-1s to true at t.
+func TestSetOsakaTime(t *testing.T) {
 	resetChainConfig(t)
 	t.Cleanup(func() { resetChainConfig(t) })
 
-	// The EVM module enables Osaka by default. If this changes, DisableOsaka
-	// is no longer needed.
-	require.NotNil(t, evmtypes.GetEthChainConfig().OsakaTime)
+	tt := []struct {
+		name       string
+		evmChainID uint64
+		expected   uint64
+	}{
+		{
+			name:       "devnet",
+			evmChainID: 1449900,
+			expected:   0,
+		},
+		{
+			name:       "testnet",
+			evmChainID: 1449000,
+			expected:   uint64(time.Date(2026, time.November, 25, 11, 0, 0, 0, time.UTC).Unix()), //nolint:gosec // G115
+		},
+		{
+			name:       "mainnet",
+			evmChainID: 1440000,
+			expected:   uint64(time.Date(2026, time.November, 26, 13, 0, 0, 0, time.UTC).Unix()), //nolint:gosec // G115
+		},
+		{
+			name:       "unlisted chain runs from genesis",
+			evmChainID: 1449999,
+			expected:   0,
+		},
+	}
 
-	app.DisableOsaka()
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			app.SetOsakaTime(tc.evmChainID)
 
-	// DisableOsaka writes through the pointer that GetChainConfig returns. A
-	// fresh read sees the change, which proves that the pointer is the shared
-	// config that the EVM module reads, and not a copy.
-	require.Nil(t, evmtypes.GetEthChainConfig().OsakaTime)
+			require.NoError(t, evmtypes.GetChainConfig().Validate())
+
+			ethCfg := evmtypes.GetEthChainConfig()
+			require.NotNil(t, ethCfg.OsakaTime)
+			require.Equal(t, tc.expected, *ethCfg.OsakaTime)
+			// IsOsaka also checks IsLondon(blockHeight), so pass any height >= 0.
+			require.True(t, ethCfg.IsOsaka(big.NewInt(1), tc.expected))
+			if tc.expected > 0 {
+				require.False(t, ethCfg.IsOsaka(big.NewInt(1), tc.expected-1))
+			}
+		})
+	}
 }
