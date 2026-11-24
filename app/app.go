@@ -23,7 +23,6 @@ import (
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 
 	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	evmmempool "github.com/cosmos/evm/mempool"
@@ -97,12 +96,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
@@ -469,12 +466,9 @@ func New(
 		govConfig,
 		authAddress,
 	)
-	govRouter := govv1beta1.NewRouter()
-	govRouter.
-		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
-		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper))
-	// Set legacy router for backwards compatibility with gov v1beta1
-	govKeeper.SetLegacyRouter(govRouter)
+	// Legacy content proposals have no handler. An empty sealed router makes
+	// them fail with a regular error.
+	govKeeper.SetLegacyRouter(govv1beta1.NewRouter())
 
 	app.GovKeeper = *govKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(),
@@ -682,11 +676,8 @@ func New(
 		map[string]module.AppModuleBasic{
 			genutiltypes.ModuleName: genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 			stakingtypes.ModuleName: staking.AppModuleBasic{},
-			govtypes.ModuleName: gov.NewAppModuleBasic(
-				[]govclient.ProposalHandler{
-					paramsclient.ProposalHandler,
-				},
-			),
+			// No legacy proposal handlers: the legacy gov router is empty.
+			govtypes.ModuleName:         gov.NewAppModuleBasic(nil),
 			ibctransfertypes.ModuleName: transfer.AppModuleBasic{},
 		},
 	)
@@ -957,9 +948,7 @@ func (app *App) AppCodec() codec.Codec {
 func (app *App) DefaultGenesis() map[string]json.RawMessage {
 	genesis := app.BasicModuleManager.DefaultGenesis(app.appCodec)
 
-	evmGenState := evmtypes.DefaultGenesisState()
-	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
-	genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(evmGenState)
+	genesis[evmtypes.ModuleName] = app.AppCodec().MustMarshalJSON(newDefaultEVMGenesisState())
 
 	erc20GenState := erc20types.DefaultGenesisState()
 	genesis[erc20types.ModuleName] = app.AppCodec().MustMarshalJSON(erc20GenState)
